@@ -8,16 +8,18 @@ Description: What the package does (one paragraph).
 License: GPL (>= 3)
 Imports: 
     archive,
-    rappdirs
+    rappdirs,
+    tools
 Suggests: 
     furrr,
     knitr,
     rmarkdown,
     spelling,
     testthat (>= 3.0.0)
+VignetteBuilder: 
+    knitr
+Config/testthat/edition: 3
 Encoding: UTF-8
 Language: en-US
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.2.3
-Config/testthat/edition: 3
-VignetteBuilder: knitr

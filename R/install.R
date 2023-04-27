@@ -52,7 +52,7 @@ find_program <- function(
     }
   }
 
-  location
+  tools::file_path_as_absolute(location)
 }
 
 # find_ffmpeg() ----------------------------------------------------------------
@@ -235,8 +235,8 @@ install_openface_win <- function(download_url = NULL, install_dir = NULL) {
 
   if (is.null(download_url)) {
     download_url <- paste0(
-      "https://github.com/TadasBaltrusaitis/OpenFace/releases/",
-      "download/OpenFace_2.2.0/OpenFace_2.2.0_win_x64.zip"
+      "https://github.com/TadasBaltrusaitis/OpenFace/releases/download/",
+      "OpenFace_2.2.0/OpenFace_2.2.0_win_x64.zip"
     )
   }
   if (is.null(install_dir)) {
@@ -296,3 +296,46 @@ install_openface_win <- function(download_url = NULL, install_dir = NULL) {
 
   TRUE
 }
+
+
+# install_opensmile_win() ------------------------------------------------------
+
+#' @export
+install_opensmile_win <- function(download_url = NULL, install_dir = NULL) {
+
+  if (is.null(download_url)) {
+    download_url <- paste0(
+      "https://github.com/audeering/opensmile/releases/download/",
+      "v3.0.1/opensmile-3.0.1-win-x64.zip"
+    )
+  }
+  if (is.null(install_dir)) {
+    install_dir <- file.path(rappdirs::user_data_dir("openac", "R"), "opensmile")
+  }
+  if (!dir.exists(install_dir)) {
+    status <- dir.create(install_dir, recursive = TRUE)
+    if (status == FALSE) return(FALSE)
+  }
+  # Download the installer to a temporary file
+  tf <- tempfile()
+  status <-
+    utils::download.file(
+      url = download_url,
+      destfile = tf,
+      mode = "wb"
+    )
+  if (status != 0) {
+    warning("File download failed")
+    return(FALSE)
+  }
+  # Extract the archive from the temporary file to the install directory
+  archive::archive_extract(tf, dir = install_dir, strip_components = 1)
+  # Delete the temporary file
+  unlink(tf)
+  # Update the user config files with the locations of the installed files
+  set_opensmile(file.path(install_dir, "bin", "SMILExtract.exe"))
+
+  TRUE
+}
+
+

@@ -1,0 +1,77 @@
+---
+title: "Extracting audio from video with ffmpeg"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Extracting audio from video with ffmpeg}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+#| message: false
+
+# Load openac package
+library(openac)
+
+# Load parallelization packages
+library(future)
+library(furrr)
+```
+
+```{r}
+# Check that ffmpeg is configured properly
+check_ffmpeg()
+```
+
+```{r}
+# Find input video files to process
+infiles <- list.files(
+  path = "Z:/DynAMoS/Stimuli/Video",
+  pattern = ".mp4$",
+  full.names = TRUE,
+  recursive = TRUE
+)
+
+# Create output WAV filenames
+
+# # Replace directory path
+outfiles <- gsub(
+  pattern = "/Stimuli/Video/",
+  replacement = "/Stimuli/Audio/",
+  x = infiles
+)
+
+# # Replace file extension
+outfiles <- gsub(
+  pattern = ".mp4",
+  replacement = ".wav",
+  x = outfiles
+)
+```
+
+```{r}
+# Set up parallelization
+future::plan("multisession", workers = 4)
+
+# Run extract_audio() on each file
+furrr::future_walk2(
+  .x = infiles,
+  .y = outfiles,
+  .f = openac::extract_wav
+)
+```
+
+```{r}
+# Check that the output files were created
+list.files(
+  path = "Z:/DynAMoS/Stimuli/Audio",
+  pattern = ".wav$"
+)
+```

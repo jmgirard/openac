@@ -1,0 +1,80 @@
+---
+title: "Running opensmile in parallel"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Running opensmile in parallel}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+#| message: false
+
+# Load openac package
+library(openac)
+
+# Load parallelization packages
+library(future)
+library(furrr)
+```
+
+```{r}
+# Check that opensmile is configured properly
+check_opensmile()
+```
+
+```{r}
+# Find input video files to process
+infiles <- list.files(
+  path = "Z:/DynAMoS/Stimuli/Audio",
+  pattern = ".wav$",
+  full.names = TRUE,
+  recursive = TRUE
+)
+
+# Create aggregate output CSV filenames
+
+# # Replace directory path
+aggfiles <- gsub(
+  pattern = "/Stimuli/Audio/",
+  replacement = "/Features/opensmile/",
+  x = infiles
+)
+
+# # Replace file extension
+aggfiles <- gsub(
+  pattern = ".wav",
+  replacement = "_agg.csv",
+  x = aggfiles
+)
+
+# Create lower-level-descriptors output CSV filenames
+
+# # Replace file extension
+lldfiles <- gsub(
+  pattern = "_agg",
+  replacement = "_lld",
+  x = aggfiles
+)
+```
+
+
+```{r}
+# Set up parallelization
+future::plan("multisession", workers = 4)
+
+# Run extract_opensmile() on each file
+furrr::future_pwalk(
+  .l = list(infile = infiles, aggfile = aggfiles, lldfile = lldfiles),
+  .f = openac::extract_opensmile,
+  config = "is09-13/IS10_paraling"
+)
+```
+
