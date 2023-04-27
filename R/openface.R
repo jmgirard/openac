@@ -40,3 +40,26 @@ extract_openface <- function(infile, outfile,
 
   openface(command)
 }
+
+
+# check_openface() -------------------------------------------------------------
+
+#' @export
+check_openface <- function() {
+
+  # Try to find the openface executable
+  of <- find_openface()
+
+  if (is.null(of)) {
+    return(FALSE)
+  }
+
+  # Try to call the openface executable
+  res <- try(openface('-h'), silent = TRUE)
+
+  if(inherits(res, "try-error")) {
+    return(FALSE)
+  }
+
+  TRUE
+}
