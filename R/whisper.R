@@ -172,8 +172,8 @@ whisper_transcribe_wav <- function(infile,
   stopifnot(is.character(infile) && length(infile) == 1 && file.exists(infile))
   stopifnot(class(model) == "whisper")
   stopifnot(is.character(language) && length(language) == 1)
-  stopifnot(is.null(rdsfile) || (is.character(rdsfile) && length(rdsfile) == 1 && tools::file_ext(rdsfile) == ".rds"))
-  stopifnot(is.null(csvfile) || (is.character(csvfile) && length(csvfile) == 1 && tools::file_ext(csvfile) == ".csv"))
+  stopifnot(is.null(rdsfile) || (is.character(rdsfile) && length(rdsfile) == 1 && tools::file_ext(rdsfile) == "rds"))
+  stopifnot(is.null(csvfile) || (is.character(csvfile) && length(csvfile) == 1 && tools::file_ext(csvfile) == "csv"))
 
   out <- predict(
     object = model,
