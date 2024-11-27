@@ -180,6 +180,7 @@ whisper_transcribe_wav <- function(infile,
     newdata = infile,
     type = "transcribe",
     language = language,
+    trace = FALSE,
     ...
   )
 
