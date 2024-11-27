@@ -8,6 +8,7 @@ Description: What the package does (one paragraph).
 License: GPL (>= 3)
 Imports: 
     archive,
+    cli,
     rappdirs,
     tools
 Suggests: 
