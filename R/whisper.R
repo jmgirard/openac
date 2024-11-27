@@ -137,8 +137,7 @@ whisper_transcribe <- function(infile,
     x <- whisper_prepare_audio(
       infile = infile,
       outfile = wavfile,
-      stream = stream,
-      overwrite = overwrite
+      stream = stream
     )
   }
 
