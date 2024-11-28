@@ -189,7 +189,7 @@ whisper_transcribe_wav <- function(infile,
   }
 
   if (!is.null(csvfile)) {
-    write.csv(out$data, file = csvfile)
+    write.csv(out$data, file = csvfile, row.names = FALSE)
   }
 
   out
