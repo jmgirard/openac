@@ -19,7 +19,7 @@ whisper_check_audio <- function(infile, verbose = FALSE) {
   streams <- count_audio_streams(infile)
 
   # Create ffprobe command
-  command <- paste0(
+  arg <- paste0(
     '-v error',
     ' -show_entries stream=codec_name,sample_rate,channels',
     ' -of default=noprint_wrappers=1:nokey=1',
@@ -27,7 +27,7 @@ whisper_check_audio <- function(infile, verbose = FALSE) {
   )
 
   # Run ffprobe command
-  dat <- ffprobe(command)
+  dat <- ffprobe(arg)
 
   # Check ffprobe output
   tests <- c(
@@ -74,8 +74,8 @@ whisper_prepare_audio <- function(infile,
   # Check that the requested audio stream exists
   stopifnot((stream + 1) <= count_audio_streams(infile))
 
-  # ...Create ffmpeg command to extract wav
-  command <- paste0(
+  # ...Create ffmpeg arg to extract wav
+  arg <- paste0(
     '-y -i "', infile, '" ',
     ' -map 0:a:', stream,
     ' -ar 16000', # set sample rate to 16kHz
@@ -83,7 +83,7 @@ whisper_prepare_audio <- function(infile,
     ' -c:a pcm_s16le', # set to 16-bit PCM codec
     ' "', outfile, '"'
   )
-  ffmpeg(command)
+  ffmpeg(arg)
 
 }
 

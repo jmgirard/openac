@@ -79,14 +79,6 @@ find_ffplay <- function() {
   find_program("ffplay")
 }
 
-# find_openface() --------------------------------------------------------------
-
-#' @rdname find_program
-#' @export
-find_ffplay <- function() {
-  find_program("openface")
-}
-
 # find_openface() -------------------------------------------------------------
 
 #' @rdname find_program
@@ -306,7 +298,7 @@ install_opensmile_win <- function(download_url = NULL, install_dir = NULL) {
   if (is.null(download_url)) {
     download_url <- paste0(
       "https://github.com/audeering/opensmile/releases/download/",
-      "v3.0.1/opensmile-3.0.1-win-x64.zip"
+      "v3.0.2/opensmile-3.0.2-win-x64.zip"
     )
   }
   if (is.null(install_dir)) {

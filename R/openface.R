@@ -1,11 +1,20 @@
 
 # openface() -------------------------------------------------------------------
 
+#' Low-level access to the openface command line interface
+#'
+#' Attempt to find and run openface with the specified arguments.
+#'
+#' @param arg A string including space-separated arguments to append to the
+#'   FaceLandmarkVidMulti.exe command line call.
+#' @return A character vector containing the output of openface.
+#' @references https://github.com/TadasBaltrusaitis/OpenFace/wiki/Command-line-arguments
 #' @export
-openface <- function(command) {
-  stopifnot(is.character(command), length(command) == 1)
-  out <- system(paste0('"', find_openface(), '" ', command), intern = TRUE)
-  out
+#' @examples
+#' openface('-h')
+openface <- function(arg) {
+  stopifnot(is.character(arg), length(arg) == 1)
+  system2(find_openface(), args = arg, stdout = TRUE, stderr = TRUE)
 }
 
 
@@ -25,7 +34,7 @@ extract_openface <- function(infile, outfile,
     is.logical(wild), is.logical(multiview)
   )
 
-  command <- paste0(
+  arg <- paste0(
     '-f "', infile, '" ',
     '-of "', outfile, '" ',
     ifelse(fp2D, '-2Dfp ', ''),
@@ -38,7 +47,7 @@ extract_openface <- function(infile, outfile,
     ifelse(multiview, '-multi_view 1', '')
   )
 
-  openface(command)
+  openface(arg)
 }
 
 

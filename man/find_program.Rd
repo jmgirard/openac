@@ -19,8 +19,6 @@ find_ffprobe()
 
 find_ffplay()
 
-find_ffplay()
-
 find_openface()
 
 find_opensmile()

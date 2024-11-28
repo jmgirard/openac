@@ -1,11 +1,20 @@
 
 # opensmile() ------------------------------------------------------------------
 
+#' Low-level access to the opensmile command line interface
+#'
+#' Attempt to find and run opensmile with the specified arguments.
+#'
+#' @param arg A string including space-separated arguments to append to the
+#'   SMILEextract command line call.
+#' @return A character vector containing the output of openface.
+#' @references https://audeering.github.io/opensmile/
 #' @export
-opensmile <- function(command) {
-  stopifnot(is.character(command), length(command) == 1)
-  out <- system(paste0('"', find_opensmile(), '" ', command), intern = TRUE)
-  out
+#' @examples
+#' opensmile('-h')
+opensmile <- function(arg) {
+  stopifnot(is.character(arg), length(arg) == 1)
+  system2(find_opensmile(), args = arg, stdout = TRUE, stderr = TRUE)
 }
 
 

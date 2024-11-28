@@ -1,49 +1,68 @@
 
 # ffmpeg ------------------------------------------------------------------
 
+#' Low-level access to the ffmpeg command line interface
+#'
+#' Attempt to find and run ffmpeg with the specified arguments.
+#'
+#' @param arg A string including space-separated arguments to append to the
+#'   ffmpeg command line call.
+#' @return A character vector containing the output of ffmpeg.
+#' @references https://ffmpeg.org/ffmpeg.html
 #' @export
-ffmpeg <- function(command) {
-  stopifnot(is.character(command), length(command) == 1)
-  out <- system(paste0('"', find_ffmpeg(), '" ', command), intern = TRUE)
-  out
+#' @examples
+#' ffmpeg('-version')
+ffmpeg <- function(arg) {
+  stopifnot(is.character(arg), length(arg) == 1)
+  system2(find_ffmpeg(), args = arg, stdout = TRUE, stderr = TRUE)
 }
 
 # ffprobe -----------------------------------------------------------------
 
+#' Low-level access to the ffprobe command line interface
+#'
+#' Attempt to find and run ffprobe with the specified arguments.
+#'
+#' @param arg A string including space-separated arguments to append to the
+#'   ffprobe command line call.
+#' @return A character vector containing the output of ffprobe.
+#' @references https://ffmpeg.org/ffprobe.html
 #' @export
-ffprobe <- function(command) {
-  stopifnot(is.character(command) && length(command) == 1)
-  system(paste0('"', find_ffprobe(), '" ', command), intern = TRUE)
+#' @examples
+#' ffprobe('-version')
+ffprobe <- function(arg) {
+  stopifnot(is.character(arg), length(arg) == 1)
+  system2(find_ffprobe(), args = arg, stdout = TRUE, stderr = TRUE)
 }
 
 count_audio_streams <- function(infile) {
-  command <- paste0(
+  arg <- paste0(
     '-v error -select_streams a -show_entries stream=index -of csv=p=0 "',
     infile,
     '"'
   )
-  out <- ffprobe(command)
+  out <- ffprobe(arg)
   length(out)
 }
 
 determine_type <- function(infile) {
-  command <- paste0(
+  arg <- paste0(
     '-v error',
     ' -select_streams v:0',
     ' -show_entries stream=codec_type',
     ' -of csv=p=0',
     ' "', infile, '"'
   )
-  vcheck <- length(ffprobe(command)) > 0
+  vcheck <- length(ffprobe(arg)) > 0
 
-  command <- paste0(
+  arg2 <- paste0(
     '-v error',
     ' -select_streams a:0',
     ' -show_entries stream=codec_type',
     ' -of csv=p=0',
     ' "', infile, '"'
   )
-  acheck <- length(ffprobe(command)) > 0
+  acheck <- length(ffprobe(arg2)) > 0
 
   c(Video = vcheck, Audio = acheck)
 }
@@ -61,7 +80,29 @@ check_ffmpeg <- function() {
   }
 
   # Try to call the openface executable
-  res <- try(ffmpeg('-h'), silent = TRUE)
+  res <- try(ffmpeg('-version'), silent = TRUE)
+
+  if(inherits(res, "try-error")) {
+    return(FALSE)
+  }
+
+  TRUE
+}
+
+# check_ffprobe() -----------------------------------------------------------
+
+#' @export
+check_ffprobe <- function() {
+
+  # Try to find the ffmpeg executable
+  ffp <- find_ffprobe()
+
+  if (is.null(ffp)) {
+    return(FALSE)
+  }
+
+  # Try to call the openface executable
+  res <- try(ffprobe('-version'), silent = TRUE)
 
   if(inherits(res, "try-error")) {
     return(FALSE)

@@ -2,6 +2,7 @@
 
 export(check_config)
 export(check_ffmpeg)
+export(check_ffprobe)
 export(check_openface)
 export(check_opensmile)
 export(extract_openface)
