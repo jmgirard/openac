@@ -74,6 +74,10 @@ whisper_prepare_audio <- function(infile,
   # Check that the requested audio stream exists
   stopifnot((stream + 1) <= count_audio_streams(infile))
 
+  if (!dir.exists(dirname(outfile))) {
+    dir.create(dirname(outfile))
+  }
+
   # ...Create ffmpeg arg to extract wav
   arg <- paste0(
     '-y -i "', infile, '" ',
@@ -185,10 +189,16 @@ whisper_transcribe_wav <- function(infile,
   )
 
   if (!is.null(rdsfile)) {
+    if (!dir.exists(dirname(rdsfile))) {
+      dir.create(dirname(rdsfile))
+    }
     saveRDS(out, file = rdsfile)
   }
 
   if (!is.null(csvfile)) {
+    if (!dir.exists(dirname(csvfile))) {
+      dir.create(dirname(csvfile))
+    }
     write.csv(out$data, file = csvfile, row.names = FALSE)
   }
 
