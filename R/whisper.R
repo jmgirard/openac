@@ -190,14 +190,14 @@ whisper_transcribe_wav <- function(infile,
 
   if (!is.null(rdsfile)) {
     if (!dir.exists(dirname(rdsfile))) {
-      dir.create(dirname(rdsfile))
+      dir.create(dirname(rdsfile), recursive = TRUE)
     }
     saveRDS(out, file = rdsfile)
   }
 
   if (!is.null(csvfile)) {
     if (!dir.exists(dirname(csvfile))) {
-      dir.create(dirname(csvfile))
+      dir.create(dirname(csvfile), recursive = TRUE)
     }
     write.csv(out$data, file = csvfile, row.names = FALSE)
   }
