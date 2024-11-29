@@ -75,7 +75,7 @@ whisper_prepare_audio <- function(infile,
   stopifnot((stream + 1) <= count_audio_streams(infile))
 
   if (!dir.exists(dirname(outfile))) {
-    dir.create(dirname(outfile))
+    dir.create(dirname(outfile), recursive = TRUE)
   }
 
   # ...Create ffmpeg arg to extract wav
