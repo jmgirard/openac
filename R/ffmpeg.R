@@ -46,6 +46,8 @@ count_audio_streams <- function(infile) {
 }
 
 determine_type <- function(infile) {
+
+  # Check if there is a video stream
   arg <- paste0(
     '-v error',
     ' -select_streams v:0',
@@ -55,6 +57,7 @@ determine_type <- function(infile) {
   )
   vcheck <- length(ffprobe(arg)) > 0
 
+  # Check if there is an audio stream
   arg2 <- paste0(
     '-v error',
     ' -select_streams a:0',
@@ -79,7 +82,7 @@ check_ffmpeg <- function() {
     return(FALSE)
   }
 
-  # Try to call the openface executable
+  # Try to call the ffmpeg executable
   res <- try(ffmpeg('-version'), silent = TRUE)
 
   if(inherits(res, "try-error")) {
@@ -94,14 +97,14 @@ check_ffmpeg <- function() {
 #' @export
 check_ffprobe <- function() {
 
-  # Try to find the ffmpeg executable
+  # Try to find the ffprobe executable
   ffp <- find_ffprobe()
 
   if (is.null(ffp)) {
     return(FALSE)
   }
 
-  # Try to call the openface executable
+  # Try to call the ffprobe executable
   res <- try(ffprobe('-version'), silent = TRUE)
 
   if(inherits(res, "try-error")) {
