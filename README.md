@@ -18,15 +18,6 @@ You can install the development version of openac from
 devtools::install_github("jmgirard/openac")
 ```
 
-## Example
-
-This is a basic example which shows you how to solve a common problem:
-
-``` r
-library(openac)
-## basic example code
-```
-
 ## Code of Conduct
 
 Please note that the openac project is released with a [Contributor Code
