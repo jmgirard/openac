@@ -108,7 +108,7 @@ check_opensmile <- function() {
 #' @export
 tidy_opensmile <- function(infile) {
   df <- read.csv(file = infile, sep = ";", dec = ".")
-  write.csv(df, file = infile)
+  write.csv(df, file = infile, row.names = FALSE)
 }
 
 
