@@ -9,10 +9,11 @@ License: GPL (>= 3)
 Imports: 
     archive,
     cli,
+    furrr,
+    future,
     rappdirs,
     tools
 Suggests: 
-    furrr,
     knitr,
     rmarkdown,
     spelling,

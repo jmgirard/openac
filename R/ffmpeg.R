@@ -113,3 +113,57 @@ check_ffprobe <- function() {
 
   TRUE
 }
+
+# extract_hifi() -------------------------------------------------------------
+
+#' @export
+extract_hifi <- function(infile, outfile, stream = 0) {
+  stopifnot(file.exists(infile))
+  if (!dir.exists(dirname(outfile))) {
+    dir.create(dirname(outfile), recursive = TRUE)
+  }
+  arg <- paste0(
+    '-y -i "', infile, '" ',
+    ' -map 0:a:', stream,
+    ' -ar 44100', # set sample rate to 44.1kHz
+    ' -ac 1', # set to mono audio (1 channel)
+    ' -c:a pcm_s16le', # set to 16-bit PCM Little-Endian codec
+    ' "', outfile, '"'
+  )
+  ffmpeg(arg)
+}
+
+# extract_hifi_dir() -------------------------------------------------------------
+
+#' @export
+extract_hifi_dir <- function(indir, inext, outdir, stream = 0, recursive = FALSE, cores = 4, .progress = TRUE) {
+
+  stopifnot(dir.exists(indir))
+  stopifnot(is.numeric(cores), floor(cores) == ceiling(cores), cores >= 1)
+
+  infiles <- list.files(
+    path = indir,
+    pattern = paste0(inext, "$"),
+    full.names = TRUE,
+    recursive = recursive
+  )
+
+  outfiles <- gsub(indir, outdir, infiles)
+  outfiles <- gsub(inext, "wav", outfiles)
+
+  if (cores > 1) {
+    future::plan("multisession", workers = cores)
+  } else {
+    future::plan("sequential")
+  }
+  
+  furrr::future_pwalk(
+    .l = data.frame(
+      infile = infiles,
+      outfile = outfiles,
+      stream = stream
+    ),
+    .f = extract_hifi,
+    .progress = .progress
+  )
+}
