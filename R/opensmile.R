@@ -63,6 +63,9 @@ extract_opensmile <- function(infile, aggfile, lldfile,
 
   config <- check_config(config)
 
+  if (!dir.exists(dirname(aggfile))) dir.create(dirname(aggfile), recursive = TRUE)
+  if (!dir.exists(dirname(lldfile))) dir.create(dirname(lldfile), recursive = TRUE)
+
   command <- paste0(
     '-C "', config, '" ',
     '-I "', infile, '" ',
