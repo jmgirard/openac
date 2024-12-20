@@ -7,7 +7,7 @@
 openface(arg)
 }
 \arguments{
-\item{arg}{A string including space-separated arguments to append to the
+\item{arg}{(string) Space-separated arguments to append to the
 FaceLandmarkVidMulti.exe command line call.}
 }
 \value{

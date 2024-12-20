@@ -147,10 +147,10 @@ check_ffprobe <- function() {
 #' @return A character vector containing the output of ffmpeg.
 #' @export
 extract_hifi <- function(infile, outfile, stream = 0) {
-  # Validate arguments
+  # Validate input
   stopifnot(file.exists(infile))
-  stopifnot(rlang::is_string(outfile))
-  stopifnot(rlang::is_integerish(stream, n = 1, finite = TRUE), stream >= 0)
+  stopifnot(rlang::is_character(outfile, n = 1))
+  stopifnot(rlang::is_integerish(stream, n = 1), stream >= 0)
   # Create outfile directory if needed
   if (!dir.exists(dirname(outfile))) dir.create(dirname(outfile), recursive = TRUE)
   # Construct ffmpeg command
@@ -184,25 +184,31 @@ extract_hifi <- function(infile, outfile, stream = 0) {
 extract_hifi_dir <- function(indir, inext, outdir, stream = 0, 
                              recursive = FALSE, progress = TRUE) {
 
+  # Validate input
   stopifnot(dir.exists(indir))
-
+  stopifnot(rlang::is_character(inext, n = 1))
+  stopifnot(rlang::is_character(outdir, n = 1))
+  stopifnot(rlang::is_integerish(stream, n = 1), stream >= 0)
+  stopifnot(rlang::is_logical(recursive, n = 1))
+  stopifnot(rlang::is_logical(progress, n = 1))
+  # Find input filenames
   infiles <- list.files(
     path = indir,
     pattern = paste0(inext, "$"),
     full.names = TRUE,
     recursive = recursive
   )
-
+  # Construct output filenames
   outfiles <- gsub(indir, outdir, infiles)
   outfiles <- gsub(inext, "wav", outfiles)
- 
+  # Iterate extract_hifi() over infiles
   furrr::future_pwalk(
     .l = data.frame(
       infile = infiles,
-      outfile = outfiles,
-      stream = stream
+      outfile = outfiles
     ),
     .f = extract_hifi,
+    stream = stream,
     .progress = progress
   )
 }

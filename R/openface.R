@@ -5,7 +5,7 @@
 #'
 #' Attempt to find and run openface with the specified arguments.
 #'
-#' @param arg A string including space-separated arguments to append to the
+#' @param arg (string) Space-separated arguments to append to the
 #'   FaceLandmarkVidMulti.exe command line call.
 #' @return A character vector containing the output of openface.
 #' @references https://github.com/TadasBaltrusaitis/OpenFace/wiki/Command-line-arguments
@@ -13,7 +13,9 @@
 #' @examples
 #' openface('-h')
 openface <- function(arg) {
-  stopifnot(is.character(arg), length(arg) == 1)
+  # Validate input
+  stopifnot(rlang::is_character(arg, n = 1))
+  # 
   system2(find_openface(), args = arg, stdout = TRUE, stderr = TRUE)
 }
 
