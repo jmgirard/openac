@@ -108,11 +108,11 @@ extract_opensmile_dir <- function(indir, aggdir, llddir = NULL, config = "misc/e
   )
 
   aggfiles <- gsub(indir, aggdir, infiles)
-  aggfiles <- gsub("wav", "csv", outfiles)
+  aggfiles <- gsub("wav", "csv", aggfiles)
 
   if (!is.null(llddir)) {
     lldfiles <- gsub(indir, llddir, infiles)
-    lldfiles <- gsub("wav", "csv", outfiles)
+    lldfiles <- gsub("wav", "csv", lldfiles)
     furrr::future_pwalk(
       .l = data.frame(
         infile = infiles,
