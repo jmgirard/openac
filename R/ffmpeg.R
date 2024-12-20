@@ -116,6 +116,15 @@ check_ffprobe <- function() {
 
 # extract_hifi() -------------------------------------------------------------
 
+#' Extract High Fidelity Audio for Acoustic Analysis
+#' 
+#' Import an audio or video file and export an audio file for acoustic analysis. Extract the audio 
+#' stream specified by `stream` and then transcode it to a mono 16-bit PCM .wav file at 44.1kHz.
+#' 
+#' @param infile (character) The filepath of the audio or video file to import.
+#' @param outfile (character) The filepath of the .wav file to create.
+#' @param stream (numeric, default=0) The index of the audio stream to extract (ffmpeg uses zero-indexing so 0 is the first stream).
+#' @return A character vector containing the output of ffmpeg.
 #' @export
 extract_hifi <- function(infile, outfile, stream = 0) {
   stopifnot(file.exists(infile))
