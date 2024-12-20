@@ -43,6 +43,8 @@ check_config <- function(config) {
     fd <- dirname(find_opensmile())
     config <- file.path(fd, "..", "config", paste0(config_sans, ".conf"))
     config <- tools::file_path_as_absolute(config)
+  } else {
+    cli::cli_warn("Config file not found in opensmile installation.")
   }
   config
 }
@@ -51,27 +53,33 @@ check_config <- function(config) {
 # extract_opensmile() ----------------------------------------------------------
 
 #' @export
-extract_opensmile <- function(infile, aggfile, lldfile,
+extract_opensmile <- function(infile, aggfile, lldfile = NULL,
                               config = "misc/emo_large", tidy = TRUE) {
 
   stopifnot(
     is.character(infile), length(infile) == 1,
     is.character(aggfile), length(aggfile) == 1,
-    is.character(lldfile), length(lldfile) == 1,
     is.character(config), length(config) == 1
+  )
+  
+  stopifnot(
+    is.null(lldfile) || (is.character(lldfile) && length(lldfile) == 1)
   )
 
   config <- check_config(config)
 
   if (!dir.exists(dirname(aggfile))) dir.create(dirname(aggfile), recursive = TRUE)
-  if (!dir.exists(dirname(lldfile))) dir.create(dirname(lldfile), recursive = TRUE)
-
+  
   arg <- paste0(
     '-C "', config, '"',
     ' -I "', infile, '"',
-    ' -csvoutput "', aggfile, '"',
-    ' -lldcsvoutput "', lldfile, '"'
+    ' -csvoutput "', aggfile, '"'
   )
+
+  if (!is.null(lldfile)) {
+    if (!dir.exists(dirname(lldfile))) dir.create(dirname(lldfile), recursive = TRUE)
+    arg <- paste0(arg, ' -lldcsvoutput "', lldfile, '"')
+  }
 
   out <- opensmile(arg)
 
