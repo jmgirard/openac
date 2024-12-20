@@ -7,7 +7,7 @@
 ffmpeg(arg)
 }
 \arguments{
-\item{arg}{A string including space-separated arguments to append to the
+\item{arg}{(string) A string of space-separated arguments to append to the
 ffmpeg command line call.}
 }
 \value{

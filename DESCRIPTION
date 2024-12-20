@@ -12,6 +12,7 @@ Imports:
     furrr,
     future,
     rappdirs,
+    rlang,
     tools
 Suggests: 
     knitr,

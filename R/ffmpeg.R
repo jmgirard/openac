@@ -5,15 +5,17 @@
 #'
 #' Attempt to find and run ffmpeg with the specified arguments.
 #'
-#' @param arg A string including space-separated arguments to append to the
+#' @param arg (string) A string of space-separated arguments to append to the
 #'   ffmpeg command line call.
 #' @return A character vector containing the output of ffmpeg.
 #' @references https://ffmpeg.org/ffmpeg.html
 #' @export
-#' @examples
+#' @examples 
 #' ffmpeg('-version')
 ffmpeg <- function(arg) {
-  stopifnot(is.character(arg), length(arg) == 1)
+  # Validate input
+  stopifnot(rlang::is_character(arg, n = 1))
+  # Run ffmpeg
   system2(find_ffmpeg(), args = arg, stdout = TRUE, stderr = TRUE)
 }
 
@@ -23,30 +25,47 @@ ffmpeg <- function(arg) {
 #'
 #' Attempt to find and run ffprobe with the specified arguments.
 #'
-#' @param arg A string including space-separated arguments to append to the
+#' @param arg (string) A string of space-separated arguments to append to the
 #'   ffprobe command line call.
 #' @return A character vector containing the output of ffprobe.
 #' @references https://ffmpeg.org/ffprobe.html
 #' @export
-#' @examples
+#' @examples 
 #' ffprobe('-version')
 ffprobe <- function(arg) {
-  stopifnot(is.character(arg), length(arg) == 1)
+  # Validate input
+  stopifnot(rlang::is_character(arg, n = 1))
+  # Run ffprobe
   system2(find_ffprobe(), args = arg, stdout = TRUE, stderr = TRUE)
 }
 
+# count_audio_streams -------------------------------------------------------
+
+#' Count the audio streams in a media file
+#' 
+#' Use ffprobe to count the number of audio streams in a media file.
+#' 
+#' @param infile (string) The filepath to the media file to import.
+#' @return An integer indicating the number of audio streams in `infile`.
+#' @export
 count_audio_streams <- function(infile) {
+  # Validate input
+  stopifnot(file.exists(infile))
+  # Construct ffprobe command
   arg <- paste0(
     '-v error -select_streams a -show_entries stream=index -of csv=p=0 "',
     infile,
     '"'
   )
+  # Run ffprobe command
   out <- ffprobe(arg)
+  # Count the number of streams
   length(out)
 }
 
 determine_type <- function(infile) {
-
+  # Validate inputs
+  stopifnot(file.exists(infile))
   # Check if there is a video stream
   arg <- paste0(
     '-v error',
@@ -56,7 +75,6 @@ determine_type <- function(infile) {
     ' "', infile, '"'
   )
   vcheck <- length(ffprobe(arg)) > 0
-
   # Check if there is an audio stream
   arg2 <- paste0(
     '-v error',
@@ -66,51 +84,53 @@ determine_type <- function(infile) {
     ' "', infile, '"'
   )
   acheck <- length(ffprobe(arg2)) > 0
-
+  # Construct output vector
   c(Video = vcheck, Audio = acheck)
 }
 
 # check_ffmpeg() ------------------------------------------------------------
 
+#' Check that ffmpeg is accessible
+#' 
+#' Check that ffmpeg is installed and accessible and working properly.
+#' 
+#' @return A logical indicating whether ffmpeg is working (TRUE) or not (FALSE).
 #' @export
+#' @examples
+#' check_ffmpeg()
 check_ffmpeg <- function() {
-
   # Try to find the ffmpeg executable
   ffm <- find_ffmpeg()
-
-  if (is.null(ffm)) {
-    return(FALSE)
-  }
-
+  if (is.null(ffm)) return(FALSE)
   # Try to call the ffmpeg executable
   res <- try(ffmpeg('-version'), silent = TRUE)
-
-  if(inherits(res, "try-error")) {
-    return(FALSE)
-  }
-
-  TRUE
+  if (inherits(res, "try-error")) return(FALSE)
+  # If not null or error, return TRUE
+  return(TRUE)
 }
 
 # check_ffprobe() -----------------------------------------------------------
 
+#' Check that ffprobe is accessible
+#' 
+#' Check that ffprobe is installed and accessible and working properly.
+#' 
+#' @return A logical indicating whether ffprobe is working (TRUE) or not (FALSE).
+#' @export
+#' @examples
+#' check_ffprobe()
 #' @export
 check_ffprobe <- function() {
-
   # Try to find the ffprobe executable
   ffp <- find_ffprobe()
-
   if (is.null(ffp)) {
     return(FALSE)
   }
-
   # Try to call the ffprobe executable
   res <- try(ffprobe('-version'), silent = TRUE)
-
   if(inherits(res, "try-error")) {
     return(FALSE)
   }
-
   TRUE
 }
 
@@ -127,12 +147,13 @@ check_ffprobe <- function() {
 #' @return A character vector containing the output of ffmpeg.
 #' @export
 extract_hifi <- function(infile, outfile, stream = 0) {
+  # Validate arguments
   stopifnot(file.exists(infile))
-  stopifnot(is.numeric(stream), length(stream) == 1, stream >= 0, floor(stream) == ceiling(stream))
-  stopifnot(is.character(outfile), length(outfile) == 1)
-
+  stopifnot(rlang::is_string(outfile))
+  stopifnot(rlang::is_integerish(stream, n = 1, finite = TRUE), stream >= 0)
+  # Create outfile directory if needed
   if (!dir.exists(dirname(outfile))) dir.create(dirname(outfile), recursive = TRUE)
-  
+  # Construct ffmpeg command
   arg <- paste0(
     '-y -i "', infile, '" ',
     ' -map 0:a:', stream,
@@ -141,13 +162,27 @@ extract_hifi <- function(infile, outfile, stream = 0) {
     ' -c:a pcm_s16le', # set to 16-bit PCM Little-Endian codec
     ' "', outfile, '"'
   )
+  # Run ffmpeg command
   ffmpeg(arg)
 }
 
 # extract_hifi_dir() -------------------------------------------------------------
 
+#' Run extract_hifi on multiple files in a directory
+#' 
+#' Find all media files with a specified extension in a specified directory and then
+#' extract an audio file for acoustic analysis from each.
+#' 
+#' @param indir (string) What directory contains the input files?
+#' @param inext (string) What file extension should we look for in `indir` (e.g., "mp4" or "mp3")?
+#' @param outdir (string) What directory should the audio files be output to?
+#' @param stream (number, default=0) Which audio stream to extract? This value is zero-indexed, so 0 is the first stream.
+#' @param recursive (logical, default=FALSE) Should subdirectories of `indir` be included?
+#' @param progress (logical, default=TRUE) Should a progress bar be created?
+#' @return `NULL`
 #' @export
-extract_hifi_dir <- function(indir, inext, outdir, stream = 0, recursive = FALSE, .progress = TRUE) {
+extract_hifi_dir <- function(indir, inext, outdir, stream = 0, 
+                             recursive = FALSE, progress = TRUE) {
 
   stopifnot(dir.exists(indir))
 
@@ -168,6 +203,6 @@ extract_hifi_dir <- function(indir, inext, outdir, stream = 0, recursive = FALSE
       stream = stream
     ),
     .f = extract_hifi,
-    .progress = .progress
+    .progress = progress
   )
 }

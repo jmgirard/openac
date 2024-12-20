@@ -7,7 +7,7 @@
 ffprobe(arg)
 }
 \arguments{
-\item{arg}{A string including space-separated arguments to append to the
+\item{arg}{(string) A string of space-separated arguments to append to the
 ffprobe command line call.}
 }
 \value{
