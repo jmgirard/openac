@@ -91,6 +91,55 @@ extract_opensmile <- function(infile, aggfile, lldfile = NULL,
   out
 }
 
+
+# extract_opensmile_dir() -------------------------------------------------------------
+
+#' @export
+extract_opensmile_dir <- function(indir, aggdir, llddir = NULL, config = "misc/emo_large", 
+                                  tidy = TRUE, recursive = FALSE, .progress = TRUE) {
+
+  stopifnot(dir.exists(indir))
+
+  infiles <- list.files(
+    path = indir,
+    pattern = "wav$",
+    full.names = TRUE,
+    recursive = recursive
+  )
+
+  aggfiles <- gsub(indir, aggdir, infiles)
+  aggfiles <- gsub("wav", "csv", outfiles)
+
+  if (!is.null(llddir)) {
+    lldfiles <- gsub(indir, llddir, infiles)
+    lldfiles <- gsub("wav", "csv", outfiles)
+    furrr::future_pwalk(
+      .l = data.frame(
+        infile = infiles,
+        aggfile = aggfiles,
+        lldfile = lldfiles
+      ),
+      config = config,
+      tidy = tidy,
+      .f = extract_opensmile,
+      .progress = .progress
+    )
+  } else {
+    furrr::future_pwalk(
+      .l = data.frame(
+        infile = infiles,
+        aggfile = aggfiles
+      ),
+      config = config,
+      tidy = tidy,
+      lldfile = NULL,
+      .f = extract_opensmile,
+      .progress = .progress
+    )
+  }
+}
+
+
 # check_opensmile() ------------------------------------------------------------
 
 #' @export
@@ -121,5 +170,3 @@ tidy_opensmile <- function(infile) {
   df <- read.csv(file = infile, sep = ";", dec = ".")
   write.csv(df, file = infile, row.names = FALSE)
 }
-
-

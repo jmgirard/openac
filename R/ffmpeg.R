@@ -119,9 +119,11 @@ check_ffprobe <- function() {
 #' @export
 extract_hifi <- function(infile, outfile, stream = 0) {
   stopifnot(file.exists(infile))
-  if (!dir.exists(dirname(outfile))) {
-    dir.create(dirname(outfile), recursive = TRUE)
-  }
+  stopifnot(is.numeric(stream), length(stream) == 1, stream >= 0, floor(stream) == ceiling(stream))
+  stopifnot(is.character(outfile), length(outfile) == 1)
+
+  if (!dir.exists(dirname(outfile))) dir.create(dirname(outfile), recursive = TRUE)
+  
   arg <- paste0(
     '-y -i "', infile, '" ',
     ' -map 0:a:', stream,
@@ -136,10 +138,9 @@ extract_hifi <- function(infile, outfile, stream = 0) {
 # extract_hifi_dir() -------------------------------------------------------------
 
 #' @export
-extract_hifi_dir <- function(indir, inext, outdir, stream = 0, recursive = FALSE, cores = 4, .progress = TRUE) {
+extract_hifi_dir <- function(indir, inext, outdir, stream = 0, recursive = FALSE, .progress = TRUE) {
 
   stopifnot(dir.exists(indir))
-  stopifnot(is.numeric(cores), floor(cores) == ceiling(cores), cores >= 1)
 
   infiles <- list.files(
     path = indir,
@@ -150,13 +151,7 @@ extract_hifi_dir <- function(indir, inext, outdir, stream = 0, recursive = FALSE
 
   outfiles <- gsub(indir, outdir, infiles)
   outfiles <- gsub(inext, "wav", outfiles)
-
-  if (cores > 1) {
-    future::plan("multisession", workers = cores)
-  } else {
-    future::plan("sequential")
-  }
-  
+ 
   furrr::future_pwalk(
     .l = data.frame(
       infile = infiles,
