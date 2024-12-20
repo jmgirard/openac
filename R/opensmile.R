@@ -44,7 +44,7 @@ check_config <- function(config) {
     config <- file.path(fd, "..", "config", paste0(config_sans, ".conf"))
     config <- tools::file_path_as_absolute(config)
   } else {
-    cli::cli_warn("Config file not found in opensmile installation.")
+    cli::cli_abort("Config file not found in opensmile installation.")
   }
   config
 }
