@@ -24,9 +24,12 @@ aw_transcribe_dir(
 \item{inext}{(character) What file extension should be looked for in \code{indir}
 (e.g., "mp4" or "mp3")?}
 
-\item{stream}{An optional number indicating the index of the audio stream in
-\code{infile} to convert or extract. Note that ffmpeg uses zero-indexing so the
-default of 0 is the first stream (default = 0).}
+\item{stream}{(numeric, default=0) The index of the audio stream to extract
+(ffmpeg uses zero-indexing so 0 is the first stream).}
+
+\item{wavdir}{(character, default=NULL) What directory should the prepared
+WAV files be saved to? If \code{NULL}, temporary WAV files will be created and
+later discarded.}
 
 \item{rdsdir}{(character, default=NULL) What directory should the RDS output
 files be saved to? If \code{NULL}, RDS files will not be output.}

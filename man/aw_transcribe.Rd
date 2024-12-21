@@ -25,9 +25,8 @@ file containing an audio stream to transcribe.}
 all languages the model can handle: see
 \code{audio.whisper::whisper_languages()}.}
 
-\item{stream}{An optional number indicating the index of the audio stream in
-\code{infile} to convert or extract. Note that ffmpeg uses zero-indexing so the
-default of 0 is the first stream (default = 0).}
+\item{stream}{(numeric, default=0) The index of the audio stream to extract
+(ffmpeg uses zero-indexing so 0 is the first stream).}
 
 \item{wavfile}{Either NULL or a string indicating the path to save the
 prepared version of \code{infile} to (must end with '.wav'). If NULL, a

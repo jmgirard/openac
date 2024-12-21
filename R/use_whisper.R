@@ -98,9 +98,8 @@ aw_prep_audio <- function(infile, outfile, stream = 0) {
 #' @param language The language of the audio. Defaults to 'auto'. For a list of
 #'   all languages the model can handle: see
 #'   `audio.whisper::whisper_languages()`.
-#' @param stream An optional number indicating the index of the audio stream in
-#'   `infile` to convert or extract. Note that ffmpeg uses zero-indexing so the
-#'   default of 0 is the first stream (default = 0).
+#' @param stream (numeric, default=0) The index of the audio stream to extract 
+#' (ffmpeg uses zero-indexing so 0 is the first stream).
 #' @param wavfile Either NULL or a string indicating the path to save the
 #'   prepared version of `infile` to (must end with '.wav'). If NULL, a
 #'   temporary file will be created and later discarded.
@@ -215,6 +214,11 @@ aw_transcribe_wav <- function(
 #' @param indir (character) What directory contains the input files?
 #' @param inext (character) What file extension should be looked for in `indir` 
 #'   (e.g., "mp4" or "mp3")?
+#' @param stream (numeric, default=0) The index of the audio stream to extract 
+#'   (ffmpeg uses zero-indexing so 0 is the first stream).
+#' @param wavdir (character, default=NULL) What directory should the prepared
+#'   WAV files be saved to? If `NULL`, temporary WAV files will be created and 
+#'   later discarded.
 #' @param rdsdir (character, default=NULL) What directory should the RDS output
 #'   files be saved to? If `NULL`, RDS files will not be output.
 #' @param csvdir (character, default=NULL) What directory should the CSV output
