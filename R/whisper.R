@@ -1,4 +1,4 @@
-# whisper_check_audio() ---------------------------------------------------
+# aw_check_audio ---------------------------------------------------------------
 
 #' Check if an audio file is ready for analysis by Whisper
 #'
@@ -10,13 +10,12 @@
 #' @param verbose An optional logical indicating whether to print warnings.
 #' @return A logical indicating whether `infile` is ready for whisper.
 #' @export
-whisper_check_audio <- function(infile, verbose = FALSE) {
+aw_check_audio <- function(infile, verbose = FALSE) {
   # Validate input
   stopifnot(file.exists(infile))
   stopifnot(rlang::is_logical(verbose))
   # Count streams
   streams <- ffp_count_streams(infile)
-  type <- streams > 0
   # Create ffprobe command
   arg <- paste0(
     '-v error',
@@ -40,7 +39,7 @@ whisper_check_audio <- function(infile, verbose = FALSE) {
   all(tests)
 }
 
-# whisper_prepare_audio() -------------------------------------------------
+# aw_prep_audio ----------------------------------------------------------------
 
 #' Prepare an audio stream for analysis by Whisper
 #'
@@ -57,9 +56,7 @@ whisper_check_audio <- function(infile, verbose = FALSE) {
 #'   default of 0 is the first stream (default = 0).
 #' @return A string containing the text output from ffmpeg.
 #' @export
-whisper_prepare_audio <- function(infile,
-                                  outfile,
-                                  stream = 0) {
+aw_prep_audio <- function(infile, outfile, stream = 0) {
 
   stopifnot(is.character(infile), length(infile) == 1, file.exists(infile))
   stopifnot(is.character(outfile), length(outfile) == 1)
@@ -67,7 +64,7 @@ whisper_prepare_audio <- function(infile,
   stopifnot(stream >= 0 && ceiling(stream) == floor(stream))
 
   # Check that the requested audio stream exists
-  stopifnot((stream + 1) <= count_audio_streams(infile))
+  stopifnot((stream + 1) <= ffp_count_streams(infile)['Audio'])
 
   if (!dir.exists(dirname(outfile))) {
     dir.create(dirname(outfile), recursive = TRUE)
@@ -86,7 +83,8 @@ whisper_prepare_audio <- function(infile,
 
 }
 
-# whisper_transcribe() ----------------------------------------------------
+
+# aw_transcribe() ----------------------------------------------------
 
 #' Transcribe an audio stream using the specified Whisper model
 #'
@@ -116,7 +114,7 @@ whisper_prepare_audio <- function(infile,
 #'   `audio.whisper:::predict.whisper()`.
 #' @return A list object containing the full whisper output.
 #' @export
-whisper_transcribe <- function(infile,
+aw_transcribe <- function(infile,
                                model,
                                language = "auto",
                                stream = 0,
@@ -126,14 +124,14 @@ whisper_transcribe <- function(infile,
                                ...) {
 
   temp <- FALSE
-  if (whisper_check_audio(infile) == FALSE) {
+  if (aw_check_audio(infile) == FALSE) {
     # If no wavfile provided, create tempfile
     if (is.null(wavfile)) {
       temp <- TRUE
       wavfile <- tempfile(fileext = ".wav")
     }
     # Prepare audio stream as wavfile/tempfile
-    x <- whisper_prepare_audio(
+    x <- aw_prep_audio(
       infile = infile,
       outfile = wavfile,
       stream = stream
@@ -143,7 +141,7 @@ whisper_transcribe <- function(infile,
   }
 
   # Transcribe prepared audio file
-  out <- whisper_transcribe_wav(
+  out <- aw_transcribe_wav(
     infile = wavfile,
     model = model,
     language = language,
@@ -161,7 +159,7 @@ whisper_transcribe <- function(infile,
 
 # whisper_transcribe_wav() ------------------------------------------------
 
-whisper_transcribe_wav <- function(infile,
+aw_transcribe_wav <- function(infile,
                                    model,
                                    language = "auto",
                                    rdsfile = NULL,
@@ -199,7 +197,3 @@ whisper_transcribe_wav <- function(infile,
 
   out
 }
-
-
-
-
