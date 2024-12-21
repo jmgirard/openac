@@ -7,6 +7,8 @@
 aw_transcribe_dir(
   indir,
   inext,
+  stream = 0,
+  wavdir = NULL,
   rdsdir = NULL,
   csvdir = NULL,
   model,
@@ -21,6 +23,10 @@ aw_transcribe_dir(
 
 \item{inext}{(character) What file extension should be looked for in \code{indir}
 (e.g., "mp4" or "mp3")?}
+
+\item{stream}{An optional number indicating the index of the audio stream in
+\code{infile} to convert or extract. Note that ffmpeg uses zero-indexing so the
+default of 0 is the first stream (default = 0).}
 
 \item{rdsdir}{(character, default=NULL) What directory should the RDS output
 files be saved to? If \code{NULL}, RDS files will not be output.}

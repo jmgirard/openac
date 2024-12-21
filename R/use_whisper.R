@@ -229,6 +229,8 @@ aw_transcribe_wav <- function(
 aw_transcribe_dir <- function(
   indir, 
   inext, 
+  stream = 0,
+  wavdir = NULL,
   rdsdir = NULL, 
   csvdir = NULL, 
   model, 
@@ -240,6 +242,7 @@ aw_transcribe_dir <- function(
   # Validate inputs
   stopifnot(dir.exists(indir))
   stopifnot(rlang::is_character(inext, n = 1))
+  stopifnot(is.null(wavdir) || rlang::is_character(wavdir, n = 1))
   stopifnot(is.null(rdsdir) || rlang::is_character(rdsdir, n = 1))
   stopifnot(is.null(csvdir) || rlang::is_character(csvdir, n = 1))
   stopifnot(rlang::is_logical(recursive, n = 1))
@@ -253,6 +256,14 @@ aw_transcribe_dir <- function(
   )
   # Construct iteration data frame
   df <- data.frame(infile = infiles)
+  # If saving prepared WAV files...
+  if (!is.null(wavdir)) {
+    # Construct WAV output filepaths
+    wavfiles <- gsub(indir, wavdir, infiles)
+    wavfiles <- gsub(inext, "wav", wavfiles)
+    # Add to iteration data frame
+    df <- cbind(df, wavfile = wavfiles)
+  }
   # If exporting RDS output...
   if (!is.null(rdsdir)) {
     # Construct RDS output filepaths
@@ -275,6 +286,7 @@ aw_transcribe_dir <- function(
     .f = aw_transcribe,
     model = model,
     language = language,
+    stream = stream,
     ...,
     .progress = progress
   )
