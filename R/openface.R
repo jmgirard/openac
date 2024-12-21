@@ -20,6 +20,29 @@ openface <- function(arg) {
 }
 
 
+# check_openface() -------------------------------------------------------------
+
+#' Check that openface is accessible
+#' 
+#' Check that openface is installed and accessible and working properly.
+#' 
+#' @return A logical indicating whether openface is working (TRUE) or not (FALSE).
+#' @export
+#' @examples
+#' check_openface()
+#' @export
+check_openface <- function() {
+  # Try to find the openface executable
+  of <- find_openface()
+  if (is.null(of)) return(FALSE)
+  # Try to call the openface executable
+  res <- try(openface('-h'), silent = TRUE)
+  if(inherits(res, "try-error")) return(FALSE)
+  # If not null or error, return TRUE
+  return(TRUE)
+}
+
+
 # extract_openface() -----------------------------------------------------------
 
 #' Extract openface features
@@ -73,24 +96,4 @@ extract_openface <- function(infile, outfile,
 }
 
 
-# check_openface() -------------------------------------------------------------
-
-#' Check that openface is accessible
-#' 
-#' Check that openface is installed and accessible and working properly.
-#' 
-#' @return A logical indicating whether openface is working (TRUE) or not (FALSE).
-#' @export
-#' @examples
-#' check_openface()
-#' @export
-check_openface <- function() {
-  # Try to find the openface executable
-  of <- find_openface()
-  if (is.null(of)) return(FALSE)
-  # Try to call the openface executable
-  res <- try(openface('-h'), silent = TRUE)
-  if(inherits(res, "try-error")) return(FALSE)
-  # If not null or error, return TRUE
-  return(TRUE)
-}
+# TODO: Create extract_openface_dir()

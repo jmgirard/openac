@@ -20,10 +20,10 @@ opensmile <- function(arg) {
 }
 
 
-# opensmile_configs() ----------------------------------------------------------
+# os_list_configs() ----------------------------------------------------------
 
 #' @export
-opensmile_configs <- function() {
+os_list_configs <- function() {
   # Find opensmile install directory
   fd <- dirname(find_opensmile())
   # Find all config files
@@ -38,8 +38,10 @@ opensmile_configs <- function() {
 
 # check_config() ---------------------------------------------------------------
 
+# TODO: Add docs
 #' @export
-check_config <- function(config) {
+opensmile_check_config <- function(config) {
+  # Prepare 
   config_sans <- tools::file_path_sans_ext(config)
   configs_sans <- tools::file_path_sans_ext(opensmile_configs())
   if (config_sans %in% configs_sans) {
@@ -56,7 +58,7 @@ check_config <- function(config) {
 # extract_opensmile() ----------------------------------------------------------
 
 #' @export
-extract_opensmile <- function(infile, aggfile, lldfile = NULL,
+opensmile_extract <- function(infile, aggfile, lldfile = NULL,
                               config = "misc/emo_large", tidy = TRUE) {
 
   stopifnot(
@@ -87,8 +89,8 @@ extract_opensmile <- function(infile, aggfile, lldfile = NULL,
   out <- opensmile(arg)
 
   if (tidy == TRUE) {
-    tidy_opensmile(aggfile)
-    tidy_opensmile(lldfile)
+    opensmile_tidy_data(aggfile)
+    if (!is.null(lldfile)) opensmile_tidy_data(lldfile)
   }
 
   out
@@ -147,29 +149,21 @@ extract_opensmile_dir <- function(indir, aggdir, llddir = NULL, config = "misc/e
 
 #' @export
 check_opensmile <- function() {
-
   # Try to find the opensmile executable
   of <- find_opensmile()
-
-  if (is.null(of)) {
-    return(FALSE)
-  }
-
+  if (is.null(of)) return(FALSE)
   # Try to call the openface executable
   res <- try(opensmile('-h'), silent = TRUE)
-
-  if(inherits(res, "try-error")) {
-    return(FALSE)
-  }
-
-  TRUE
+  if(inherits(res, "try-error")) return(FALSE)
+  # If not null or error, return TRUE
+  return(TRUE)
 }
 
 
-# tidy_opensmile() -------------------------------------------------------------
+# opensmile_tidy_data() -------------------------------------------------------------
 
 #' @export
-tidy_opensmile <- function(infile) {
+opensmile_tidy_data <- function(infile) {
   df <- read.csv(file = infile, sep = ";", dec = ".")
   write.csv(df, file = infile, row.names = FALSE)
 }
