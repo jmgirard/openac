@@ -1,161 +1,3 @@
-# find_program -----------------------------------------------------------------
-
-#' Find the location of a dependency program
-#'
-#' Returns the location of the requested program as a string.
-#'
-#' @param program (character) Which program to find? Can be either "ffmpeg", 
-#'   "ffprobe", "openface", or "opensmile"
-#' @return Either a string indicating whether the requested program was found or
-#'   `NULL` if the program could not be found.
-#' @export
-#' 
-find_program <- function(program) {
-  # Validate arguments
-  stopifnot(program %in% c("ffmpeg", "ffprobe", "openface", "opensmile"))
-  # First, look for program in path
-  location <- Sys.which(program)
-  if (location == "") {
-    # If program not found, look for a user config file
-    config <- file.path(
-      rappdirs::user_config_dir("openac", "R"),
-      paste0(program, "_location.txt")
-    )
-    # If a user config file exists, read it in
-    if (file.exists(config)) {
-      location <- readLines(config)
-      # Verify that the location in the user config file is valid
-      if (Sys.which(location) == "") {
-        warning(
-          paste0(
-            program,
-            " was set as being at ",
-            location,
-            " but this file does not seem to exist anymore."
-          )
-        )
-        location <- NULL
-      }
-    } else {
-      # If config file not found, return NULL value and warning
-      location <- NULL
-      warning(
-        paste0(
-          "Failed to find ",
-          program,
-          ". Check that it is installed and, if necessary, ",
-          "use the set_program() function."
-        )
-      )
-    }
-  }
-  tools::file_path_as_absolute(location)
-}
-
-
-# find_ffmpeg ------------------------------------------------------------------
-
-#' @rdname find_program
-#' @export
-#' 
-find_ffmpeg <- function() {
-  find_program("ffmpeg")
-}
-
-
-# find_ffprobe -----------------------------------------------------------------
-
-#' @rdname find_program
-#' @export
-#' 
-find_ffprobe <- function() {
-  find_program("ffprobe")
-}
-
-
-# find_openface ----------------------------------------------------------------
-
-#' @rdname find_program
-#' @export
-#' 
-find_openface <- function() {
-  find_program("openface")
-}
-
-
-# find_opensmile ---------------------------------------------------------------
-
-#' @rdname find_program
-#' @export
-#' 
-find_opensmile <- function() {
-  find_program("opensmile")
-}
-
-
-# set_program ------------------------------------------------------------------
-
-#' Set the location of a dependency program
-#'
-#' @param program A string indicating which program to set the location for.
-#' @param location A string containing the location of the program.
-#' @return A logical indicating whether the program location was set properly.
-#' @export
-#' 
-set_program <- function(program, location) {
-  # Validate arguments
-  stopifnot(program %in% c("ffmpeg", "ffprobe", "openface", "opensmile"))
-  stopifnot(rlang::is_character(location, n = 1))
-  stopifnot(Sys.which(location) != "")
-  # Find where to save user configuration data
-  config_dir <- rappdirs::user_config_dir("openac", "R")
-  config_file <- file.path(config_dir, paste0(program, "_location.txt"))
-  # Create configuration directory if needed
-  if (!dir.exists(config_dir)) {
-    dir.create(config_dir, recursive = TRUE)
-  }
-  # Save location to user configuration file
-  writeLines(location, config_file)
-}
-
-
-# set_ffmpeg -------------------------------------------------------------------
-
-#' @rdname set_program
-#' @export
-#' 
-set_ffmpeg <- function(location) {
-  set_program("ffmpeg", location)
-}
-
-
-# set_ffprobe ------------------------------------------------------------------
-
-#' @rdname set_program
-#' @export
-set_ffprobe <- function(location) {
-  set_program("ffprobe", location)
-}
-
-
-# set_openface -----------------------------------------------------------------
-
-#' @rdname set_program
-#' @export
-set_openface <- function(location) {
-  set_program("openface", location)
-}
-
-
-# set_opensmile ----------------------------------------------------------------
-
-#' @rdname set_program
-#' @export
-set_opensmile <- function(location) {
-  set_program("opensmile", location)
-}
-
-
 # install_ffmpeg_win -----------------------------------------------------------
 
 #' Install FFmpeg on Windows
@@ -328,8 +170,7 @@ install_opensmile_win <- function(download_url = NULL, install_dir = NULL) {
   unlink(tf)
   # Update the user config files with the locations of the installed files
   set_opensmile(file.path(install_dir, "bin", "SMILExtract.exe"))
-
-  TRUE
+  return(TRUE)
 }
 
 
@@ -387,5 +228,6 @@ install_opensmile_mac <- function(download_url = NULL, install_dir = NULL,
     )
   )
   # Return TRUE
-  TRUE
+  return(TRUE)
 }
+
