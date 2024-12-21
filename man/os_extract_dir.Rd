@@ -6,6 +6,8 @@
 \usage{
 os_extract_dir(
   indir,
+  inext,
+  wavdir = NULL,
   aggdir = NULL,
   llddir = NULL,
   ...,
@@ -16,15 +18,23 @@ os_extract_dir(
 \arguments{
 \item{indir}{(character) What directory contains the input .wav files?}
 
-\item{aggdir}{(character) What directory should the AGG output friles be
-saved to?}
+\item{wavdir}{(character, default=NULL) What directory should the prepared
+WAV audio files be saved to? If \code{NULL}, temporary WAV files will be created
+and then discarded (if needed).}
+
+\item{aggdir}{(character, default=NULL) What directory should the AGG output
+files be saved to? If \code{NULL}, AGG files will not be output. Note that
+\code{aggdir} or \code{llddir} (or both) must be non-NULL.}
 
 \item{llddir}{(character, default=NULL) What directory should the LLD output
-files be saved to? If \code{NULL}, LLD files will not be output.}
+files be saved to? If \code{NULL}, LLD files will not be output. Note that
+\code{aggdir} or \code{llddir} (or both) must be non-NULL.}
 
 \item{...}{
   Arguments passed on to \code{\link[=os_extract]{os_extract}}
   \describe{
+    \item{\code{stream}}{(numeric, default=0) The index of the audio stream to extract
+(ffmpeg uses zero-indexing so 0 is the first stream).}
     \item{\code{config}}{(character, default="misc/emo_large") Which configuration file
 should be used to analyze \code{infile}? A list of available config files can be
 generated using \code{os_list_configs()}.}

@@ -4,11 +4,25 @@
 \alias{os_extract}
 \title{Extract opensmile features}
 \usage{
-os_extract(infile, aggfile = NULL, lldfile = NULL, config = "misc/emo_large")
+os_extract(
+  infile,
+  stream = 0,
+  wavfile = NULL,
+  aggfile = NULL,
+  lldfile = NULL,
+  config = "misc/emo_large"
+)
 }
 \arguments{
 \item{infile}{(character) What is the filepath for the input file to be
 analyzed? The proper format can be created by \code{os_prep_audio()}.}
+
+\item{stream}{(numeric, default=0) The index of the audio stream to extract
+(ffmpeg uses zero-indexing so 0 is the first stream).}
+
+\item{wavfile}{(character, default=NULL) Either NULL or a string indicating
+the path to save the prepared version of \code{infile} to (must end with '.wav').
+If NULL, a temporary file will be created and later discarded.}
 
 \item{aggfile}{(character, default=NULL) What is the filepath to write the
 AGG output to? If \code{NULL}, the AGG output will not be saved. Note that either

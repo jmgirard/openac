@@ -178,8 +178,14 @@ os_prep_audio <- function(infile, outfile, stream = 0) {
 #' @return `NULL`
 #' @export
 #' 
-os_prep_audio_dir <- function(indir, inext, outdir, ...,
-                              recursive = FALSE, progress = TRUE) {
+os_prep_audio_dir <- function(
+  indir, 
+  inext, 
+  outdir, 
+  ...,
+  recursive = FALSE, 
+  progress = TRUE
+) {
   # Validate input
   stopifnot(dir.exists(indir))
   stopifnot(rlang::is_character(inext, n = 1))
@@ -220,6 +226,11 @@ os_prep_audio_dir <- function(indir, inext, outdir, ...,
 #' 
 #' @param infile (character) What is the filepath for the input file to be
 #' analyzed? The proper format can be created by `os_prep_audio()`.
+#' @param stream (numeric, default=0) The index of the audio stream to extract 
+#' (ffmpeg uses zero-indexing so 0 is the first stream).
+#' @param wavfile (character, default=NULL) Either NULL or a string indicating 
+#' the path to save the prepared version of `infile` to (must end with '.wav'). 
+#' If NULL, a temporary file will be created and later discarded.
 #' @param aggfile (character, default=NULL) What is the filepath to write the 
 #' AGG output to? If `NULL`, the AGG output will not be saved. Note that either
 #' `aggfile` or `lldfile` (or both) must be non-NULL.
@@ -232,15 +243,60 @@ os_prep_audio_dir <- function(indir, inext, outdir, ...,
 #' @return A character vector including opensmile output.
 #' @export
 #' 
-os_extract <- function(infile, aggfile = NULL, lldfile = NULL,
-                       config = "misc/emo_large") {
-  # Validate input
-  stopifnot(file.exists(infile))
-  stopifnot(is.null(aggfile) || rlang::is_character(aggfile, n = 1))
-  stopifnot(is.null(lldfile) || rlang::is_character(lldfile, n = 1))
-  stopifnot(!is.null(aggfile) || !is.null(lldfile))
-  stopifnot(rlang::is_character(config, n = 1))
-  stopifnot(rlang::is_logical(tidy, n = 1))
+os_extract <- function(
+  infile, 
+  stream = 0,
+  wavfile = NULL,
+  aggfile = NULL, 
+  lldfile = NULL,
+  config = "misc/emo_large"
+) {
+  # Input validation will be handled by subfunctions
+  # Preallocate temp
+  temp <- FALSE
+  if (os_check_audio(infile) == FALSE) {
+    # If no wavfile provided, create tempfile
+    if (is.null(wavfile)) {
+      temp <- TRUE
+      wavfile <- tempfile(fileext = ".wav")
+    }
+    # Prepare audio stream as wavfile/tempfile
+    x <- os_prep_audio(
+      infile = infile,
+      outfile = wavfile,
+      stream = stream
+    )
+  } else {
+    wavfile <- infile
+  }
+  # Extract features from prepared audio file
+  out <- os_extract_wav(
+    infile = wavfile,
+    aggfile = aggfile,
+    lldfile = lldfile,
+    config = config
+  )
+  # Clean up temporary file if created
+  if (temp) unlink(wavfile)
+  # Return the output from opensmile
+  out
+}
+
+
+# os_extract_wav ------------------------------------------------------------
+
+os_extract_wav <- function(
+  infile,
+  aggfile = NULL,
+  lldfile = NULL,
+  config = "misc/emo_large"
+) {
+  # Validate inputs
+  stopifnot(file.exists(infile), os_check_audio(infile))
+  stopifnot(is.null(aggfile) || 
+   (rlang::is_character(aggfile, n = 1) && tools::file_ext(aggfile) == "csv"))
+  stopifnot(is.null(lldfile) || 
+    (rlang::is_character(lldfile, n = 1) && tools::file_ext(lldfile) == "csv"))
   config <- os_check_config(config)
   # Create output directories if necessary
   if (!is.null(aggfile) && !dir.exists(dirname(aggfile))) {
@@ -287,21 +343,36 @@ os_extract <- function(infile, aggfile = NULL, lldfile = NULL,
 #' by using `plan()` beforehand.
 #' 
 #' @param indir (character) What directory contains the input .wav files?
-#' @param aggdir (character) What directory should the AGG output friles be 
-#'   saved to?
+#' @param wavdir (character, default=NULL) What directory should the prepared 
+#' WAV audio files be saved to? If `NULL`, temporary WAV files will be created
+#' and then discarded (if needed).
+#' @param aggdir (character, default=NULL) What directory should the AGG output 
+#' files be saved to? If `NULL`, AGG files will not be output. Note that 
+#' `aggdir` or `llddir` (or both) must be non-NULL.
 #' @param llddir (character, default=NULL) What directory should the LLD output
-#'   files be saved to? If `NULL`, LLD files will not be output.
-#' @inheritDotParams os_extract config
+#' files be saved to? If `NULL`, LLD files will not be output. Note that 
+#' `aggdir` or `llddir` (or both) must be non-NULL.
+#' @inheritDotParams os_extract stream config
 #' @param recursive (logical, default=FALSE) Should files in subdirectories
 #'  within `indir` be included?
 #' @param progress (logical, default=TRUE) Should a progress bar be shown?
 #' @return `NULL`
 #' @export
 #' 
-os_extract_dir <- function(indir, aggdir = NULL, llddir = NULL, ...,
-                           recursive = FALSE, progress = TRUE) {
+os_extract_dir <- function(
+  indir, 
+  inext,
+  wavdir = NULL,
+  aggdir = NULL, 
+  llddir = NULL, 
+  ...,
+  recursive = FALSE, 
+  progress = TRUE
+) {
   # Validate inputs
   stopifnot(dir.exists(indir))
+  stopifnot(rlang::is_character(inext, n = 1))
+  stopifnot(is.null(wavdir) || rlang::is_character(wavdir, n = 1))
   stopifnot(is.null(aggdir) || rlang::is_character(aggdir, n = 1))
   stopifnot(is.null(llddir) || rlang::is_character(llddir, n = 1))
   stopifnot(!is.null(aggdir) || !is.null(llddir))
@@ -310,17 +381,25 @@ os_extract_dir <- function(indir, aggdir = NULL, llddir = NULL, ...,
   # Find input filepaths
   infiles <- list.files(
     path = indir,
-    pattern = "wav$",
+    pattern = paste0(inext, "$"),
     full.names = TRUE,
     recursive = recursive
   )
   # Construct iteration data frame
   df <- data.frame(infile = infiles)
+  # If saving prepared WAV files...
+  if (!is.null(wavdir)) {
+    # Construct WAV output filepaths
+    wavfiles <- gsub(indir, wavdir, infiles)
+    wavfiles <- gsub(inext, "wav", wavfiles)
+    # Add to iteration data frame
+    df <- cbind(df, wavfile = wavfiles)
+  }
   # If exporting AGG output...
   if (!is.null(aggdir)) {
     # Construct AGG output filepaths
     aggfiles <- gsub(indir, aggdir, infiles)
-    aggfiles <- gsub("wav", "csv", aggfiles)
+    aggfiles <- gsub(inext, "csv", aggfiles)
     # Add to iteration data frame
     df <- cbind(df, aggfile = aggfiles)
   }
@@ -328,7 +407,7 @@ os_extract_dir <- function(indir, aggdir = NULL, llddir = NULL, ...,
   if (!is.null(llddir)) {
     # Construct LLD output filepaths
     lldfiles <- gsub(indir, llddir, infiles)
-    lldfiles <- gsub("wav", "csv", lldfiles)
+    lldfiles <- gsub(inext, "csv", lldfiles)
     # Add to iteration data frame
     df <- cbind(df, lldfile = lldfiles)
   }

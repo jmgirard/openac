@@ -180,8 +180,11 @@ install_opensmile_win <- function(download_url = NULL, install_dir = NULL) {
 # TODO: Write documentation
 
 #' @export
-install_opensmile_mac <- function(download_url = NULL, install_dir = NULL,
-                                  arch = c("armv8", "x86_64")) {
+install_opensmile_mac <- function(
+  download_url = NULL, 
+  install_dir = NULL,
+  arch = c("armv8", "x86_64")
+) {
   # Validate input
   stopifnot(is.null(download_url) || rlang::is_character(download_url, n = 1))
   stopifnot(is.null(install_dir) || rlang::is_character(install_dir, n = 1))

@@ -112,14 +112,16 @@ aw_prep_audio <- function(infile, outfile, stream = 0) {
 #'   `audio.whisper:::predict.whisper()`.
 #' @return A list object containing the full whisper output.
 #' @export
-aw_transcribe <- function(infile,
-                          model,
-                          language = "auto",
-                          stream = 0,
-                          wavfile = NULL,
-                          rdsfile = NULL,
-                          csvfile = NULL,
-                          ...) {
+aw_transcribe <- function(
+  infile,
+  model,
+  language = "auto",
+  stream = 0,
+  wavfile = NULL,
+  rdsfile = NULL,
+  csvfile = NULL,
+  ...
+) {
   # Input validation will be handled by subfunctions
   # Preallocate temp
   temp <- FALSE
@@ -156,14 +158,16 @@ aw_transcribe <- function(infile,
 
 # aw_transcribe_wav ------------------------------------------------------------
 
-aw_transcribe_wav <- function(infile,
-                              model,
-                              language = "auto",
-                              rdsfile = NULL,
-                              csvfile = NULL,
-                              ...) {
+aw_transcribe_wav <- function(
+  infile,
+  model,
+  language = "auto",
+  rdsfile = NULL,
+  csvfile = NULL,
+  ...
+) {
   # Validate inputs
-  stopifnot(file.exists(infile))
+  stopifnot(file.exists(infile), aw_check_audio(infile))
   stopifnot(class(model) == "whisper")
   stopifnot(rlang::is_character(language, n = 1))
   stopifnot(is.null(rdsfile) || 
@@ -200,9 +204,13 @@ aw_transcribe_wav <- function(infile,
 
 # aw_transcribe_dir ------------------------------------------------------------
 
-#' Title
+#' Run aw_transcribe() on multiple files in a directory
 #' 
-#' Description
+#' Find all files in a specified directory with a specified extension and then 
+#' transcribe each using whisper. Can optionally be run in parallel
+#' by using `plan()` beforehand; however, whisper is much more computationally 
+#' intensive than the other programs (especially when using CUDA) and thus 
+#' trying to run this in parallel could easily overwhelm your computer.
 #' 
 #' @param indir (character) What directory contains the input files?
 #' @param inext (character) What file extension should be looked for in `indir` 
@@ -218,8 +226,17 @@ aw_transcribe_wav <- function(infile,
 #' @return A list object containing the whisper output for each input file.
 #' @export
 #' 
-aw_transcribe_dir <- function(indir, inext, rdsdir = NULL, csvdir = NULL, 
-  model, language = "auto", ..., recursive = FALSE, progress = TRUE) {
+aw_transcribe_dir <- function(
+  indir, 
+  inext, 
+  rdsdir = NULL, 
+  csvdir = NULL, 
+  model, 
+  language = "auto", 
+  ..., 
+  recursive = FALSE, 
+  progress = TRUE
+) {
   # Validate inputs
   stopifnot(dir.exists(indir))
   stopifnot(rlang::is_character(inext, n = 1))

@@ -2,7 +2,7 @@
 % Please edit documentation in R/use_whisper.R
 \name{aw_transcribe_dir}
 \alias{aw_transcribe_dir}
-\title{Title}
+\title{Run aw_transcribe() on multiple files in a directory}
 \usage{
 aw_transcribe_dir(
   indir,
@@ -46,5 +46,9 @@ within \code{indir} be included?}
 A list object containing the whisper output for each input file.
 }
 \description{
-Description
+Find all files in a specified directory with a specified extension and then
+transcribe each using whisper. Can optionally be run in parallel
+by using \code{plan()} beforehand; however, whisper is much more computationally
+intensive than the other programs (especially when using CUDA) and thus
+trying to run this in parallel could easily overwhelm your computer.
 }

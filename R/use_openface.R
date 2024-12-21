@@ -50,10 +50,18 @@ of <- openface
 #' @references https://github.com/TadasBaltrusaitis/OpenFace/wiki/Command-line-arguments
 #' @export
 #' 
-of_extract <- function(infile, outfile,
-                       fp2D = TRUE, fp3D = TRUE, pdm = FALSE,
-                       pose = TRUE, gaze = TRUE, aus = TRUE,
-                       wild = FALSE, multiview = FALSE) {
+of_extract <- function(
+  infile, 
+  outfile,
+  fp2D = TRUE, 
+  fp3D = TRUE, 
+  pdm = FALSE,
+  pose = TRUE, 
+  gaze = TRUE, 
+  aus = TRUE,
+  wild = FALSE, 
+  multiview = FALSE
+) {
   # Validate input
   stopifnot(file.exists(infile))
   stopifnot(rlang::is_character(outfile, n = 1))
@@ -103,8 +111,14 @@ of_extract <- function(infile, outfile,
 #' @return `NULL`
 #' @export
 #' 
-of_extract_dir <- function(indir, inext, outdir, ...,
-                           recursive = FALSE, progress = TRUE) {
+of_extract_dir <- function(
+  indir, 
+  inext, 
+  outdir, 
+  ...,
+  recursive = FALSE, 
+  progress = TRUE
+) {
   # Validate input
   stopifnot(dir.exists(indir))
   stopifnot(rlang::is_character(inext, n = 1))
