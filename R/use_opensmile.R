@@ -30,11 +30,12 @@ os <- opensmile
 
 # os_list_configs --------------------------------------------------------------
 
-#' Title
+#' List openSMILE configuration files
 #' 
-#' Description
+#' Return a list of all configuration (.config) files found in the openSMILE
+#' installation folder.
 #' 
-#' @return A character vector
+#' @return A character vector containing the configuration files found.
 #' @export
 #' @examples
 #' os_list_configs()
@@ -73,6 +74,52 @@ os_check_config <- function(config) {
 }
 
 
+# os_check_audio ---------------------------------------------------------------
+
+#' Check if an audio file is ready for analysis by openSMILE
+#'
+#' Check if an audio file has the proper format for openSMILE, i.e., the 
+#' pcm_s16le audio codec and 1 audio channel.
+#'
+#' @param infile A required string indicating the filepath of the audio file to
+#'   check.
+#' @param verbose An optional logical indicating whether to print warnings.
+#' @return A logical indicating whether `infile` is ready for openSMILE
+#' @export
+os_check_audio <- function(infile, verbose = FALSE) {
+  # Validate input
+  stopifnot(file.exists(infile))
+  stopifnot(rlang::is_logical(verbose))
+  # Count streams
+  streams <- ffp_count_streams(infile)
+  # Create ffprobe command
+  arg <- paste0(
+    '-v error',
+    ' -show_entries stream=codec_name,sample_rate,channels',
+    ' -of default=noprint_wrappers=1:nokey=1',
+    ' "', infile, '"'
+  )
+  # Run ffprobe command
+  dat <- ffprobe(arg)
+  # Check ffprobe output
+  tests <- c(
+    No_Video = streams["Video"] == 0,
+    One_Stream = streams["Audio"] == 1,
+    Right_Codec = dat[[1]] == "pcm_s16le",
+    One_Channel = dat[[3]] == "1"
+  )
+  # If verbose, state the result
+  if (verbose) {
+    print(tests)
+    if (dat[[2]] != "44100") {
+      cli::cli_warn("A sampling rate of 44100 is recommended.")
+    }
+  }
+  # Return single logical
+  all(tests)
+}
+
+
 # os_extract -------------------------------------------------------------------
 
 #' Extract opensmile features
@@ -83,26 +130,30 @@ os_check_config <- function(config) {
 #' 
 #' @param infile (character) What is the filepath for the input file to be
 #' analyzed? The proper format can be created by `os_prep_audio()`.
-#' @param aggfile (character) What is the filepath to write the AGG output to?
+#' @param aggfile (character, default=NULL) What is the filepath to write the 
+#' AGG output to? If `NULL`, the AGG output will not be saved. Note that either
+#' `aggfile` or `lldfile` (or both) must be non-NULL.
 #' @param lldfile (character, default=NULL) What is the filepath to write the 
-#' LLD output to? If `NULL`, the LLD output will not be saved.
+#' LLD output to? If `NULL`, the LLD output will not be saved. Note that either
+#' `aggfile` or `lldfile` (or both) must be non-NULL.
 #' @param config (character, default="misc/emo_large") Which configuration file 
 #' should be used to analyze `infile`? A list of available config files can be
 #' generated using `os_list_configs()`.
 #' @return A character vector including opensmile output.
 #' @export
 #' 
-os_extract <- function(infile, aggfile, lldfile = NULL,
+os_extract <- function(infile, aggfile = NULL, lldfile = NULL,
                        config = "misc/emo_large") {
   # Validate input
   stopifnot(file.exists(infile))
-  stopifnot(rlang::is_character(aggfile, n = 1))
+  stopifnot(is.null(aggfile) || rlang::is_character(aggfile, n = 1))
   stopifnot(is.null(lldfile) || rlang::is_character(lldfile, n = 1))
+  stopifnot(!is.null(aggfile) || !is.null(lldfile))
   stopifnot(rlang::is_character(config, n = 1))
   stopifnot(rlang::is_logical(tidy, n = 1))
   config <- os_check_config(config)
   # Create output directories if necessary
-  if (!dir.exists(dirname(aggfile))) {
+  if (!is.null(aggfile) && !dir.exists(dirname(aggfile))) {
     dir.create(dirname(aggfile), recursive = TRUE)
   }
   if (!is.null(lldfile) && !dir.exists(dirname(lldfile))) {
@@ -112,7 +163,11 @@ os_extract <- function(infile, aggfile, lldfile = NULL,
   arg <- paste0(
     '-C "', config, '"',
     ' -I "', infile, '"',
-    ' -csvoutput "', aggfile, '"',
+    ifelse(
+      test = !is.null(aggfile),
+      yes = paste0(' -csvoutput "', aggfile, '"'),
+      no = ''
+    ),
     ifelse(
       test = !is.null(lldfile), 
       yes = paste0(' -lldcsvoutput "', lldfile, '"'),
@@ -122,8 +177,12 @@ os_extract <- function(infile, aggfile, lldfile = NULL,
   # Run opensmile command
   out <- opensmile(arg)
   # Fix the output CSV files
-  os_fix_csv(aggfile)
-  if (!is.null(lldfile)) os_fix_csv(lldfile)
+  if (!is.null(aggfile)) {
+    os_fix_csv(aggfile)
+  }
+  if (!is.null(lldfile)) {
+    os_fix_csv(lldfile)
+  }
   # Return opensmile output
   out
 }
@@ -149,12 +208,13 @@ os_extract <- function(infile, aggfile, lldfile = NULL,
 #' @return `NULL`
 #' @export
 #' 
-os_extract_dir <- function(indir, aggdir, llddir = NULL, ...,
+os_extract_dir <- function(indir, aggdir = NULL, llddir = NULL, ...,
                            recursive = FALSE, progress = TRUE) {
   # Validate inputs
   stopifnot(dir.exists(indir))
-  stopifnot(rlang::is_character(aggdir, n = 1))
+  stopifnot(is.null(aggdir) || rlang::is_character(aggdir, n = 1))
   stopifnot(is.null(llddir) || rlang::is_character(llddir, n = 1))
+  stopifnot(!is.null(aggdir) || !is.null(llddir))
   stopifnot(rlang::is_logical(recursive, n = 1))
   stopifnot(rlang::is_logical(progress, n = 1))
   # Find input filepaths
@@ -164,14 +224,16 @@ os_extract_dir <- function(indir, aggdir, llddir = NULL, ...,
     full.names = TRUE,
     recursive = recursive
   )
-  # Construct AGG output filepaths
-  aggfiles <- gsub(indir, aggdir, infiles)
-  aggfiles <- gsub("wav", "csv", aggfiles)
   # Construct iteration data frame
-  df <- data.frame(
-    infile = infiles,
-    aggfile = aggfiles
-  )
+  df <- data.frame(infile = infiles)
+  # If exporting AGG output...
+  if (!is.null(aggdir)) {
+    # Construct AGG output filepaths
+    aggfiles <- gsub(indir, aggdir, infiles)
+    aggfiles <- gsub("wav", "csv", aggfiles)
+    # Add to iteration data frame
+    df <- cbind(df, aggfile = aggfiles)
+  }
   # If exporting LLD output...
   if (!is.null(llddir)) {
     # Construct LLD output filepaths

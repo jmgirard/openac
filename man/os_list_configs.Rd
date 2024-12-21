@@ -2,15 +2,16 @@
 % Please edit documentation in R/use_opensmile.R
 \name{os_list_configs}
 \alias{os_list_configs}
-\title{Title}
+\title{List openSMILE configuration files}
 \usage{
 os_list_configs()
 }
 \value{
-A character vector
+A character vector containing the configuration files found.
 }
 \description{
-Description
+Return a list of all configuration (.config) files found in the openSMILE
+installation folder.
 }
 \examples{
 os_list_configs()

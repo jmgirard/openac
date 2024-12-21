@@ -6,7 +6,7 @@
 \usage{
 os_extract_dir(
   indir,
-  aggdir,
+  aggdir = NULL,
   llddir = NULL,
   ...,
   recursive = FALSE,

@@ -21,6 +21,7 @@ Attempt to find and run openface with the specified arguments.
 }
 \examples{
 openface('-h')
+
 }
 \references{
 https://github.com/TadasBaltrusaitis/OpenFace/wiki/Command-line-arguments

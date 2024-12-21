@@ -4,16 +4,19 @@
 \alias{os_extract}
 \title{Extract opensmile features}
 \usage{
-os_extract(infile, aggfile, lldfile = NULL, config = "misc/emo_large")
+os_extract(infile, aggfile = NULL, lldfile = NULL, config = "misc/emo_large")
 }
 \arguments{
 \item{infile}{(character) What is the filepath for the input file to be
 analyzed? The proper format can be created by \code{os_prep_audio()}.}
 
-\item{aggfile}{(character) What is the filepath to write the AGG output to?}
+\item{aggfile}{(character, default=NULL) What is the filepath to write the
+AGG output to? If \code{NULL}, the AGG output will not be saved. Note that either
+\code{aggfile} or \code{lldfile} (or both) must be non-NULL.}
 
 \item{lldfile}{(character, default=NULL) What is the filepath to write the
-LLD output to? If \code{NULL}, the LLD output will not be saved.}
+LLD output to? If \code{NULL}, the LLD output will not be saved. Note that either
+\code{aggfile} or \code{lldfile} (or both) must be non-NULL.}
 
 \item{config}{(character, default="misc/emo_large") Which configuration file
 should be used to analyze \code{infile}? A list of available config files can be

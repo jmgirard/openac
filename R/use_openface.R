@@ -12,6 +12,7 @@
 #' @export
 #' @examples
 #' openface('-h')
+#' 
 openface <- function(arg) {
   # Validate input
   stopifnot(rlang::is_character(arg, n = 1))
@@ -24,6 +25,7 @@ openface <- function(arg) {
 
 #' @rdname openface
 #' @export
+#' 
 of <- openface
 
 
@@ -47,6 +49,7 @@ of <- openface
 #' @return A character vector containing openface output.
 #' @references https://github.com/TadasBaltrusaitis/OpenFace/wiki/Command-line-arguments
 #' @export
+#' 
 of_extract <- function(infile, outfile,
                        fp2D = TRUE, fp3D = TRUE, pdm = FALSE,
                        pose = TRUE, gaze = TRUE, aus = TRUE,
@@ -99,6 +102,7 @@ of_extract <- function(infile, outfile,
 #' @param progress (logical, default=TRUE) Should a progress bar be shown?
 #' @return `NULL`
 #' @export
+#' 
 of_extract_dir <- function(indir, inext, outdir, ...,
                            recursive = FALSE, progress = TRUE) {
   # Validate input
@@ -128,3 +132,4 @@ of_extract_dir <- function(indir, inext, outdir, ...,
     .progress = progress
   )
 }
+
