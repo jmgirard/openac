@@ -21,6 +21,7 @@ Attempt to find and run ffmpeg with the specified arguments.
 }
 \examples{
 ffmpeg('-version')
+
 }
 \references{
 https://ffmpeg.org/ffmpeg.html

@@ -15,4 +15,5 @@ Check that opensmile is installed and accessible and working properly.
 }
 \examples{
 check_opensmile()
+
 }

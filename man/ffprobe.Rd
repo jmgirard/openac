@@ -21,6 +21,7 @@ Attempt to find and run ffprobe with the specified arguments.
 }
 \examples{
 ffprobe('-version')
+
 }
 \references{
 https://ffmpeg.org/ffprobe.html

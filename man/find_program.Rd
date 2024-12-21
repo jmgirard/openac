@@ -4,27 +4,23 @@
 \alias{find_program}
 \alias{find_ffmpeg}
 \alias{find_ffprobe}
-\alias{find_ffplay}
 \alias{find_openface}
 \alias{find_opensmile}
 \title{Find the location of a dependency program}
 \usage{
-find_program(
-  program = c("ffmpeg", "ffprobe", "ffplay", "openface", "opensmile")
-)
+find_program(program)
 
 find_ffmpeg()
 
 find_ffprobe()
-
-find_ffplay()
 
 find_openface()
 
 find_opensmile()
 }
 \arguments{
-\item{program}{A string indicating which program to find}
+\item{program}{(character) Which program to find? Can be either "ffmpeg",
+"ffprobe", "openface", or "opensmile"}
 }
 \value{
 Either a string indicating whether the requested program was found or

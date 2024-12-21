@@ -14,4 +14,5 @@ Check that ffprobe is installed and accessible and working properly.
 }
 \examples{
 check_ffprobe()
+
 }

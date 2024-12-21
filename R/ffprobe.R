@@ -12,6 +12,7 @@
 #' @export
 #' @examples 
 #' ffprobe('-version')
+#' 
 ffprobe <- function(arg) {
   # Validate input
   stopifnot(rlang::is_character(arg, n = 1))
@@ -24,6 +25,7 @@ ffprobe <- function(arg) {
 
 #' @rdname ffprobe
 #' @export
+#' 
 ffp <- ffprobe
 
 
@@ -37,6 +39,7 @@ ffp <- ffprobe
 #' @return A named numeric vector with two elements (`Video` and `Audio`)
 #' indicating the number of video and audio streams in `infile`.
 #' @export
+#' 
 ffp_count_streams <- function(infile) {
   # Validate inputs
   stopifnot(file.exists(infile))

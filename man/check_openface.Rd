@@ -15,4 +15,5 @@ Check that openface is installed and accessible and working properly.
 }
 \examples{
 check_openface()
+
 }

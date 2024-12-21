@@ -129,7 +129,7 @@ os_extract <- function(infile, aggfile, lldfile = NULL,
 }
 
 
-# os_extract_dir() -------------------------------------------------------------
+# os_extract_dir ---------------------------------------------------------------
 
 #' Run os_extract() on multiple files in a directory
 #' 

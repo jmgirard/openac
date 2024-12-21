@@ -12,6 +12,7 @@
 #' @export
 #' @examples 
 #' ffmpeg('-version')
+#' 
 ffmpeg <- function(arg) {
   # Validate input
   stopifnot(rlang::is_character(arg, n = 1))
@@ -24,4 +25,5 @@ ffmpeg <- function(arg) {
 
 #' @rdname ffmpeg
 #' @export
+#' 
 ffm <- ffmpeg

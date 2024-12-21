@@ -4,21 +4,15 @@
 \alias{set_program}
 \alias{set_ffmpeg}
 \alias{set_ffprobe}
-\alias{set_ffplay}
 \alias{set_openface}
 \alias{set_opensmile}
 \title{Set the location of a dependency program}
 \usage{
-set_program(
-  program = c("ffmpeg", "ffprobe", "ffplay", "openface", "opensmile"),
-  location
-)
+set_program(program, location)
 
 set_ffmpeg(location)
 
 set_ffprobe(location)
-
-set_ffplay(location)
 
 set_openface(location)
 

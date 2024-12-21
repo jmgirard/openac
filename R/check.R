@@ -8,6 +8,7 @@
 #' @export
 #' @examples
 #' check_ffmpeg()
+#' 
 check_ffmpeg <- function() {
   # Try to find the ffmpeg executable
   ffm <- find_ffmpeg()
@@ -19,6 +20,7 @@ check_ffmpeg <- function() {
   return(TRUE)
 }
 
+
 # check_ffprobe() --------------------------------------------------------------
 
 #' Check that ffprobe is accessible
@@ -29,6 +31,7 @@ check_ffmpeg <- function() {
 #' @export
 #' @examples
 #' check_ffprobe()
+#' 
 check_ffprobe <- function() {
   # Try to find the ffprobe executable
   ffp <- find_ffprobe()
@@ -52,6 +55,7 @@ check_ffprobe <- function() {
 #' @export
 #' @examples
 #' check_openface()
+#' 
 check_openface <- function() {
   # Try to find the openface executable
   of <- find_openface()
@@ -75,6 +79,7 @@ check_openface <- function() {
 #' @export
 #' @examples
 #' check_opensmile()
+#' 
 check_opensmile <- function() {
   # Try to find the opensmile executable
   of <- find_opensmile()

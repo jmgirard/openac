@@ -14,4 +14,5 @@ Check that ffmpeg is installed and accessible and working properly.
 }
 \examples{
 check_ffmpeg()
+
 }
