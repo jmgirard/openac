@@ -123,15 +123,12 @@ check_ffmpeg <- function() {
 check_ffprobe <- function() {
   # Try to find the ffprobe executable
   ffp <- find_ffprobe()
-  if (is.null(ffp)) {
-    return(FALSE)
-  }
+  if (is.null(ffp)) return(FALSE)
   # Try to call the ffprobe executable
   res <- try(ffprobe('-version'), silent = TRUE)
-  if(inherits(res, "try-error")) {
-    return(FALSE)
-  }
-  TRUE
+  if(inherits(res, "try-error")) return(FALSE)
+  # If not null or error, return TRUE
+  return(TRUE)
 }
 
 # extract_hifi() -------------------------------------------------------------
