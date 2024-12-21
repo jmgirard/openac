@@ -1,5 +1,4 @@
-
-# opensmile() ------------------------------------------------------------------
+# opensmile --------------------------------------------------------------------
 
 #' Low-level access to the opensmile command line interface
 #'
@@ -9,9 +8,11 @@
 #'   SMILEextract command line call.
 #' @return A character vector containing the output of openface.
 #' @references https://audeering.github.io/opensmile/
+#' @aliases os
 #' @export
 #' @examples
 #' opensmile('-h')
+#' 
 opensmile <- function(arg) {
   # Validate input
   stopifnot(rlang::is_character(arg, n = 1))
@@ -20,173 +21,212 @@ opensmile <- function(arg) {
 }
 
 
-# os_list_configs() ----------------------------------------------------------
+# os ---------------------------------------------------------------------------
 
+#' @rdname opensmile
 #' @export
+os <- opensmile
+
+
+# os_list_configs --------------------------------------------------------------
+
+#' Title
+#' 
+#' Description
+#' 
+#' @return A character vector
+#' @export
+#' @examples
+#' os_list_configs()
+#' 
 os_list_configs <- function() {
   # Find opensmile install directory
   fd <- dirname(find_opensmile())
   # Find all config files
-  list.files(
+  configs <- list.files(
     path = file.path(fd, "..", "config"),
     pattern = ".conf$",
     full.names = FALSE,
     recursive = TRUE
   )
+  # Strip away file extensions
+  tools::file_path_sans_ext(configs)
 }
 
 
-# check_config() ---------------------------------------------------------------
+# os_check_config --------------------------------------------------------------
 
-# TODO: Add docs
 #' @export
-opensmile_check_config <- function(config) {
-  # Prepare 
+os_check_config <- function(config) {
+  # Validate input
+  stopifnot(rlang::is_character(config, n = 1))
+  # Strip away file extensions
   config_sans <- tools::file_path_sans_ext(config)
-  configs_sans <- tools::file_path_sans_ext(opensmile_configs())
-  if (config_sans %in% configs_sans) {
-    fd <- dirname(find_opensmile())
-    config <- file.path(fd, "..", "config", paste0(config_sans, ".conf"))
-    config <- tools::file_path_as_absolute(config)
-  } else {
+  configs_sans <- tools::file_path_sans_ext(os_list_configs())
+  if (config_sans %in% configs_sans == FALSE) {
     cli::cli_abort("Config file not found in opensmile installation.")
   }
-  config
+  # Get absolute path to config
+  fd <- dirname(find_opensmile())
+  config <- file.path(fd, "..", "config", paste0(config_sans, ".conf"))
+  tools::file_path_as_absolute(config)
 }
 
 
-# extract_opensmile() ----------------------------------------------------------
+# os_extract -------------------------------------------------------------------
 
+#' Extract opensmile features
+#' 
+#' Extract openSMILE acoustic features from an audio file based on a config 
+#' file. Lower level descriptors (LLDs) will be calculated per frame and then 
+#' summarized into an aggregate (AGG) file.
+#' 
+#' @param infile (character) What is the filepath for the input file to be
+#' analyzed? The proper format can be created by `os_prep_audio()`.
+#' @param aggfile (character) What is the filepath to write the AGG output to?
+#' @param lldfile (character, default=NULL) What is the filepath to write the 
+#' LLD output to? If `NULL`, the LLD output will not be saved.
+#' @param config (character, default="misc/emo_large") Which configuration file 
+#' should be used to analyze `infile`? A list of available config files can be
+#' generated using `os_list_configs()`.
+#' @return A character vector including opensmile output.
 #' @export
-opensmile_extract <- function(infile, aggfile, lldfile = NULL,
-                              config = "misc/emo_large", tidy = TRUE) {
-
-  stopifnot(
-    is.character(infile), length(infile) == 1,
-    is.character(aggfile), length(aggfile) == 1,
-    is.character(config), length(config) == 1
-  )
-  
-  stopifnot(
-    is.null(lldfile) || (is.character(lldfile) && length(lldfile) == 1)
-  )
-
-  config <- check_config(config)
-
-  if (!dir.exists(dirname(aggfile))) dir.create(dirname(aggfile), recursive = TRUE)
-  
+#' 
+os_extract <- function(infile, aggfile, lldfile = NULL,
+                       config = "misc/emo_large") {
+  # Validate input
+  stopifnot(file.exists(infile))
+  stopifnot(rlang::is_character(aggfile, n = 1))
+  stopifnot(is.null(lldfile) || rlang::is_character(lldfile, n = 1))
+  stopifnot(rlang::is_character(config, n = 1))
+  stopifnot(rlang::is_logical(tidy, n = 1))
+  config <- os_check_config(config)
+  # Create output directories if necessary
+  if (!dir.exists(dirname(aggfile))) {
+    dir.create(dirname(aggfile), recursive = TRUE)
+  }
+  if (!is.null(lldfile) && !dir.exists(dirname(lldfile))) {
+    dir.create(dirname(lldfile), recursive = TRUE)
+  }
+  # Construct opensmile command
   arg <- paste0(
     '-C "', config, '"',
     ' -I "', infile, '"',
-    ' -csvoutput "', aggfile, '"'
+    ' -csvoutput "', aggfile, '"',
+    ifelse(
+      test = !is.null(lldfile), 
+      yes = paste0(' -lldcsvoutput "', lldfile, '"'),
+      no = ''
+    )
   )
-
-  if (!is.null(lldfile)) {
-    if (!dir.exists(dirname(lldfile))) dir.create(dirname(lldfile), recursive = TRUE)
-    arg <- paste0(arg, ' -lldcsvoutput "', lldfile, '"')
-  }
-
+  # Run opensmile command
   out <- opensmile(arg)
-
-  if (tidy == TRUE) {
-    opensmile_tidy_data(aggfile)
-    if (!is.null(lldfile)) opensmile_tidy_data(lldfile)
-  }
-
+  # Fix the output CSV files
+  os_fix_csv(aggfile)
+  if (!is.null(lldfile)) os_fix_csv(lldfile)
+  # Return opensmile output
   out
 }
 
 
-# extract_opensmile_dir() -------------------------------------------------------------
+# os_extract_dir() -------------------------------------------------------------
 
+#' Run os_extract() on multiple files in a directory
+#' 
+#' Find all .wav files in a specified directory and then extract opensmile
+#' features from each (according to `config`). Can optionally be run in parallel
+#' by using `plan()` beforehand.
+#' 
+#' @param indir (character) What directory contains the input .wav files?
+#' @param aggdir (character) What directory should the AGG output friles be 
+#'   saved to?
+#' @param llddir (character, default=NULL) What directory should the LLD output
+#'   files be saved to? If `NULL`, LLD files will not be output.
+#' @inheritDotParams os_extract config
+#' @param recursive (logical, default=FALSE) Should files in subdirectories
+#'  within `indir` be included?
+#' @param progress (logical, default=TRUE) Should a progress bar be shown?
+#' @return `NULL`
 #' @export
-extract_opensmile_dir <- function(indir, aggdir, llddir = NULL, config = "misc/emo_large", 
-                                  tidy = TRUE, recursive = FALSE, .progress = TRUE) {
-
+#' 
+os_extract_dir <- function(indir, aggdir, llddir = NULL, ...,
+                           recursive = FALSE, progress = TRUE) {
+  # Validate inputs
   stopifnot(dir.exists(indir))
-
+  stopifnot(rlang::is_character(aggdir, n = 1))
+  stopifnot(is.null(llddir) || rlang::is_character(llddir, n = 1))
+  stopifnot(rlang::is_logical(recursive, n = 1))
+  stopifnot(rlang::is_logical(progress, n = 1))
+  # Find input filepaths
   infiles <- list.files(
     path = indir,
     pattern = "wav$",
     full.names = TRUE,
     recursive = recursive
   )
-
+  # Construct AGG output filepaths
   aggfiles <- gsub(indir, aggdir, infiles)
   aggfiles <- gsub("wav", "csv", aggfiles)
-
+  # Construct iteration data frame
+  df <- data.frame(
+    infile = infiles,
+    aggfile = aggfiles
+  )
+  # If exporting LLD output...
   if (!is.null(llddir)) {
+    # Construct LLD output filepaths
     lldfiles <- gsub(indir, llddir, infiles)
     lldfiles <- gsub("wav", "csv", lldfiles)
-    furrr::future_pwalk(
-      .l = data.frame(
-        infile = infiles,
-        aggfile = aggfiles,
-        lldfile = lldfiles
-      ),
-      config = config,
-      tidy = tidy,
-      .f = extract_opensmile,
-      .progress = .progress
-    )
-  } else {
-    furrr::future_pwalk(
-      .l = data.frame(
-        infile = infiles,
-        aggfile = aggfiles
-      ),
-      config = config,
-      tidy = tidy,
-      lldfile = NULL,
-      .f = extract_opensmile,
-      .progress = .progress
-    )
+    # Add to iteration data frame
+    df <- cbind(df, lldfile = lldfiles)
   }
+  # Iterate os_extract() over infiles
+  furrr::future_pwalk(
+    .l = df,
+    .f = os_extract,
+    ...,
+    .progress = progress
+  )
 }
 
 
-# check_opensmile() ------------------------------------------------------------
+# os_fix_csv -------------------------------------------------------------------
 
-#' @export
-check_opensmile <- function() {
-  # Try to find the opensmile executable
-  of <- find_opensmile()
-  if (is.null(of)) return(FALSE)
-  # Try to call the openface executable
-  res <- try(opensmile('-h'), silent = TRUE)
-  if(inherits(res, "try-error")) return(FALSE)
-  # If not null or error, return TRUE
-  return(TRUE)
-}
-
-
-# opensmile_tidy_data() -------------------------------------------------------------
-
-#' @export
-opensmile_tidy_data <- function(infile) {
+os_fix_csv <- function(infile) {
+  # Validate input
+  stopifnot(file.exists(infile))
+  # Read in opensmile output in original format
   df <- read.csv(file = infile, sep = ";", dec = ".")
+  # Write out opensmile output in traditional format
   write.csv(df, file = infile, row.names = FALSE)
 }
 
-# opensmile_prepare_audio() -------------------------------------------------------------
+
+# os_prep_audio ----------------------------------------------------------------
 
 #' Prepare an audio stream for analysis by opensmile
 #' 
-#' Import an audio or video file and export an audio file for acoustic analysis. Extract the audio 
-#' stream specified by `stream` and then transcode it to a mono 16-bit PCM .wav file at 44.1kHz.
+#' Import an audio or video file and export an audio file for acoustic analysis.
+#' Extract the audio stream specified by `stream` and then transcode it to a 
+#' mono (i.e., single channel) 16-bit PCM .wav file at 44.1kHz sampling rate.
 #' 
-#' @param infile (character) The filepath of the audio or video file to import.
-#' @param outfile (character) The filepath of the .wav file to create.
-#' @param stream (numeric, default=0) The index of the audio stream to extract (ffmpeg uses zero-indexing so 0 is the first stream).
+#' @param infile (character) What is the filepath of the audio or video file 
+#'   to import?
+#' @param outfile (character) What is the filepath of the .wav file to create?
+#' @param stream (numeric, default=0) The index of the audio stream to extract 
+#' (ffmpeg uses zero-indexing so 0 is the first stream).
 #' @return A character vector containing the output of ffmpeg.
 #' @export
-opensmile_prepare_audio <- function(infile, outfile, stream = 0) {
+#' 
+os_prep_audio <- function(infile, outfile, stream = 0) {
   # Validate input
   stopifnot(file.exists(infile))
   stopifnot(rlang::is_character(outfile, n = 1))
   stopifnot(rlang::is_integerish(stream, n = 1), stream >= 0)
   # Create outfile directory if needed
-  if (!dir.exists(dirname(outfile))) dir.create(dirname(outfile), recursive = TRUE)
+  if (!dir.exists(dirname(outfile))) {
+    dir.create(dirname(outfile), recursive = TRUE)
+  }
   # Construct ffmpeg command
   arg <- paste0(
     '-y -i "', infile, '" ',
@@ -200,24 +240,28 @@ opensmile_prepare_audio <- function(infile, outfile, stream = 0) {
   ffmpeg(arg)
 }
 
-# opensmile_prepare_audio_dir() -------------------------------------------------------------
 
-#' Run opensmile_prepare_audio on multiple files in a directory
+# os_prep_audio_dir ------------------------------------------------------------
+
+#' Run os_prep_audio() on multiple files in a directory
 #' 
-#' Find all media files with a specified extension in a specified directory and then
-#' extract an audio file for acoustic analysis from each.
+#' Find all media files with a specified extension in a specified directory and 
+#' then extract an audio file for acoustic analysis from each. Can be optionally
+#' run in parallel by running `plan()` beforehand.
 #' 
 #' @param indir (string) What directory contains the input files?
-#' @param inext (string) What file extension should we look for in `indir` (e.g., "mp4" or "mp3")?
+#' @param inext (string) What file extension should we look for in `indir` 
+#'   (e.g., "mp4" or "mp3")?
 #' @param outdir (string) What directory should the audio files be output to?
-#' @param stream (number, default=0) Which audio stream to extract? This value is zero-indexed, so 0 is the first stream.
-#' @param recursive (logical, default=FALSE) Should subdirectories of `indir` be included?
-#' @param progress (logical, default=TRUE) Should a progress bar be created?
+#' @inheritDotParams os_prep_audio stream
+#' @param recursive (logical, default=FALSE) Should files in subdirectories
+#'  within `indir` be included?
+#' @param progress (logical, default=TRUE) Should a progress bar be shown?
 #' @return `NULL`
 #' @export
-opensmile_prepare_audio_dir <- function(indir, inext, outdir, stream = 0, 
-                             recursive = FALSE, progress = TRUE) {
-
+#' 
+os_prep_audio_dir <- function(indir, inext, outdir, ...,
+                              recursive = FALSE, progress = TRUE) {
   # Validate input
   stopifnot(dir.exists(indir))
   stopifnot(rlang::is_character(inext, n = 1))
@@ -235,14 +279,14 @@ opensmile_prepare_audio_dir <- function(indir, inext, outdir, stream = 0,
   # Construct output filenames
   outfiles <- gsub(indir, outdir, infiles)
   outfiles <- gsub(inext, "wav", outfiles)
-  # Iterate extract_hifi() over infiles
+  # Iterate os_prep_audio() over infiles
   furrr::future_pwalk(
     .l = data.frame(
       infile = infiles,
       outfile = outfiles
     ),
-    .f = opensmile_prepare_audio,
-    stream = stream,
+    .f = os_prep_audio,
+    ...,
     .progress = progress
   )
 }

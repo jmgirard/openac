@@ -11,13 +11,12 @@
 #' @return A logical indicating whether `infile` is ready for whisper.
 #' @export
 whisper_check_audio <- function(infile, verbose = FALSE) {
-
-  stopifnot(is.character(infile), length(infile) == 1, file.exists(infile))
-  stopifnot(is.logical(verbose) && length(verbose) == 1)
-
-  type <- determine_type(infile)
-  streams <- count_audio_streams(infile)
-
+  # Validate input
+  stopifnot(file.exists(infile))
+  stopifnot(rlang::is_logical(verbose))
+  # Count streams
+  streams <- ffp_count_streams(infile)
+  type <- streams > 0
   # Create ffprobe command
   arg <- paste0(
     '-v error',
@@ -25,22 +24,18 @@ whisper_check_audio <- function(infile, verbose = FALSE) {
     ' -of default=noprint_wrappers=1:nokey=1',
     ' "', infile, '"'
   )
-
   # Run ffprobe command
   dat <- ffprobe(arg)
-
   # Check ffprobe output
   tests <- c(
-    No_Video = type[[1]] == FALSE,
-    One_Stream = streams == 1,
+    No_Video = streams["Video"] == 0,
+    One_Stream = streams["Audio"] == 1,
     Right_Codec = dat[[1]] == "pcm_s16le",
     Sample_Rate = dat[[2]] == "16000",
     One_Channel = dat[[3]] == "1"
   )
-
   # If verbose, state the result
   if (verbose) print(tests)
-
   # Return single logical
   all(tests)
 }

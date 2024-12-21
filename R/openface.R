@@ -9,6 +9,7 @@
 #'   FaceLandmarkVidMulti.exe command line call.
 #' @return A character vector containing the output of openface.
 #' @references https://github.com/TadasBaltrusaitis/OpenFace/wiki/Command-line-arguments
+#' @aliases of
 #' @export
 #' @examples
 #' openface('-h')
@@ -20,30 +21,14 @@ openface <- function(arg) {
 }
 
 
-# check_openface() -------------------------------------------------------------
+# of ---------------------------------------------------------------------------
 
-#' Check that openface is accessible
-#' 
-#' Check that openface is installed and accessible and working properly.
-#' 
-#' @return A logical indicating whether openface is working (TRUE) or not (FALSE).
+#' @rdname openface
 #' @export
-#' @examples
-#' check_openface()
-#' @export
-check_openface <- function() {
-  # Try to find the openface executable
-  of <- find_openface()
-  if (is.null(of)) return(FALSE)
-  # Try to call the openface executable
-  res <- try(openface('-h'), silent = TRUE)
-  if(inherits(res, "try-error")) return(FALSE)
-  # If not null or error, return TRUE
-  return(TRUE)
-}
+of <- openface
 
 
-# extract_openface() -----------------------------------------------------------
+# of_extract -------------------------------------------------------------------
 
 #' Extract openface features
 #' 
@@ -63,10 +48,10 @@ check_openface <- function() {
 #' @return A character vector containing openface output.
 #' @references https://github.com/TadasBaltrusaitis/OpenFace/wiki/Command-line-arguments
 #' @export
-extract_openface <- function(infile, outfile,
-                             fp2D = TRUE, fp3D = TRUE, pdm = FALSE,
-                             pose = TRUE, gaze = TRUE, aus = TRUE,
-                             wild = FALSE, multiview = FALSE) {
+of_extract <- function(infile, outfile,
+                       fp2D = TRUE, fp3D = TRUE, pdm = FALSE,
+                       pose = TRUE, gaze = TRUE, aus = TRUE,
+                       wild = FALSE, multiview = FALSE) {
   # Validate input
   stopifnot(file.exists(infile))
   stopifnot(rlang::is_character(outfile, n = 1))
@@ -96,4 +81,51 @@ extract_openface <- function(infile, outfile,
 }
 
 
-# TODO: Create extract_openface_dir()
+# of_extract_dir ---------------------------------------------------------------
+
+#' Run of_extract() on multiple files in a directory
+#' 
+#' Find all video files with a specified extension in a specified directory and
+#' then extract openface features from each. Can optionally be run in parallel 
+#' by using `plan()` beforehand.
+#' 
+#' @param indir (character) What directory are the input files in?
+#' @param inext (character) What file extension should be looked for in `indir` 
+#'   (e.g., "mp4" or "avi")?
+#' @param outdir (character) What directory should the output files be created
+#'   in?
+#' @inheritDotParams of_extract fp2D fp3D pdm pose gaze aus wild multiview
+#' @param recursive (logical, default=FALSE) Should files in subdirectories
+#'  within `indir` be included?
+#' @param progress (logical, default=TRUE) Should a progress bar be shown?
+#' @return `NULL`
+#' @export
+of_extract_dir <- function(indir, inext, outdir, ...,
+                           recursive = FALSE, progress = TRUE) {
+  # Validate input
+  stopifnot(dir.exists(indir))
+  stopifnot(rlang::is_character(inext, n = 1))
+  stopifnot(rlang::is_character(outdir, n = 1))
+  stopifnot(rlang::is_logical(recursiive, n = 1))
+  stopifnot(rlang::is_logical(progress, n = 1))
+  # Find input filepaths
+  infiles <- list.files(
+    path = indir,
+    pattern = paste0(inext, "$"),
+    full.names = TRUE,
+    recursive = recursive
+  )
+  # Build output filepaths
+  outfiles <- gsub(indir, outdir, infiles)
+  outfiles <- gsub(inext, "csv", outfiles)
+  # Iterate of_extract() over infiles
+  furrr::future_pwalk(
+    .l = data.frame(
+      infile = infiles,
+      outfile = outfiles
+    ),
+    .f = of_extract,
+    ...,
+    .progress = progress
+  )
+}

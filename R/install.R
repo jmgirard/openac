@@ -331,3 +331,57 @@ install_opensmile_win <- function(download_url = NULL, install_dir = NULL) {
 }
 
 
+# install_opensmile_mac --------------------------------------------------------
+
+#' @export
+install_opensmile_mac <- function(download_url = NULL, install_dir = NULL,
+                                  arch = c("armv8", "x86_64")) {
+  # Validate input
+  stopifnot(is.null(download_url) || rlang::is_character(download_url, n = 1))
+  stopifnot(is.null(install_dir) || rlang::is_character(install_dir, n = 1))
+  arch <- match.arg(arch)
+  # Prepare download URL
+  if (is.null(download_url)) {
+    download_url <- paste0(
+      "https://github.com/audeering/opensmile/releases/download/v3.0.2/",
+      ifelse(
+        arch == "armv8",
+        "opensmile-3.0.2-macos-armv8.zip",
+        "opensmile-3.0.2-windows-x86_64.zip"
+      )
+    )
+  }
+  # Prepare install directory
+  if (is.null(install_dir)) {
+    install_dir <- file.path(rappdirs::user_data_dir("openac", "R"), "opensmile")
+  }
+  # Create install directory if needed
+  if (!dir.exists(install_dir)) {
+    status <- dir.create(install_dir, recursive = TRUE)
+    if (status == FALSE) return(FALSE)
+  }
+  # Download the installer to a temporary file
+  tf <- tempfile()
+  status <-
+    utils::download.file(
+      url = download_url,
+      destfile = tf,
+      mode = "wb"
+    )
+  if (status != 0) {
+    warning("File download failed")
+    return(FALSE)
+  }
+  # Extract the archive from the temporary file to the install directory
+  archive::archive_extract(tf, dir = install_dir, strip_components = 1)
+  # Delete the temporary file
+  unlink(tf)
+  # Update the user config files with the locations of the installed files
+  set_opensmile(
+    tools::file_path_as_absolute(
+      file.path(install_dir, "bin", "SMILExtract")
+    )
+  )
+  # Return TRUE
+  TRUE
+}

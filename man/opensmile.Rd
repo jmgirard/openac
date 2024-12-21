@@ -2,9 +2,12 @@
 % Please edit documentation in R/opensmile.R
 \name{opensmile}
 \alias{opensmile}
+\alias{os}
 \title{Low-level access to the opensmile command line interface}
 \usage{
 opensmile(arg)
+
+os(arg)
 }
 \arguments{
 \item{arg}{A string including space-separated arguments to append to the
@@ -18,6 +21,7 @@ Attempt to find and run opensmile with the specified arguments.
 }
 \examples{
 opensmile('-h')
+
 }
 \references{
 https://audeering.github.io/opensmile/

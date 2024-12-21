@@ -2,9 +2,12 @@
 % Please edit documentation in R/openface.R
 \name{openface}
 \alias{openface}
+\alias{of}
 \title{Low-level access to the openface command line interface}
 \usage{
 openface(arg)
+
+of(arg)
 }
 \arguments{
 \item{arg}{(string) Space-separated arguments to append to the

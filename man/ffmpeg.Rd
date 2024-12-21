@@ -2,9 +2,12 @@
 % Please edit documentation in R/ffmpeg.R
 \name{ffmpeg}
 \alias{ffmpeg}
+\alias{ffm}
 \title{Low-level access to the ffmpeg command line interface}
 \usage{
 ffmpeg(arg)
+
+ffm(arg)
 }
 \arguments{
 \item{arg}{(string) A string of space-separated arguments to append to the
