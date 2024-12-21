@@ -19,7 +19,7 @@ aw_transcribe(
 \item{infile}{A required string indicating the file path to an audio or video
 file containing an audio stream to transcribe.}
 
-\item{model}{A required model object produced by \code{audio.whisper::whisper()}.}
+\item{model}{A required model object produced by \code{whisper()}.}
 
 \item{language}{The language of the audio. Defaults to 'auto'. For a list of
 all languages the model can handle: see

@@ -19,5 +19,6 @@ A logical indicating whether the installation was successful.
 }
 \description{
 Downloads an FFmpeg zip installer, extracts it, and updates the package's
-user config files to point to the component executable files.
+user config files to point to the component executable files. Note that this
+function will also install FFprobe.
 }

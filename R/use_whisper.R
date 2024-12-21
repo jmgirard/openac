@@ -39,6 +39,7 @@ aw_check_audio <- function(infile, verbose = FALSE) {
   all(tests)
 }
 
+
 # aw_prep_audio ----------------------------------------------------------------
 
 #' Prepare an audio stream for analysis by Whisper
@@ -57,20 +58,17 @@ aw_check_audio <- function(infile, verbose = FALSE) {
 #' @return A string containing the text output from ffmpeg.
 #' @export
 aw_prep_audio <- function(infile, outfile, stream = 0) {
-
-  stopifnot(is.character(infile), length(infile) == 1, file.exists(infile))
-  stopifnot(is.character(outfile), length(outfile) == 1)
-  stopifnot(is.numeric(stream) && length(stream) == 1)
-  stopifnot(stream >= 0 && ceiling(stream) == floor(stream))
-
+  # Validate input
+  stopifnot(file.exists(infile))
+  stopifnot(rlang::is_character(outfile, n = 1))
+  stopifnot(rlang::is_integerish(stream, n = 1), stream >= 0)
   # Check that the requested audio stream exists
   stopifnot((stream + 1) <= ffp_count_streams(infile)['Audio'])
-
+  # Create output directory if necessary
   if (!dir.exists(dirname(outfile))) {
     dir.create(dirname(outfile), recursive = TRUE)
   }
-
-  # ...Create ffmpeg arg to extract wav
+  # Construct ffmpeg command
   arg <- paste0(
     '-y -i "', infile, '" ',
     ' -map 0:a:', stream,
@@ -79,12 +77,12 @@ aw_prep_audio <- function(infile, outfile, stream = 0) {
     ' -c:a pcm_s16le', # set to 16-bit PCM codec
     ' "', outfile, '"'
   )
+  # Run ffmpeg command
   ffmpeg(arg)
-
 }
 
 
-# aw_transcribe() ----------------------------------------------------
+# aw_transcribe ----------------------------------------------------------------
 
 #' Transcribe an audio stream using the specified Whisper model
 #'
@@ -96,7 +94,7 @@ aw_prep_audio <- function(infile, outfile, stream = 0) {
 #'
 #' @param infile A required string indicating the file path to an audio or video
 #'   file containing an audio stream to transcribe.
-#' @param model A required model object produced by `audio.whisper::whisper()`.
+#' @param model A required model object produced by `whisper()`.
 #' @param language The language of the audio. Defaults to 'auto'. For a list of
 #'   all languages the model can handle: see
 #'   `audio.whisper::whisper_languages()`.
@@ -115,14 +113,15 @@ aw_prep_audio <- function(infile, outfile, stream = 0) {
 #' @return A list object containing the full whisper output.
 #' @export
 aw_transcribe <- function(infile,
-                               model,
-                               language = "auto",
-                               stream = 0,
-                               wavfile = NULL,
-                               rdsfile = NULL,
-                               csvfile = NULL,
-                               ...) {
-
+                          model,
+                          language = "auto",
+                          stream = 0,
+                          wavfile = NULL,
+                          rdsfile = NULL,
+                          csvfile = NULL,
+                          ...) {
+  # Input validation will be handled by subfunctions
+  # Preallocate temp
   temp <- FALSE
   if (aw_check_audio(infile) == FALSE) {
     # If no wavfile provided, create tempfile
@@ -139,7 +138,6 @@ aw_transcribe <- function(infile,
   } else {
     wavfile <- infile
   }
-
   # Transcribe prepared audio file
   out <- aw_transcribe_wav(
     infile = wavfile,
@@ -149,29 +147,30 @@ aw_transcribe <- function(infile,
     csvfile = csvfile,
     ...
   )
-
   # Clean up temporary file if created
   if (temp) unlink(wavfile)
-
   # Return the output from whisper
   out
 }
 
-# whisper_transcribe_wav() ------------------------------------------------
+
+# aw_transcribe_wav ------------------------------------------------------------
 
 aw_transcribe_wav <- function(infile,
-                                   model,
-                                   language = "auto",
-                                   rdsfile = NULL,
-                                   csvfile = NULL,
-                                   ...) {
-
-  stopifnot(is.character(infile) && length(infile) == 1 && file.exists(infile))
+                              model,
+                              language = "auto",
+                              rdsfile = NULL,
+                              csvfile = NULL,
+                              ...) {
+  # Validate inputs
+  stopifnot(file.exists(infile))
   stopifnot(class(model) == "whisper")
-  stopifnot(is.character(language) && length(language) == 1)
-  stopifnot(is.null(rdsfile) || (is.character(rdsfile) && length(rdsfile) == 1 && tools::file_ext(rdsfile) == "rds"))
-  stopifnot(is.null(csvfile) || (is.character(csvfile) && length(csvfile) == 1 && tools::file_ext(csvfile) == "csv"))
-
+  stopifnot(rlang::is_character(language, n = 1))
+  stopifnot(is.null(rdsfile) || 
+    (rlang::is_character(rdsfile, n = 1) && tools::file_ext(rdsfile) == "rds"))
+  stopifnot(is.null(csvfile) || 
+    (rlang::is_character(csvfile, n = 1) && tools::file_ext(csvfile) == "csv"))
+  # Run whisper
   out <- predict(
     object = model,
     newdata = infile,
@@ -180,20 +179,87 @@ aw_transcribe_wav <- function(infile,
     trace = FALSE,
     ...
   )
-
+  # Create RDS output if requested
   if (!is.null(rdsfile)) {
     if (!dir.exists(dirname(rdsfile))) {
       dir.create(dirname(rdsfile), recursive = TRUE)
     }
     saveRDS(out, file = rdsfile)
   }
-
+  # Create CSV output if requested
   if (!is.null(csvfile)) {
     if (!dir.exists(dirname(csvfile))) {
       dir.create(dirname(csvfile), recursive = TRUE)
     }
     write.csv(out$data, file = csvfile, row.names = FALSE)
   }
-
+  # Return whisper output
   out
 }
+
+
+# aw_transcribe_dir ------------------------------------------------------------
+
+#' Title
+#' 
+#' Description
+#' 
+#' @param indir (character) What directory contains the input files?
+#' @param inext (character) What file extension should be looked for in `indir` 
+#'   (e.g., "mp4" or "mp3")?
+#' @param rdsdir (character, default=NULL) What directory should the RDS output
+#'   files be saved to? If `NULL`, RDS files will not be output.
+#' @param csvdir (character, default=NULL) What directory should the CSV output
+#'   files be saved to? If `NULL`, CSV files will not be output.
+#' @inheritParams aw_transcribe
+#' @param recursive (logical, default=FALSE) Should files in subdirectories
+#'  within `indir` be included?
+#' @param progress (logical, default=TRUE) Should a progress bar be shown?
+#' @return A list object containing the whisper output for each input file.
+#' @export
+#' 
+aw_transcribe_dir <- function(indir, inext, rdsdir = NULL, csvdir = NULL, 
+  model, language = "auto", ..., recursive = FALSE, progress = TRUE) {
+  # Validate inputs
+  stopifnot(dir.exists(indir))
+  stopifnot(rlang::is_character(inext, n = 1))
+  stopifnot(is.null(rdsdir) || rlang::is_character(rdsdir, n = 1))
+  stopifnot(is.null(csvdir) || rlang::is_character(csvdir, n = 1))
+  stopifnot(rlang::is_logical(recursive, n = 1))
+  stopifnot(rlang::is_logical(progress, n = 1))
+  # Find input filepaths
+  infiles <- list.files(
+    path = indir,
+    pattern = paste0(inext, "$"),
+    full.names = TRUE,
+    recursive = recursive
+  )
+  # Construct iteration data frame
+  df <- data.frame(infile = infiles)
+  # If exporting RDS output...
+  if (!is.null(rdsdir)) {
+    # Construct RDS output filepaths
+    rdsfiles <- gsub(indir, rdsdir, infiles)
+    rdsfiles <- gsub(inext, "rds", rdsfiles)
+    # Add to iteration data frame
+    df <- cbind(df, rdsfile = rdsfiles)
+  }
+  # If exporting CSV output...
+  if (!is.null(csvdir)) {
+    # Construct CSV output filepaths
+    csvfiles <- gsub(indir, csvdir, infiles)
+    csvfiles <- gsub(inext, "csv", csvfiles)
+    # Add to iteration data frame
+    df <- cbind(df, csvfile = csvfiles)
+  }
+  # Iterate aw_transcribe() over infiles
+  furrr::future_pwalk(
+    .l = df,
+    .f = aw_transcribe,
+    model = model,
+    language = language,
+    ...,
+    .progress = progress
+  )
+}
+

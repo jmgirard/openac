@@ -3,7 +3,8 @@
 #' Install FFmpeg on Windows
 #'
 #' Downloads an FFmpeg zip installer, extracts it, and updates the package's
-#' user config files to point to the component executable files.
+#' user config files to point to the component executable files. Note that this
+#' function will also install FFprobe.
 #'
 #' @param download_url A string indicating the location of the FFmpeg
 #'   installation zip file. If `NULL`, will default to the latest static
@@ -229,5 +230,19 @@ install_opensmile_mac <- function(download_url = NULL, install_dir = NULL,
   )
   # Return TRUE
   return(TRUE)
+}
+
+
+# install_whisper --------------------------------------------------------------
+
+#' Install audio.whisper package
+#' 
+#' Install the audio.whisper R package from github.
+#' 
+#' @return NULL
+#' @export
+#' 
+install_whisper <- function() {
+  rlang::check_installed("audio.whisper")
 }
 

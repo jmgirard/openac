@@ -16,7 +16,7 @@ os_prep_audio_dir(
 \arguments{
 \item{indir}{(string) What directory contains the input files?}
 
-\item{inext}{(string) What file extension should we look for in \code{indir}
+\item{inext}{(string) What file extension should be looked for in \code{indir}
 (e.g., "mp4" or "mp3")?}
 
 \item{outdir}{(string) What directory should the audio files be output to?}

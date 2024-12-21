@@ -120,6 +120,96 @@ os_check_audio <- function(infile, verbose = FALSE) {
 }
 
 
+# os_prep_audio ----------------------------------------------------------------
+
+#' Prepare an audio stream for analysis by opensmile
+#' 
+#' Import an audio or video file and export an audio file for acoustic analysis.
+#' Extract the audio stream specified by `stream` and then transcode it to a 
+#' mono (i.e., single channel) 16-bit PCM .wav file at 44.1kHz sampling rate.
+#' 
+#' @param infile (character) What is the filepath of the audio or video file 
+#'   to import?
+#' @param outfile (character) What is the filepath of the .wav file to create?
+#' @param stream (numeric, default=0) The index of the audio stream to extract 
+#' (ffmpeg uses zero-indexing so 0 is the first stream).
+#' @return A character vector containing the output of ffmpeg.
+#' @export
+#' 
+os_prep_audio <- function(infile, outfile, stream = 0) {
+  # Validate input
+  stopifnot(file.exists(infile))
+  stopifnot(rlang::is_character(outfile, n = 1))
+  stopifnot(rlang::is_integerish(stream, n = 1), stream >= 0)
+  # Create outfile directory if needed
+  if (!dir.exists(dirname(outfile))) {
+    dir.create(dirname(outfile), recursive = TRUE)
+  }
+  # Construct ffmpeg command
+  arg <- paste0(
+    '-y -i "', infile, '" ',
+    ' -map 0:a:', stream,
+    ' -ar 44100', # set sample rate to 44.1kHz
+    ' -ac 1', # set to mono audio (1 channel)
+    ' -c:a pcm_s16le', # set to 16-bit PCM Little-Endian codec
+    ' "', outfile, '"'
+  )
+  # Run ffmpeg command
+  ffmpeg(arg)
+}
+
+
+# os_prep_audio_dir ------------------------------------------------------------
+
+#' Run os_prep_audio() on multiple files in a directory
+#' 
+#' Find all media files with a specified extension in a specified directory and 
+#' then extract an audio file for acoustic analysis from each. Can be optionally
+#' run in parallel by running `plan()` beforehand.
+#' 
+#' @param indir (string) What directory contains the input files?
+#' @param inext (string) What file extension should be looked for in `indir` 
+#'   (e.g., "mp4" or "mp3")?
+#' @param outdir (string) What directory should the audio files be output to?
+#' @inheritDotParams os_prep_audio stream
+#' @param recursive (logical, default=FALSE) Should files in subdirectories
+#'  within `indir` be included?
+#' @param progress (logical, default=TRUE) Should a progress bar be shown?
+#' @return `NULL`
+#' @export
+#' 
+os_prep_audio_dir <- function(indir, inext, outdir, ...,
+                              recursive = FALSE, progress = TRUE) {
+  # Validate input
+  stopifnot(dir.exists(indir))
+  stopifnot(rlang::is_character(inext, n = 1))
+  stopifnot(rlang::is_character(outdir, n = 1))
+  stopifnot(rlang::is_integerish(stream, n = 1), stream >= 0)
+  stopifnot(rlang::is_logical(recursive, n = 1))
+  stopifnot(rlang::is_logical(progress, n = 1))
+  # Find input filenames
+  infiles <- list.files(
+    path = indir,
+    pattern = paste0(inext, "$"),
+    full.names = TRUE,
+    recursive = recursive
+  )
+  # Construct output filenames
+  outfiles <- gsub(indir, outdir, infiles)
+  outfiles <- gsub(inext, "wav", outfiles)
+  # Iterate os_prep_audio() over infiles
+  furrr::future_pwalk(
+    .l = data.frame(
+      infile = infiles,
+      outfile = outfiles
+    ),
+    .f = os_prep_audio,
+    ...,
+    .progress = progress
+  )
+}
+
+
 # os_extract -------------------------------------------------------------------
 
 #' Extract opensmile features
@@ -263,92 +353,3 @@ os_fix_csv <- function(infile) {
   write.csv(df, file = infile, row.names = FALSE)
 }
 
-
-# os_prep_audio ----------------------------------------------------------------
-
-#' Prepare an audio stream for analysis by opensmile
-#' 
-#' Import an audio or video file and export an audio file for acoustic analysis.
-#' Extract the audio stream specified by `stream` and then transcode it to a 
-#' mono (i.e., single channel) 16-bit PCM .wav file at 44.1kHz sampling rate.
-#' 
-#' @param infile (character) What is the filepath of the audio or video file 
-#'   to import?
-#' @param outfile (character) What is the filepath of the .wav file to create?
-#' @param stream (numeric, default=0) The index of the audio stream to extract 
-#' (ffmpeg uses zero-indexing so 0 is the first stream).
-#' @return A character vector containing the output of ffmpeg.
-#' @export
-#' 
-os_prep_audio <- function(infile, outfile, stream = 0) {
-  # Validate input
-  stopifnot(file.exists(infile))
-  stopifnot(rlang::is_character(outfile, n = 1))
-  stopifnot(rlang::is_integerish(stream, n = 1), stream >= 0)
-  # Create outfile directory if needed
-  if (!dir.exists(dirname(outfile))) {
-    dir.create(dirname(outfile), recursive = TRUE)
-  }
-  # Construct ffmpeg command
-  arg <- paste0(
-    '-y -i "', infile, '" ',
-    ' -map 0:a:', stream,
-    ' -ar 44100', # set sample rate to 44.1kHz
-    ' -ac 1', # set to mono audio (1 channel)
-    ' -c:a pcm_s16le', # set to 16-bit PCM Little-Endian codec
-    ' "', outfile, '"'
-  )
-  # Run ffmpeg command
-  ffmpeg(arg)
-}
-
-
-# os_prep_audio_dir ------------------------------------------------------------
-
-#' Run os_prep_audio() on multiple files in a directory
-#' 
-#' Find all media files with a specified extension in a specified directory and 
-#' then extract an audio file for acoustic analysis from each. Can be optionally
-#' run in parallel by running `plan()` beforehand.
-#' 
-#' @param indir (string) What directory contains the input files?
-#' @param inext (string) What file extension should we look for in `indir` 
-#'   (e.g., "mp4" or "mp3")?
-#' @param outdir (string) What directory should the audio files be output to?
-#' @inheritDotParams os_prep_audio stream
-#' @param recursive (logical, default=FALSE) Should files in subdirectories
-#'  within `indir` be included?
-#' @param progress (logical, default=TRUE) Should a progress bar be shown?
-#' @return `NULL`
-#' @export
-#' 
-os_prep_audio_dir <- function(indir, inext, outdir, ...,
-                              recursive = FALSE, progress = TRUE) {
-  # Validate input
-  stopifnot(dir.exists(indir))
-  stopifnot(rlang::is_character(inext, n = 1))
-  stopifnot(rlang::is_character(outdir, n = 1))
-  stopifnot(rlang::is_integerish(stream, n = 1), stream >= 0)
-  stopifnot(rlang::is_logical(recursive, n = 1))
-  stopifnot(rlang::is_logical(progress, n = 1))
-  # Find input filenames
-  infiles <- list.files(
-    path = indir,
-    pattern = paste0(inext, "$"),
-    full.names = TRUE,
-    recursive = recursive
-  )
-  # Construct output filenames
-  outfiles <- gsub(indir, outdir, infiles)
-  outfiles <- gsub(inext, "wav", outfiles)
-  # Iterate os_prep_audio() over infiles
-  furrr::future_pwalk(
-    .l = data.frame(
-      infile = infiles,
-      outfile = outfiles
-    ),
-    .f = os_prep_audio,
-    ...,
-    .progress = progress
-  )
-}
