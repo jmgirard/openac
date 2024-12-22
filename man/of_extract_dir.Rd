@@ -4,7 +4,7 @@
 \alias{of_extract_dir}
 \title{Run of_extract() on multiple files in a directory}
 \usage{
-of_extract_dir(indir, inext, outdir, ..., recursive = FALSE)
+of_extract_dir(indir, inext, outdir, recursive = FALSE, ...)
 }
 \arguments{
 \item{indir}{(character) What directory are the input files in?}
@@ -14,6 +14,9 @@ of_extract_dir(indir, inext, outdir, ..., recursive = FALSE)
 
 \item{outdir}{(character) What directory should the output files be created
 in?}
+
+\item{recursive}{(logical, default=FALSE) Should files in subdirectories
+within \code{indir} be included?}
 
 \item{...}{
   Arguments passed on to \code{\link[=of_extract]{of_extract}}
@@ -27,9 +30,6 @@ in?}
     \item{\code{wild}}{(logical, default=FALSE) Should the model consider extended search regions (for challenging images)?}
     \item{\code{multiview}}{(logical, default=FALSE) Should multi-view initialisation be used (more robust but slower)?}
   }}
-
-\item{recursive}{(logical, default=FALSE) Should files in subdirectories
-within \code{indir} be included?}
 }
 \value{
 \code{NULL}

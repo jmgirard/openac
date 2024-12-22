@@ -10,8 +10,8 @@ os_extract_dir(
   wavdir = NULL,
   aggdir = NULL,
   llddir = NULL,
-  ...,
-  recursive = FALSE
+  recursive = FALSE,
+  ...
 )
 }
 \arguments{
@@ -29,18 +29,18 @@ files be saved to? If \code{NULL}, AGG files will not be output. Note that
 files be saved to? If \code{NULL}, LLD files will not be output. Note that
 \code{aggdir} or \code{llddir} (or both) must be non-NULL.}
 
+\item{recursive}{(logical, default=FALSE) Should files in subdirectories
+within \code{indir} be included?}
+
 \item{...}{
   Arguments passed on to \code{\link[=os_extract]{os_extract}}
   \describe{
-    \item{\code{stream}}{(numeric, default=0) The index of the audio stream to extract
-(ffmpeg uses zero-indexing so 0 is the first stream).}
     \item{\code{config}}{(character, default="misc/emo_large") Which configuration file
 should be used to analyze \code{infile}? A list of available config files can be
 generated using \code{os_list_configs()}.}
+    \item{\code{stream}}{(numeric, default=0) The index of the audio stream to extract
+(ffmpeg uses zero-indexing so 0 is the first stream).}
   }}
-
-\item{recursive}{(logical, default=FALSE) Should files in subdirectories
-within \code{indir} be included?}
 }
 \value{
 \code{NULL}

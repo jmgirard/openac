@@ -104,9 +104,9 @@ of_extract <- function(
 #'   (e.g., "mp4" or "avi")?
 #' @param outdir (character) What directory should the output files be created
 #'   in?
-#' @inheritDotParams of_extract fp2D fp3D pdm pose gaze aus wild multiview
 #' @param recursive (logical, default=FALSE) Should files in subdirectories
 #'  within `indir` be included?
+#' @inheritDotParams of_extract fp2D fp3D pdm pose gaze aus wild multiview
 #' @return `NULL`
 #' @export
 #' 
@@ -114,8 +114,8 @@ of_extract_dir <- function(
   indir, 
   inext, 
   outdir, 
-  ...,
-  recursive = FALSE
+  recursive = FALSE,
+  ...
 ) {
   # Validate input
   stopifnot(dir.exists(indir))

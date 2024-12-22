@@ -171,9 +171,9 @@ os_prep_audio <- function(infile, outfile, stream = 0) {
 #' @param inext (string) What file extension should be looked for in `indir` 
 #'   (e.g., "mp4" or "mp3")?
 #' @param outdir (string) What directory should the audio files be output to?
-#' @inheritDotParams os_prep_audio stream
 #' @param recursive (logical, default=FALSE) Should files in subdirectories
 #'  within `indir` be included?
+#' @inheritDotParams os_prep_audio stream
 #' @return `NULL`
 #' @export
 #' 
@@ -181,8 +181,8 @@ os_prep_audio_dir <- function(
   indir, 
   inext, 
   outdir, 
-  ...,
-  recursive = FALSE
+  recursive = FALSE,
+  ...
 ) {
   # Validate input
   stopifnot(dir.exists(indir))
@@ -225,8 +225,6 @@ os_prep_audio_dir <- function(
 #' 
 #' @param infile (character) What is the filepath for the input file to be
 #' analyzed? The proper format can be created by `os_prep_audio()`.
-#' @param stream (numeric, default=0) The index of the audio stream to extract 
-#' (ffmpeg uses zero-indexing so 0 is the first stream).
 #' @param wavfile (character, default=NULL) Either NULL or a string indicating 
 #' the path to save the prepared version of `infile` to (must end with '.wav'). 
 #' If NULL, a temporary file will be created and later discarded.
@@ -239,6 +237,7 @@ os_prep_audio_dir <- function(
 #' @param config (character, default="misc/emo_large") Which configuration file 
 #' should be used to analyze `infile`? A list of available config files can be
 #' generated using `os_list_configs()`.
+#' @inheritParams os_prep_audio
 #' @return A character vector including opensmile output.
 #' @export
 #' 
@@ -351,9 +350,9 @@ os_extract_wav <- function(
 #' @param llddir (character, default=NULL) What directory should the LLD output
 #' files be saved to? If `NULL`, LLD files will not be output. Note that 
 #' `aggdir` or `llddir` (or both) must be non-NULL.
-#' @inheritDotParams os_extract stream config
 #' @param recursive (logical, default=FALSE) Should files in subdirectories
 #'  within `indir` be included?
+#' @inheritDotParams os_extract stream config
 #' @return `NULL`
 #' @export
 #' 
@@ -363,8 +362,8 @@ os_extract_dir <- function(
   wavdir = NULL,
   aggdir = NULL, 
   llddir = NULL, 
-  ...,
-  recursive = FALSE
+  recursive = FALSE,
+  ...
 ) {
   # Validate inputs
   stopifnot(dir.exists(indir))
@@ -413,7 +412,10 @@ os_extract_dir <- function(
   furrr::future_pwalk(
     .l = df,
     .f = function(...) {
-      do.call(os_extract, c(list(...), extra_args))
+      do.call(
+        what = os_extract, 
+        args = c(list(...), extra_args)
+      )
       p() # update progress
     }
   )

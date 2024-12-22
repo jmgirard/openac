@@ -4,7 +4,7 @@
 \alias{os_prep_audio_dir}
 \title{Run os_prep_audio() on multiple files in a directory}
 \usage{
-os_prep_audio_dir(indir, inext, outdir, ..., recursive = FALSE)
+os_prep_audio_dir(indir, inext, outdir, recursive = FALSE, ...)
 }
 \arguments{
 \item{indir}{(string) What directory contains the input files?}
@@ -14,15 +14,15 @@ os_prep_audio_dir(indir, inext, outdir, ..., recursive = FALSE)
 
 \item{outdir}{(string) What directory should the audio files be output to?}
 
+\item{recursive}{(logical, default=FALSE) Should files in subdirectories
+within \code{indir} be included?}
+
 \item{...}{
   Arguments passed on to \code{\link[=os_prep_audio]{os_prep_audio}}
   \describe{
     \item{\code{stream}}{(numeric, default=0) The index of the audio stream to extract
 (ffmpeg uses zero-indexing so 0 is the first stream).}
   }}
-
-\item{recursive}{(logical, default=FALSE) Should files in subdirectories
-within \code{indir} be included?}
 }
 \value{
 \code{NULL}
