@@ -17,6 +17,8 @@ os_extract_dir(
 \arguments{
 \item{indir}{(character) What directory contains the input .wav files?}
 
+\item{inext}{(character) What file extension to look for in \code{indir}?}
+
 \item{wavdir}{(character, default=NULL) What directory should the prepared
 WAV audio files be saved to? If \code{NULL}, temporary WAV files will be created
 and then discarded (if needed).}

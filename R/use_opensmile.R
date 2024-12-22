@@ -316,7 +316,8 @@ os_extract_wav <- function(
       test = !is.null(lldfile), 
       yes = paste0(' -lldcsvoutput "', lldfile, '"'),
       no = ''
-    )
+    ),
+    ' -instname "', basename(infile), '"'
   )
   # Run opensmile command
   out <- opensmile(arg)
@@ -341,6 +342,7 @@ os_extract_wav <- function(
 #' by using `plan()` beforehand.
 #' 
 #' @param indir (character) What directory contains the input .wav files?
+#' @param inext (character) What file extension to look for in `indir`?
 #' @param wavdir (character, default=NULL) What directory should the prepared 
 #' WAV audio files be saved to? If `NULL`, temporary WAV files will be created
 #' and then discarded (if needed).
