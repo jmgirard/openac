@@ -174,7 +174,6 @@ os_prep_audio <- function(infile, outfile, stream = 0) {
 #' @inheritDotParams os_prep_audio stream
 #' @param recursive (logical, default=FALSE) Should files in subdirectories
 #'  within `indir` be included?
-#' @param progress (logical, default=TRUE) Should a progress bar be shown?
 #' @return `NULL`
 #' @export
 #' 
@@ -183,8 +182,7 @@ os_prep_audio_dir <- function(
   inext, 
   outdir, 
   ...,
-  recursive = FALSE, 
-  progress = TRUE
+  recursive = FALSE
 ) {
   # Validate input
   stopifnot(dir.exists(indir))
@@ -192,7 +190,6 @@ os_prep_audio_dir <- function(
   stopifnot(rlang::is_character(outdir, n = 1))
   stopifnot(rlang::is_integerish(stream, n = 1), stream >= 0)
   stopifnot(rlang::is_logical(recursive, n = 1))
-  stopifnot(rlang::is_logical(progress, n = 1))
   # Find input filenames
   infiles <- list.files(
     path = indir,
@@ -204,14 +201,16 @@ os_prep_audio_dir <- function(
   outfiles <- gsub(indir, outdir, infiles)
   outfiles <- gsub(inext, "wav", outfiles)
   # Iterate os_prep_audio() over infiles
+  p <- progressr::progressor(along = infiles)
   furrr::future_pwalk(
     .l = data.frame(
       infile = infiles,
       outfile = outfiles
     ),
-    .f = os_prep_audio,
-    ...,
-    .progress = progress
+    .f = function(infile, outfile) {
+      os_prep_audio(infile, outfile, ...)
+      p() # update progress
+    }
   )
 }
 
@@ -355,7 +354,6 @@ os_extract_wav <- function(
 #' @inheritDotParams os_extract stream config
 #' @param recursive (logical, default=FALSE) Should files in subdirectories
 #'  within `indir` be included?
-#' @param progress (logical, default=TRUE) Should a progress bar be shown?
 #' @return `NULL`
 #' @export
 #' 
@@ -366,8 +364,7 @@ os_extract_dir <- function(
   aggdir = NULL, 
   llddir = NULL, 
   ...,
-  recursive = FALSE, 
-  progress = TRUE
+  recursive = FALSE
 ) {
   # Validate inputs
   stopifnot(dir.exists(indir))
@@ -377,7 +374,7 @@ os_extract_dir <- function(
   stopifnot(is.null(llddir) || rlang::is_character(llddir, n = 1))
   stopifnot(!is.null(aggdir) || !is.null(llddir))
   stopifnot(rlang::is_logical(recursive, n = 1))
-  stopifnot(rlang::is_logical(progress, n = 1))
+  extra_args <- list(...)
   # Find input filepaths
   infiles <- list.files(
     path = indir,
@@ -412,11 +409,13 @@ os_extract_dir <- function(
     df <- cbind(df, lldfile = lldfiles)
   }
   # Iterate os_extract() over infiles
+  p <- progressr::progressor(along = infiles)
   furrr::future_pwalk(
     .l = df,
-    .f = os_extract,
-    ...,
-    .progress = progress
+    .f = function(...) {
+      do.call(os_extract, c(list(...), extra_args))
+      p() # update progress
+    }
   )
 }
 

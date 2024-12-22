@@ -4,14 +4,7 @@
 \alias{os_prep_audio_dir}
 \title{Run os_prep_audio() on multiple files in a directory}
 \usage{
-os_prep_audio_dir(
-  indir,
-  inext,
-  outdir,
-  ...,
-  recursive = FALSE,
-  progress = TRUE
-)
+os_prep_audio_dir(indir, inext, outdir, ..., recursive = FALSE)
 }
 \arguments{
 \item{indir}{(string) What directory contains the input files?}
@@ -30,8 +23,6 @@ os_prep_audio_dir(
 
 \item{recursive}{(logical, default=FALSE) Should files in subdirectories
 within \code{indir} be included?}
-
-\item{progress}{(logical, default=TRUE) Should a progress bar be shown?}
 }
 \value{
 \code{NULL}

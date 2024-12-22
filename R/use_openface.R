@@ -107,7 +107,6 @@ of_extract <- function(
 #' @inheritDotParams of_extract fp2D fp3D pdm pose gaze aus wild multiview
 #' @param recursive (logical, default=FALSE) Should files in subdirectories
 #'  within `indir` be included?
-#' @param progress (logical, default=TRUE) Should a progress bar be shown?
 #' @return `NULL`
 #' @export
 #' 
@@ -116,8 +115,7 @@ of_extract_dir <- function(
   inext, 
   outdir, 
   ...,
-  recursive = FALSE, 
-  progress = TRUE
+  recursive = FALSE
 ) {
   # Validate input
   stopifnot(dir.exists(indir))
@@ -136,14 +134,16 @@ of_extract_dir <- function(
   outfiles <- gsub(indir, outdir, infiles)
   outfiles <- gsub(inext, "csv", outfiles)
   # Iterate of_extract() over infiles
+  p <- progressr::progressor(along = infiles)
   furrr::future_pwalk(
     .l = data.frame(
       infile = infiles,
       outfile = outfiles
     ),
-    .f = of_extract,
-    ...,
-    .progress = progress
+    .f = function(infile, outfile) {
+      of_extract(infile, outfile, ...)
+      p() # update progress
+    }
   )
 }
 

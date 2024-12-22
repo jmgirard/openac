@@ -12,6 +12,7 @@ Imports:
     furrr,
     future,
     pak,
+    progressr,
     rappdirs,
     rlang,
     tools

@@ -82,6 +82,23 @@ aw_prep_audio <- function(infile, outfile, stream = 0) {
 }
 
 
+# aw_get_model -----------------------------------------------------------------
+
+#' Get a Whisper model from a local or online source
+#'
+#' This function is an alias for `audio.whisper::whisper()`. Refer to
+#' `audio.whisper::whisper()` for full documentation of available parameters
+#' and usage details.
+#'
+#' @inheritParams audio.whisper::whisper
+#' @seealso [audio.whisper::whisper()]
+#' @return The result from `audio.whisper::whisper()`.
+#' @export
+aw_get_model <- function(...) {
+  audio.whisper::whisper(...)
+}
+
+
 # aw_transcribe ----------------------------------------------------------------
 
 #' Transcribe an audio stream using the specified Whisper model
@@ -94,12 +111,10 @@ aw_prep_audio <- function(infile, outfile, stream = 0) {
 #'
 #' @param infile A required string indicating the file path to an audio or video
 #'   file containing an audio stream to transcribe.
-#' @param model A required model object produced by `whisper()`.
+#' @param model A required model object produced by \code{\link{whisper}}.
 #' @param language The language of the audio. Defaults to 'auto'. For a list of
 #'   all languages the model can handle: see
-#'   `audio.whisper::whisper_languages()`.
-#' @param stream (numeric, default=0) The index of the audio stream to extract 
-#' (ffmpeg uses zero-indexing so 0 is the first stream).
+#'   \code{\link[audio.whisper]{whisper_languages}}.
 #' @param wavfile Either NULL or a string indicating the path to save the
 #'   prepared version of `infile` to (must end with '.wav'). If NULL, a
 #'   temporary file will be created and later discarded.
@@ -107,8 +122,9 @@ aw_prep_audio <- function(infile, outfile, stream = 0) {
 #'   whisper output list object to (must end with '.rds').
 #' @param csvfile Either NULL or a string indicating the path to save a
 #'   human-readable version of the transcript to (must end with '.csv').
-#' @param ... Optional arguments to forward to
-#'   `audio.whisper:::predict.whisper()`.
+#' @param whisper_args A list of optional arguments to forward to
+#'   \code{\link[audio.whisper]{predict.whisper}}.
+#' @inheritParams aw_prep_audio
 #' @return A list object containing the full whisper output.
 #' @export
 aw_transcribe <- function(
@@ -119,7 +135,7 @@ aw_transcribe <- function(
   wavfile = NULL,
   rdsfile = NULL,
   csvfile = NULL,
-  ...
+  whisper_args = list()
 ) {
   # Input validation will be handled by subfunctions
   # Preallocate temp
@@ -140,13 +156,18 @@ aw_transcribe <- function(
     wavfile <- infile
   }
   # Transcribe prepared audio file
-  out <- aw_transcribe_wav(
-    infile = wavfile,
-    model = model,
-    language = language,
-    rdsfile = rdsfile,
-    csvfile = csvfile,
-    ...
+  out <- do.call(
+    what = aw_transcribe_wav,
+    args = c(
+      list(
+        infile = wavfile,
+        model = model,
+        language = language,
+        rdsfile = rdsfile,
+        csvfile = csvfile
+      ),
+      whisper_args
+    )
   )
   # Clean up temporary file if created
   if (temp) unlink(wavfile)
@@ -163,7 +184,7 @@ aw_transcribe_wav <- function(
   language = "auto",
   rdsfile = NULL,
   csvfile = NULL,
-  ...
+  whisper_args = list()
 ) {
   # Validate inputs
   stopifnot(file.exists(infile), aw_check_audio(infile))
@@ -173,14 +194,20 @@ aw_transcribe_wav <- function(
     (rlang::is_character(rdsfile, n = 1) && tools::file_ext(rdsfile) == "rds"))
   stopifnot(is.null(csvfile) || 
     (rlang::is_character(csvfile, n = 1) && tools::file_ext(csvfile) == "csv"))
+  stopifnot(is.list(whisper_args))
   # Run whisper
-  out <- predict(
-    object = model,
-    newdata = infile,
-    type = "transcribe",
-    language = language,
-    trace = FALSE,
-    ...
+  out <- do.call(
+    what = predict,
+    args = c(
+      list(
+        object = model,
+        newdata = infile,
+        type = "transcribe",
+        language = language,
+        trace = FALSE
+      ),
+      whisper_args
+    )
   )
   # Create RDS output if requested
   if (!is.null(rdsfile)) {
@@ -203,19 +230,23 @@ aw_transcribe_wav <- function(
 
 # aw_transcribe_dir ------------------------------------------------------------
 
-#' Run aw_transcribe() on multiple files in a directory
+#' Transcribe multiple media files with Whisper
 #' 
 #' Find all files in a specified directory with a specified extension and then 
-#' transcribe each using whisper. Can optionally be run in parallel
-#' by using `plan()` beforehand; however, whisper is much more computationally 
-#' intensive than the other programs (especially when using CUDA) and thus 
-#' trying to run this in parallel could easily overwhelm your computer.
+#' apply \code{\link{aw_transcribe}} to each to transcribe them. If the input files are
+#' not in the format expected by Whisper, they will be converted first.
+#' 
+#' Can optionally be run in parallel by using \code{\link[future]{plan}} 
+#' beforehand; however, whisper is much more computationally intensive than the 
+#' other programs in this package (especially when using CUDA) and thus trying 
+#' to run this in parallel could easily overwhelm your computer's resources.
+#' 
+#' Can optionally output a progress bar by using 
+#' \code{\link[progressr]{handlers}}.
 #' 
 #' @param indir (character) What directory contains the input files?
 #' @param inext (character) What file extension should be looked for in `indir` 
 #'   (e.g., "mp4" or "mp3")?
-#' @param stream (numeric, default=0) The index of the audio stream to extract 
-#'   (ffmpeg uses zero-indexing so 0 is the first stream).
 #' @param wavdir (character, default=NULL) What directory should the prepared
 #'   WAV files be saved to? If `NULL`, temporary WAV files will be created and 
 #'   later discarded.
@@ -223,25 +254,20 @@ aw_transcribe_wav <- function(
 #'   files be saved to? If `NULL`, RDS files will not be output.
 #' @param csvdir (character, default=NULL) What directory should the CSV output
 #'   files be saved to? If `NULL`, CSV files will not be output.
-#' @inheritParams aw_transcribe
 #' @param recursive (logical, default=FALSE) Should files in subdirectories
 #'  within `indir` be included?
-#' @param progress (logical, default=TRUE) Should a progress bar be shown?
+#' @inheritDotParams aw_transcribe model language stream whisper_args
 #' @return A list object containing the whisper output for each input file.
 #' @export
 #' 
 aw_transcribe_dir <- function(
   indir, 
   inext, 
-  stream = 0,
   wavdir = NULL,
   rdsdir = NULL, 
   csvdir = NULL, 
-  model, 
-  language = "auto", 
-  ..., 
-  recursive = FALSE, 
-  progress = TRUE
+  recursive = FALSE,
+  ...
 ) {
   # Validate inputs
   stopifnot(dir.exists(indir))
@@ -250,7 +276,7 @@ aw_transcribe_dir <- function(
   stopifnot(is.null(rdsdir) || rlang::is_character(rdsdir, n = 1))
   stopifnot(is.null(csvdir) || rlang::is_character(csvdir, n = 1))
   stopifnot(rlang::is_logical(recursive, n = 1))
-  stopifnot(rlang::is_logical(progress, n = 1))
+  extra_args <- list(...)
   # Find input filepaths
   infiles <- list.files(
     path = indir,
@@ -285,14 +311,16 @@ aw_transcribe_dir <- function(
     df <- cbind(df, csvfile = csvfiles)
   }
   # Iterate aw_transcribe() over infiles
+  p <- progressr::progressor(along = infiles)
   furrr::future_pwalk(
     .l = df,
-    .f = aw_transcribe,
-    model = model,
-    language = language,
-    stream = stream,
-    ...,
-    .progress = progress
+    .f = function(...) {
+      do.call(
+        what = aw_transcribe, 
+        args = c(list(...), extra_args)
+      )
+      p() # update progress
+    }
   )
 }
 

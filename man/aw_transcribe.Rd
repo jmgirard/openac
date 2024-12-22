@@ -12,21 +12,22 @@ aw_transcribe(
   wavfile = NULL,
   rdsfile = NULL,
   csvfile = NULL,
-  ...
+  whisper_args = list()
 )
 }
 \arguments{
 \item{infile}{A required string indicating the file path to an audio or video
 file containing an audio stream to transcribe.}
 
-\item{model}{A required model object produced by \code{whisper()}.}
+\item{model}{A required model object produced by \code{\link{whisper}}.}
 
 \item{language}{The language of the audio. Defaults to 'auto'. For a list of
 all languages the model can handle: see
-\code{audio.whisper::whisper_languages()}.}
+\code{\link[audio.whisper]{whisper_languages}}.}
 
-\item{stream}{(numeric, default=0) The index of the audio stream to extract
-(ffmpeg uses zero-indexing so 0 is the first stream).}
+\item{stream}{An optional number indicating the index of the audio stream in
+\code{infile} to convert or extract. Note that ffmpeg uses zero-indexing so the
+default of 0 is the first stream (default = 0).}
 
 \item{wavfile}{Either NULL or a string indicating the path to save the
 prepared version of \code{infile} to (must end with '.wav'). If NULL, a
@@ -38,8 +39,8 @@ whisper output list object to (must end with '.rds').}
 \item{csvfile}{Either NULL or a string indicating the path to save a
 human-readable version of the transcript to (must end with '.csv').}
 
-\item{...}{Optional arguments to forward to
-\code{audio.whisper:::predict.whisper()}.}
+\item{whisper_args}{A list of optional arguments to forward to
+\code{\link[audio.whisper]{predict.whisper}}.}
 }
 \value{
 A list object containing the full whisper output.

@@ -2,20 +2,16 @@
 % Please edit documentation in R/use_whisper.R
 \name{aw_transcribe_dir}
 \alias{aw_transcribe_dir}
-\title{Run aw_transcribe() on multiple files in a directory}
+\title{Transcribe multiple media files with Whisper}
 \usage{
 aw_transcribe_dir(
   indir,
   inext,
-  stream = 0,
   wavdir = NULL,
   rdsdir = NULL,
   csvdir = NULL,
-  model,
-  language = "auto",
-  ...,
   recursive = FALSE,
-  progress = TRUE
+  ...
 )
 }
 \arguments{
@@ -23,9 +19,6 @@ aw_transcribe_dir(
 
 \item{inext}{(character) What file extension should be looked for in \code{indir}
 (e.g., "mp4" or "mp3")?}
-
-\item{stream}{(numeric, default=0) The index of the audio stream to extract
-(ffmpeg uses zero-indexing so 0 is the first stream).}
 
 \item{wavdir}{(character, default=NULL) What directory should the prepared
 WAV files be saved to? If \code{NULL}, temporary WAV files will be created and
@@ -37,27 +30,37 @@ files be saved to? If \code{NULL}, RDS files will not be output.}
 \item{csvdir}{(character, default=NULL) What directory should the CSV output
 files be saved to? If \code{NULL}, CSV files will not be output.}
 
-\item{model}{A required model object produced by \code{whisper()}.}
-
-\item{language}{The language of the audio. Defaults to 'auto'. For a list of
-all languages the model can handle: see
-\code{audio.whisper::whisper_languages()}.}
-
-\item{...}{Optional arguments to forward to
-\code{audio.whisper:::predict.whisper()}.}
-
 \item{recursive}{(logical, default=FALSE) Should files in subdirectories
 within \code{indir} be included?}
 
-\item{progress}{(logical, default=TRUE) Should a progress bar be shown?}
+\item{...}{
+  Arguments passed on to \code{\link[=aw_transcribe]{aw_transcribe}}
+  \describe{
+    \item{\code{model}}{A required model object produced by \code{\link{whisper}}.}
+    \item{\code{language}}{The language of the audio. Defaults to 'auto'. For a list of
+all languages the model can handle: see
+\code{\link[audio.whisper]{whisper_languages}}.}
+    \item{\code{whisper_args}}{A list of optional arguments to forward to
+\code{\link[audio.whisper]{predict.whisper}}.}
+    \item{\code{stream}}{An optional number indicating the index of the audio stream in
+\code{infile} to convert or extract. Note that ffmpeg uses zero-indexing so the
+default of 0 is the first stream (default = 0).}
+  }}
 }
 \value{
 A list object containing the whisper output for each input file.
 }
 \description{
 Find all files in a specified directory with a specified extension and then
-transcribe each using whisper. Can optionally be run in parallel
-by using \code{plan()} beforehand; however, whisper is much more computationally
-intensive than the other programs (especially when using CUDA) and thus
-trying to run this in parallel could easily overwhelm your computer.
+apply \code{\link{aw_transcribe}} to each to transcribe them. If the input files are
+not in the format expected by Whisper, they will be converted first.
+}
+\details{
+Can optionally be run in parallel by using \code{\link[future]{plan}}
+beforehand; however, whisper is much more computationally intensive than the
+other programs in this package (especially when using CUDA) and thus trying
+to run this in parallel could easily overwhelm your computer's resources.
+
+Can optionally output a progress bar by using
+\code{\link[progressr]{handlers}}.
 }

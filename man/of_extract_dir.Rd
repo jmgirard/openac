@@ -4,7 +4,7 @@
 \alias{of_extract_dir}
 \title{Run of_extract() on multiple files in a directory}
 \usage{
-of_extract_dir(indir, inext, outdir, ..., recursive = FALSE, progress = TRUE)
+of_extract_dir(indir, inext, outdir, ..., recursive = FALSE)
 }
 \arguments{
 \item{indir}{(character) What directory are the input files in?}
@@ -30,8 +30,6 @@ in?}
 
 \item{recursive}{(logical, default=FALSE) Should files in subdirectories
 within \code{indir} be included?}
-
-\item{progress}{(logical, default=TRUE) Should a progress bar be shown?}
 }
 \value{
 \code{NULL}

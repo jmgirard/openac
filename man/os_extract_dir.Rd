@@ -11,8 +11,7 @@ os_extract_dir(
   aggdir = NULL,
   llddir = NULL,
   ...,
-  recursive = FALSE,
-  progress = TRUE
+  recursive = FALSE
 )
 }
 \arguments{
@@ -42,8 +41,6 @@ generated using \code{os_list_configs()}.}
 
 \item{recursive}{(logical, default=FALSE) Should files in subdirectories
 within \code{indir} be included?}
-
-\item{progress}{(logical, default=TRUE) Should a progress bar be shown?}
 }
 \value{
 \code{NULL}

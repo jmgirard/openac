@@ -15,19 +15,20 @@
 NULL
 
 
-# audio.whisper::whisper -------------------------------------------------------
+# progressr::handlers ----------------------------------------------------------
 
-#' Re-export the whisper function from the audio.whisper package
+#' Re-export the handlers function from the progressr package
 #'
-#' This function is re-exported from the **audio.whisper** package to allow 
-#' users to download or load a whisper model.
+#' This function is re-exported from the **progressr** package to allow 
+#' users to set whether and how to display progress bars during iteration.
 #'
-#' For more information, see the original documentation in the **audio.whisper**
+#' For more information, see the original documentation in the **progressr**
 #' package.
 #'
-#' @importFrom audio.whisper whisper
+#' @importFrom progressr handlers
 #' @export
-#' @name whisper
-#' @rdname whisper
-#' @seealso \code{\link[audio.whisper]{whisper}}
+#' @name handlers
+#' @rdname handlers
+#' @seealso \code{\link[progressr]{handlers}}
 NULL
+
