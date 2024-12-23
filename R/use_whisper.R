@@ -55,24 +55,15 @@ aw_check_audio <- function(infile, verbose = FALSE) {
 #' @param stream An optional number indicating the index of the audio stream in
 #'   `infile` to convert or extract. Note that ffmpeg uses zero-indexing so the
 #'   default of 0 is the first stream (default = 0).
-#' @param afftdn Remove background noise from the stream?
-#' @param loudnorm Normalize the loudness of the stream?
-#' @param dynaudnorm Compress dynamic range of the stream?
-#' @param highpass Apply a highpass (3400 Hz) filter to the stream?
-#' @param lowpass Apply a lowpass (300 Hz) filter to the stream?
-#' @param silenceremove Remove silences from the stream?
+#' @param afilters Should audio filters be used to try to improve audio quality?
+#'   (See Details.) Defaults to FALSE.
 #' @return A string containing the text output from ffmpeg.
 #' @export
 aw_prep_audio <- function(
   infile, 
   outfile, 
   stream = 0,
-  afftdn = FALSE,
-  loudnorm = FALSE,
-  dynaudnorm = FALSE,
-  highpass = FALSE,
-  lowpass = FALSE,
-  silenceremove = FALSE
+  afilters = FALSE
 ) {
   # Validate input
   stopifnot(file.exists(infile))
@@ -84,34 +75,32 @@ aw_prep_audio <- function(
   if (!dir.exists(dirname(outfile))) {
     dir.create(dirname(outfile), recursive = TRUE)
   }
-  afilters <- vector("character", length = 0)
-  if (afftdn) afilters <- c(afilters, 'afftdn')
-  if (loudnorm) afilters <- c(afilters, 'loudnorm')
-  if (dynaudnorm) afilters <- c(afilters, 'dynaudnorm')
-  if (!is.null(highpass)) afilters <- c(afilters, 'highpass=f=3400')
-  if (!is.null(lowpass)) afilters <- c(afilters, 'lowpass=f=300')
-  if (!is.null(silenceremove)) {
-    afilters <- c(
-      afilters, 
-      paste0(
-        'silenceremove=',
-        'stop_periods=-1:',
-        'stop_duration=1:',
-        'stop_threshold=-50dB:',
-        'timestamp=copy'
-      )
+  # Construct audio filters if requested
+  if (afilters) {
+    afstring <- paste0(
+      ' -af "',
+      # Normalize loudness
+      'loudnorm=I=-24:LRA=7:tp=-2,',
+      # Filter to human speech frequencies
+      'highpass=f=70,',
+      'lowpass=f=14000,',
+      # Reduce noise in frequency domain
+      'afftdn=nf=-20,',
+      # Compress dynamic range
+      'compand=attacks=0:points=-80/-80|-50/-50|-20/-5|-5/-3:soft-knee=6,',
+      # Dynamically normalize volume
+      'dynaudnorm=p=0.7,',
+      # Boost subtle transient details
+      'areverse,',
+      'asubboost,',
+      'areverse"'
     )
   }
-  afilters <- paste(afilters, collapse = ',')
   # Construct ffmpeg command
   arg <- paste0(
     '-y -i "', infile, '"',
     ' -map 0:a:', stream,
-    ifelse(
-      test = nchar(afilters) > 0,
-      yes = paste0(' -af "', afilters, '"'),
-      no = ''
-    ),
+    ifelse(test = afilters, yes = afstring, no = ''),
     ' -ar 16000', # set sample rate to 16kHz
     ' -ac 1', # set to mono audio (1 channel)
     ' -c:a pcm_s16le', # set to 16-bit PCM codec

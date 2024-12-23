@@ -4,17 +4,7 @@
 \alias{aw_prep_audio}
 \title{Prepare an audio stream for analysis by Whisper}
 \usage{
-aw_prep_audio(
-  infile,
-  outfile,
-  stream = 0,
-  afftdn = FALSE,
-  loudnorm = FALSE,
-  dynaudnorm = FALSE,
-  highpass = FALSE,
-  lowpass = FALSE,
-  silenceremove = FALSE
-)
+aw_prep_audio(infile, outfile, stream = 0, afilters = FALSE)
 }
 \arguments{
 \item{infile}{A required string indicating the filepath to the input audio or
@@ -27,17 +17,8 @@ file to create containing only the specified audio stream from \code{infile}.}
 \code{infile} to convert or extract. Note that ffmpeg uses zero-indexing so the
 default of 0 is the first stream (default = 0).}
 
-\item{afftdn}{Remove background noise from the stream?}
-
-\item{loudnorm}{Normalize the loudness of the stream?}
-
-\item{dynaudnorm}{Compress dynamic range of the stream?}
-
-\item{highpass}{Apply a highpass (3400 Hz) filter to the stream?}
-
-\item{lowpass}{Apply a lowpass (300 Hz) filter to the stream?}
-
-\item{silenceremove}{Remove silences from the stream?}
+\item{afilters}{Should audio filters be used to try to improve audio quality?
+Defaults to FALSE.}
 }
 \value{
 A string containing the text output from ffmpeg.
