@@ -55,43 +55,61 @@ aw_check_audio <- function(infile, verbose = FALSE) {
 #' @param stream An optional number indicating the index of the audio stream in
 #'   `infile` to convert or extract. Note that ffmpeg uses zero-indexing so the
 #'   default of 0 is the first stream (default = 0).
-#' @param agate A logical indicating whether to apply the adaptive gate audio 
-#' filter, which automatically attenuates the volume of low-level segments.
-#' @param agate_args A list containing parameters for the agate audio filter, 
-#' such as threshold (in dB), ratio, attack (in ms), and release (in ms).
+#' @param afftdn Remove background noise from the stream?
+#' @param loudnorm Normalize the loudness of the stream?
+#' @param dynaudnorm Compress dynamic range of the stream?
+#' @param highpass Apply a highpass (3400 Hz) filter to the stream?
+#' @param lowpass Apply a lowpass (300 Hz) filter to the stream?
+#' @param silenceremove Remove silences from the stream?
 #' @return A string containing the text output from ffmpeg.
 #' @export
 aw_prep_audio <- function(
   infile, 
   outfile, 
   stream = 0,
-  agate = FALSE,
-  agate_args = list(threshold = -40, ratio = 2, attack = 20, release = 250)
+  afftdn = FALSE,
+  loudnorm = FALSE,
+  dynaudnorm = FALSE,
+  highpass = FALSE,
+  lowpass = FALSE,
+  silenceremove = FALSE
 ) {
   # Validate input
   stopifnot(file.exists(infile))
   stopifnot(rlang::is_character(outfile, n = 1))
   stopifnot(rlang::is_integerish(stream, n = 1), stream >= 0)
-  stopifnot(rlang::is_logical(agate, n =1))
-  stopifnot(rlang::is_list(agate_args, n = 4))
   # Check that the requested audio stream exists
   stopifnot((stream + 1) <= ffp_count_streams(infile)['Audio'])
   # Create output directory if necessary
   if (!dir.exists(dirname(outfile))) {
     dir.create(dirname(outfile), recursive = TRUE)
   }
+  afilters <- vector("character", length = 0)
+  if (afftdn) afilters <- c(afilters, 'afftdn')
+  if (loudnorm) afilters <- c(afilters, 'loudnorm')
+  if (dynaudnorm) afilters <- c(afilters, 'dynaudnorm')
+  if (!is.null(highpass)) afilters <- c(afilters, 'highpass=f=3400')
+  if (!is.null(lowpass)) afilters <- c(afilters, 'lowpass=f=300')
+  if (!is.null(silenceremove)) {
+    afilters <- c(
+      afilters, 
+      paste0(
+        'silenceremove=',
+        'stop_periods=-1:',
+        'stop_duration=1:',
+        'stop_threshold=-50dB:',
+        'timestamps=copy'
+      )
+    )
+  }
+  afilters <- paste(afilters, collapse = ',')
   # Construct ffmpeg command
   arg <- paste0(
     '-y -i "', infile, '" ',
     ' -map 0:a:', stream,
     ifelse(
-      test = audio_gate,
-      yes = paste0(
-        ' -af "agate=',
-        'threshold=', agate_args$threshold, 'dB:',
-        'ratio=', agate_args$ratio, ':',
-        'attack=', agate_args$attack, 'ms:',
-        'release=', agate_args$release, 'ms,acompressor"'),
+      test = nchar(afilters) > 0,
+      yes = paste0(' -af "', afilters, '"'),
       no = ''
     ),
     ' -ar 16000', # set sample rate to 16kHz
@@ -144,19 +162,20 @@ aw_get_model <- function(...) {
 #'   whisper output list object to (must end with '.rds').
 #' @param csvfile Either NULL or a string indicating the path to save a
 #'   human-readable version of the transcript to (must end with '.csv').
+#' @param audio_args A list of optional arguments to forward to 
+#'   \code{\link{aw_prep_audio}}.
 #' @param whisper_args A list of optional arguments to forward to
 #'   \code{\link[audio.whisper]{predict.whisper}}.
-#' @inheritParams aw_prep_audio
 #' @return A list object containing the full whisper output.
 #' @export
 aw_transcribe <- function(
   infile,
   model,
   language = "auto",
-  stream = 0,
   wavfile = NULL,
   rdsfile = NULL,
   csvfile = NULL,
+  audio_args = list(),
   whisper_args = list()
 ) {
   # Input validation will be handled by subfunctions
@@ -169,10 +188,15 @@ aw_transcribe <- function(
       wavfile <- tempfile(fileext = ".wav")
     }
     # Prepare audio stream as wavfile/tempfile
-    x <- aw_prep_audio(
-      infile = infile,
-      outfile = wavfile,
-      stream = stream
+    do.call(
+      what = aw_prep_audio,
+      args = c(
+        list(
+          infile = infile, 
+          outfile = wavfile
+        ),
+        audio_args 
+      )
     )
   } else {
     wavfile <- infile
@@ -278,7 +302,7 @@ aw_transcribe_wav <- function(
 #'   files be saved to? If `NULL`, CSV files will not be output.
 #' @param recursive (logical, default=FALSE) Should files in subdirectories
 #'  within `indir` be included?
-#' @inheritDotParams aw_transcribe model language stream whisper_args
+#' @inheritDotParams aw_transcribe model language audio_args whisper_args
 #' @return A list object containing the whisper output for each input file.
 #' @export
 #' 

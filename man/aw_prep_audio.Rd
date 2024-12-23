@@ -8,8 +8,12 @@ aw_prep_audio(
   infile,
   outfile,
   stream = 0,
-  agate = FALSE,
-  agate_args = list(threshold = -40, ratio = 2, attack = 20, release = 250)
+  afftdn = FALSE,
+  loudnorm = FALSE,
+  dynaudnorm = FALSE,
+  highpass = FALSE,
+  lowpass = FALSE,
+  silenceremove = FALSE
 )
 }
 \arguments{
@@ -23,11 +27,17 @@ file to create containing only the specified audio stream from \code{infile}.}
 \code{infile} to convert or extract. Note that ffmpeg uses zero-indexing so the
 default of 0 is the first stream (default = 0).}
 
-\item{agate}{A logical indicating whether to apply the adaptive gate audio
-filter, which automatically attenuates the volume of low-level segments.}
+\item{afftdn}{Remove background noise from the stream?}
 
-\item{agate_args}{A list containing parameters for the agate audio filter,
-such as threshold (in dB), ratio, attack (in ms), and release (in ms).}
+\item{loudnorm}{Normalize the loudness of the stream?}
+
+\item{dynaudnorm}{Compress dynamic range of the stream?}
+
+\item{highpass}{Apply a highpass (3400 Hz) filter to the stream?}
+
+\item{lowpass}{Apply a lowpass (300 Hz) filter to the stream?}
+
+\item{silenceremove}{Remove silences from the stream?}
 }
 \value{
 A string containing the text output from ffmpeg.

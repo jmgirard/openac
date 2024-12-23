@@ -8,10 +8,10 @@ aw_transcribe(
   infile,
   model,
   language = "auto",
-  stream = 0,
   wavfile = NULL,
   rdsfile = NULL,
   csvfile = NULL,
+  audio_args = list(),
   whisper_args = list()
 )
 }
@@ -25,10 +25,6 @@ file containing an audio stream to transcribe.}
 all languages the model can handle: see
 \code{\link[audio.whisper]{whisper_languages}}.}
 
-\item{stream}{An optional number indicating the index of the audio stream in
-\code{infile} to convert or extract. Note that ffmpeg uses zero-indexing so the
-default of 0 is the first stream (default = 0).}
-
 \item{wavfile}{Either NULL or a string indicating the path to save the
 prepared version of \code{infile} to (must end with '.wav'). If NULL, a
 temporary file will be created and later discarded.}
@@ -38,6 +34,9 @@ whisper output list object to (must end with '.rds').}
 
 \item{csvfile}{Either NULL or a string indicating the path to save a
 human-readable version of the transcript to (must end with '.csv').}
+
+\item{audio_args}{A list of optional arguments to forward to
+\code{\link{aw_prep_audio}}.}
 
 \item{whisper_args}{A list of optional arguments to forward to
 \code{\link[audio.whisper]{predict.whisper}}.}

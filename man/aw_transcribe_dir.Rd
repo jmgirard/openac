@@ -40,11 +40,10 @@ within \code{indir} be included?}
     \item{\code{language}}{The language of the audio. Defaults to 'auto'. For a list of
 all languages the model can handle: see
 \code{\link[audio.whisper]{whisper_languages}}.}
+    \item{\code{audio_args}}{A list of optional arguments to forward to
+\code{\link{aw_prep_audio}}.}
     \item{\code{whisper_args}}{A list of optional arguments to forward to
 \code{\link[audio.whisper]{predict.whisper}}.}
-    \item{\code{stream}}{An optional number indicating the index of the audio stream in
-\code{infile} to convert or extract. Note that ffmpeg uses zero-indexing so the
-default of 0 is the first stream (default = 0).}
   }}
 }
 \value{
