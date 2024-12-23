@@ -15,7 +15,7 @@
 #' 
 ffmpeg <- function(arg) {
   # Validate input
-  stopifnot(rlang::is_character(arg, n = 1))
+  stopifnot(rlang::is_string(arg))
   # Run ffmpeg
   system2(find_ffmpeg(), args = arg, stdout = TRUE, stderr = TRUE)
 }

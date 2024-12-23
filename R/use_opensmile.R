@@ -15,7 +15,7 @@
 #' 
 opensmile <- function(arg) {
   # Validate input
-  stopifnot(rlang::is_character(arg, n = 1))
+  stopifnot(rlang::is_string(arg))
   # Run opensmile
   system2(find_opensmile(), args = arg, stdout = TRUE, stderr = TRUE)
 }
@@ -60,7 +60,7 @@ os_list_configs <- function() {
 #' @export
 os_check_config <- function(config) {
   # Validate input
-  stopifnot(rlang::is_character(config, n = 1))
+  stopifnot(rlang::is_string(config))
   # Strip away file extensions
   config_sans <- tools::file_path_sans_ext(config)
   configs_sans <- tools::file_path_sans_ext(os_list_configs())
@@ -89,7 +89,7 @@ os_check_config <- function(config) {
 os_check_audio <- function(infile, verbose = FALSE) {
   # Validate input
   stopifnot(file.exists(infile))
-  stopifnot(rlang::is_logical(verbose))
+  stopifnot(rlang::is_bool(verbose))
   # Count streams
   streams <- ffp_count_streams(infile)
   # Create ffprobe command
@@ -139,7 +139,7 @@ os_check_audio <- function(infile, verbose = FALSE) {
 os_prep_audio <- function(infile, outfile, stream = 0) {
   # Validate input
   stopifnot(file.exists(infile))
-  stopifnot(rlang::is_character(outfile, n = 1))
+  stopifnot(rlang::is_string(outfile))
   stopifnot(rlang::is_integerish(stream, n = 1), stream >= 0)
   # Create outfile directory if needed
   if (!dir.exists(dirname(outfile))) {
@@ -186,10 +186,10 @@ os_prep_audio_dir <- function(
 ) {
   # Validate input
   stopifnot(dir.exists(indir))
-  stopifnot(rlang::is_character(inext, n = 1))
-  stopifnot(rlang::is_character(outdir, n = 1))
+  stopifnot(rlang::is_string(inext))
+  stopifnot(rlang::is_string(outdir))
   stopifnot(rlang::is_integerish(stream, n = 1), stream >= 0)
-  stopifnot(rlang::is_logical(recursive, n = 1))
+  stopifnot(rlang::is_bool(recursive))
   # Find input filenames
   infiles <- list.files(
     path = indir,
@@ -292,9 +292,9 @@ os_extract_wav <- function(
   # Validate inputs
   stopifnot(file.exists(infile), os_check_audio(infile))
   stopifnot(is.null(aggfile) || 
-   (rlang::is_character(aggfile, n = 1) && tools::file_ext(aggfile) == "csv"))
+   (rlang::is_string(aggfile) && tools::file_ext(aggfile) == "csv"))
   stopifnot(is.null(lldfile) || 
-    (rlang::is_character(lldfile, n = 1) && tools::file_ext(lldfile) == "csv"))
+    (rlang::is_string(lldfile) && tools::file_ext(lldfile) == "csv"))
   config <- os_check_config(config)
   # Create output directories if necessary
   if (!is.null(aggfile) && !dir.exists(dirname(aggfile))) {
@@ -369,12 +369,12 @@ os_extract_dir <- function(
 ) {
   # Validate inputs
   stopifnot(dir.exists(indir))
-  stopifnot(rlang::is_character(inext, n = 1))
-  stopifnot(is.null(wavdir) || rlang::is_character(wavdir, n = 1))
-  stopifnot(is.null(aggdir) || rlang::is_character(aggdir, n = 1))
-  stopifnot(is.null(llddir) || rlang::is_character(llddir, n = 1))
+  stopifnot(rlang::is_string(inext))
+  stopifnot(is.null(wavdir) || rlang::is_string(wavdir))
+  stopifnot(is.null(aggdir) || rlang::is_string(aggdir))
+  stopifnot(is.null(llddir) || rlang::is_string(llddir))
   stopifnot(!is.null(aggdir) || !is.null(llddir))
-  stopifnot(rlang::is_logical(recursive, n = 1))
+  stopifnot(rlang::is_bool(recursive))
   extra_args <- list(...)
   # Find input filepaths
   infiles <- list.files(

@@ -13,7 +13,7 @@
 aw_check_audio <- function(infile, verbose = FALSE) {
   # Validate input
   stopifnot(file.exists(infile))
-  stopifnot(rlang::is_logical(verbose))
+  stopifnot(rlang::is_bool(verbose))
   # Count streams
   streams <- ffp_count_streams(infile)
   # Create ffprobe command
@@ -67,8 +67,9 @@ aw_prep_audio <- function(
 ) {
   # Validate input
   stopifnot(file.exists(infile))
-  stopifnot(rlang::is_character(outfile, n = 1))
+  stopifnot(rlang::is_string(outfile))
   stopifnot(rlang::is_integerish(stream, n = 1), stream >= 0)
+  stopifnot(rlang::is_bool(afilters))
   # Check that the requested audio stream exists
   stopifnot((stream + 1) <= ffp_count_streams(infile)['Audio'])
   # Create output directory if necessary
@@ -224,11 +225,11 @@ aw_transcribe_wav <- function(
   # Validate inputs
   stopifnot(file.exists(infile), aw_check_audio(infile))
   stopifnot(class(model) == "whisper")
-  stopifnot(rlang::is_character(language, n = 1))
+  stopifnot(rlang::is_string(language))
   stopifnot(is.null(rdsfile) || 
-    (rlang::is_character(rdsfile, n = 1) && tools::file_ext(rdsfile) == "rds"))
+    (rlang::is_string(rdsfile) && tools::file_ext(rdsfile) == "rds"))
   stopifnot(is.null(csvfile) || 
-    (rlang::is_character(csvfile, n = 1) && tools::file_ext(csvfile) == "csv"))
+    (rlang::is_string(csvfile) && tools::file_ext(csvfile) == "csv"))
   stopifnot(is.list(whisper_args))
   # Run whisper
   out <- do.call(
@@ -306,11 +307,11 @@ aw_transcribe_dir <- function(
 ) {
   # Validate inputs
   stopifnot(dir.exists(indir))
-  stopifnot(rlang::is_character(inext, n = 1))
-  stopifnot(is.null(wavdir) || rlang::is_character(wavdir, n = 1))
-  stopifnot(is.null(rdsdir) || rlang::is_character(rdsdir, n = 1))
-  stopifnot(is.null(csvdir) || rlang::is_character(csvdir, n = 1))
-  stopifnot(rlang::is_logical(recursive, n = 1))
+  stopifnot(rlang::is_string(inext))
+  stopifnot(is.null(wavdir) || rlang::is_string(wavdir))
+  stopifnot(is.null(rdsdir) || rlang::is_string(rdsdir))
+  stopifnot(is.null(csvdir) || rlang::is_string(csvdir))
+  stopifnot(rlang::is_bool(recursive))
   extra_args <- list(...)
   # Find input filepaths
   infiles <- list.files(

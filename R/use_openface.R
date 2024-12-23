@@ -15,7 +15,7 @@
 #' 
 openface <- function(arg) {
   # Validate input
-  stopifnot(rlang::is_character(arg, n = 1))
+  stopifnot(rlang::is_string(arg))
   # Run openface
   system2(find_openface(), args = arg, stdout = TRUE, stderr = TRUE)
 }
@@ -64,15 +64,15 @@ of_extract <- function(
 ) {
   # Validate input
   stopifnot(file.exists(infile))
-  stopifnot(rlang::is_character(outfile, n = 1))
-  stopifnot(rlang::is_logical(fp2D, n = 1))
-  stopifnot(rlang::is_logical(fp3D, n = 1))
-  stopifnot(rlang::is_logical(pdm, n = 1))
-  stopifnot(rlang::is_logical(pose, n = 1))
-  stopifnot(rlang::is_logical(gaze, n = 1))
-  stopifnot(rlang::is_logical(aus, n = 1))
-  stopifnot(rlang::is_logical(wild, n = 1))
-  stopifnot(rlang::is_logical(multiview, n = 1))
+  stopifnot(rlang::is_string(outfile))
+  stopifnot(rlang::is_bool(fp2D))
+  stopifnot(rlang::is_bool(fp3D))
+  stopifnot(rlang::is_bool(pdm))
+  stopifnot(rlang::is_bool(pose))
+  stopifnot(rlang::is_bool(gaze))
+  stopifnot(rlang::is_bool(aus))
+  stopifnot(rlang::is_bool(wild))
+  stopifnot(rlang::is_bool(multiview))
   # Construct openface command
   arg <- paste0(
     '-f "', infile, '"',
@@ -119,10 +119,10 @@ of_extract_dir <- function(
 ) {
   # Validate input
   stopifnot(dir.exists(indir))
-  stopifnot(rlang::is_character(inext, n = 1))
-  stopifnot(rlang::is_character(outdir, n = 1))
-  stopifnot(rlang::is_logical(recursiive, n = 1))
-  stopifnot(rlang::is_logical(progress, n = 1))
+  stopifnot(rlang::is_string(inext))
+  stopifnot(rlang::is_string(outdir))
+  stopifnot(rlang::is_bool(recursiive))
+  stopifnot(rlang::is_bool(progress))
   # Find input filepaths
   infiles <- list.files(
     path = indir,

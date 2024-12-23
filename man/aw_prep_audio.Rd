@@ -18,7 +18,7 @@ file to create containing only the specified audio stream from \code{infile}.}
 default of 0 is the first stream (default = 0).}
 
 \item{afilters}{Should audio filters be used to try to improve audio quality?
-Defaults to FALSE.}
+(See Details.) Defaults to FALSE.}
 }
 \value{
 A string containing the text output from ffmpeg.

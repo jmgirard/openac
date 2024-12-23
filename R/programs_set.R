@@ -10,7 +10,7 @@
 set_program <- function(program, location) {
   # Validate arguments
   stopifnot(program %in% c("ffmpeg", "ffprobe", "openface", "opensmile"))
-  stopifnot(rlang::is_character(location, n = 1))
+  stopifnot(rlang::is_string(location))
   stopifnot(Sys.which(location) != "")
   # Find where to save user configuration data
   config_dir <- rappdirs::user_config_dir("openac", "R")

@@ -15,7 +15,7 @@
 #' 
 ffprobe <- function(arg) {
   # Validate input
-  stopifnot(rlang::is_character(arg, n = 1))
+  stopifnot(rlang::is_string(arg))
   # Run ffprobe
   system2(find_ffprobe(), args = arg, stdout = TRUE, stderr = TRUE)
 }
