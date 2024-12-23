@@ -4,7 +4,13 @@
 \alias{aw_prep_audio}
 \title{Prepare an audio stream for analysis by Whisper}
 \usage{
-aw_prep_audio(infile, outfile, stream = 0)
+aw_prep_audio(
+  infile,
+  outfile,
+  stream = 0,
+  agate = FALSE,
+  agate_args = list(threshold = -40, ratio = 2, attack = 20, release = 250)
+)
 }
 \arguments{
 \item{infile}{A required string indicating the filepath to the input audio or
@@ -16,6 +22,12 @@ file to create containing only the specified audio stream from \code{infile}.}
 \item{stream}{An optional number indicating the index of the audio stream in
 \code{infile} to convert or extract. Note that ffmpeg uses zero-indexing so the
 default of 0 is the first stream (default = 0).}
+
+\item{agate}{A logical indicating whether to apply the adaptive gate audio
+filter, which automatically attenuates the volume of low-level segments.}
+
+\item{agate_args}{A list containing parameters for the agate audio filter,
+such as threshold (in dB), ratio, attack (in ms), and release (in ms).}
 }
 \value{
 A string containing the text output from ffmpeg.

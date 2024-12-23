@@ -55,13 +55,25 @@ aw_check_audio <- function(infile, verbose = FALSE) {
 #' @param stream An optional number indicating the index of the audio stream in
 #'   `infile` to convert or extract. Note that ffmpeg uses zero-indexing so the
 #'   default of 0 is the first stream (default = 0).
+#' @param agate A logical indicating whether to apply the adaptive gate audio 
+#' filter, which automatically attenuates the volume of low-level segments.
+#' @param agate_args A list containing parameters for the agate audio filter, 
+#' such as threshold (in dB), ratio, attack (in ms), and release (in ms).
 #' @return A string containing the text output from ffmpeg.
 #' @export
-aw_prep_audio <- function(infile, outfile, stream = 0) {
+aw_prep_audio <- function(
+  infile, 
+  outfile, 
+  stream = 0,
+  agate = FALSE,
+  agate_args = list(threshold = -40, ratio = 2, attack = 20, release = 250)
+) {
   # Validate input
   stopifnot(file.exists(infile))
   stopifnot(rlang::is_character(outfile, n = 1))
   stopifnot(rlang::is_integerish(stream, n = 1), stream >= 0)
+  stopifnot(rlang::is_logical(agate, n =1))
+  stopifnot(rlang::is_list(agate_args, n = 4))
   # Check that the requested audio stream exists
   stopifnot((stream + 1) <= ffp_count_streams(infile)['Audio'])
   # Create output directory if necessary
@@ -72,6 +84,16 @@ aw_prep_audio <- function(infile, outfile, stream = 0) {
   arg <- paste0(
     '-y -i "', infile, '" ',
     ' -map 0:a:', stream,
+    ifelse(
+      test = audio_gate,
+      yes = paste0(
+        ' -af "agate=',
+        'threshold=', agate_args$threshold, 'dB:',
+        'ratio=', agate_args$ratio, ':',
+        'attack=', agate_args$attack, 'ms:',
+        'release=', agate_args$release, 'ms,acompressor"'),
+      no = ''
+    ),
     ' -ar 16000', # set sample rate to 16kHz
     ' -ac 1', # set to mono audio (1 channel)
     ' -c:a pcm_s16le', # set to 16-bit PCM codec
