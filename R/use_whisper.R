@@ -98,14 +98,14 @@ aw_prep_audio <- function(
         'stop_periods=-1:',
         'stop_duration=1:',
         'stop_threshold=-50dB:',
-        'timestamps=copy'
+        'timestamp=copy'
       )
     )
   }
   afilters <- paste(afilters, collapse = ',')
   # Construct ffmpeg command
   arg <- paste0(
-    '-y -i "', infile, '" ',
+    '-y -i "', infile, '"',
     ' -map 0:a:', stream,
     ifelse(
       test = nchar(afilters) > 0,
