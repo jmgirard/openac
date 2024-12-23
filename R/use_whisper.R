@@ -192,18 +192,13 @@ aw_transcribe <- function(
     wavfile <- infile
   }
   # Transcribe prepared audio file
-  out <- do.call(
-    what = aw_transcribe_wav,
-    args = c(
-      list(
-        infile = wavfile,
-        model = model,
-        language = language,
-        rdsfile = rdsfile,
-        csvfile = csvfile
-      ),
-      whisper_args
-    )
+  out <- aw_transcribe_wav(
+    infile = wavfile,
+    model = model,
+    language = language,
+    rdsfile = rdsfile,
+    csvfile = csvfile,
+    whisper_args = whisper_args
   )
   # Clean up temporary file if created
   if (temp) unlink(wavfile)
