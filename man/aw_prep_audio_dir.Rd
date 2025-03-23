@@ -35,10 +35,10 @@ Find all media files with a specified extension in a specified directory and
 then extract an audio file for acoustic analysis from each.
 }
 \details{
-Can be optionally run in parallel by running \code{plan()} beforehand, e.g., by
-calling \code{plan("multisession", workers = 4)} before this code.
+Can be optionally run in parallel by running \code{\link[future]{plan}()}
+beforehand, e.g., by calling \code{plan("multisession", workers = 4)}.
 
 Can optionally output a progress bar by using
-\code{\link[progressr]{handlers}}, e.g., by calling
-\verb{handlers("cli"); handlers(global = TRUE)} before this code.
+\code{\link[progressr]{handlers}()} beforehand, e.g., by calling
+\verb{handlers("cli"); handlers(global = TRUE)}.
 }

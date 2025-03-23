@@ -166,12 +166,12 @@ os_prep_audio <- function(infile, outfile, stream = 0) {
 #' Find all media files with a specified extension in a specified directory and 
 #' then extract an audio file for acoustic analysis from each.
 #' 
-#' Can be optionally run in parallel by running `plan()` beforehand, e.g., by
-#' calling `plan("multisession", workers = 4)` before this code.
+#' Can be optionally run in parallel by running \code{\link[future]{plan}()} 
+#' beforehand, e.g., by calling `plan("multisession", workers = 4)`.
 #' 
 #' Can optionally output a progress bar by using 
-#' \code{\link[progressr]{handlers}}, e.g., by calling 
-#' `handlers("cli"); handlers(global = TRUE)` before this code.
+#' \code{\link[progressr]{handlers}()} beforehand, e.g., by calling 
+#' `handlers("cli"); handlers(global = TRUE)`.
 #' 
 #' @param indir (string) What directory contains the input files?
 #' @param inext (string) What file extension should be looked for in `indir` 
@@ -344,8 +344,14 @@ os_extract_wav <- function(
 #' Run os_extract() on multiple files in a directory
 #' 
 #' Find all .wav files in a specified directory and then extract opensmile
-#' features from each (according to `config`). Can optionally be run in parallel
-#' by using `plan()` beforehand.
+#' features from each (according to `config`).
+#' 
+#' Can be optionally run in parallel by running \code{\link[future]{plan}()} 
+#' beforehand, e.g., by calling `plan("multisession", workers = 4)`.
+#' 
+#' Can optionally output a progress bar by using 
+#' \code{\link[progressr]{handlers}()} beforehand, e.g., by calling 
+#' `handlers("cli"); handlers(global = TRUE)`.
 #' 
 #' @param indir (character) What directory contains the input .wav files?
 #' @param inext (character) What file extension to look for in `indir`?

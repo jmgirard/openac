@@ -118,12 +118,12 @@ aw_prep_audio <- function(
 #' Find all media files with a specified extension in a specified directory and 
 #' then extract an audio file for acoustic analysis from each. 
 #' 
-#' Can be optionally run in parallel by running `plan()` beforehand, e.g., by
-#' calling `plan("multisession", workers = 4)` before this code.
+#' Can be optionally run in parallel by running \code{\link[future]{plan}()} 
+#' beforehand, e.g., by calling `plan("multisession", workers = 4)`.
 #' 
 #' Can optionally output a progress bar by using 
-#' \code{\link[progressr]{handlers}}, e.g., by calling 
-#' `handlers("cli"); handlers(global = TRUE)` before this code.
+#' \code{\link[progressr]{handlers}()} beforehand, e.g., by calling 
+#' `handlers("cli"); handlers(global = TRUE)`.
 #' 
 #' @param indir (string) What directory contains the input files?
 #' @param inext (string) What file extension should be looked for in `indir` 

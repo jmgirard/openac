@@ -49,6 +49,13 @@ generated using \code{os_list_configs()}.}
 }
 \description{
 Find all .wav files in a specified directory and then extract opensmile
-features from each (according to \code{config}). Can optionally be run in parallel
-by using \code{plan()} beforehand.
+features from each (according to \code{config}).
+}
+\details{
+Can be optionally run in parallel by running \code{\link[future]{plan}()}
+beforehand, e.g., by calling \code{plan("multisession", workers = 4)}.
+
+Can optionally output a progress bar by using
+\code{\link[progressr]{handlers}()} beforehand, e.g., by calling
+\verb{handlers("cli"); handlers(global = TRUE)}.
 }

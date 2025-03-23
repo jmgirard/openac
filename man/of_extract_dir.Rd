@@ -36,6 +36,13 @@ within \code{indir} be included?}
 }
 \description{
 Find all video files with a specified extension in a specified directory and
-then extract openface features from each. Can optionally be run in parallel
-by using \code{plan()} beforehand.
+then extract openface features from each.
+}
+\details{
+Can be optionally run in parallel by running \code{\link[future]{plan}()}
+beforehand, e.g., by calling \code{plan("multisession", workers = 4)}.
+
+Can optionally output a progress bar by using
+\code{\link[progressr]{handlers}()} beforehand, e.g., by calling
+\verb{handlers("cli"); handlers(global = TRUE)}.
 }

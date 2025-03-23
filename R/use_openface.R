@@ -96,8 +96,14 @@ of_extract <- function(
 #' Run of_extract() on multiple files in a directory
 #' 
 #' Find all video files with a specified extension in a specified directory and
-#' then extract openface features from each. Can optionally be run in parallel 
-#' by using `plan()` beforehand.
+#' then extract openface features from each. 
+#' 
+#' Can be optionally run in parallel by running \code{\link[future]{plan}()} 
+#' beforehand, e.g., by calling `plan("multisession", workers = 4)`.
+#' 
+#' Can optionally output a progress bar by using 
+#' \code{\link[progressr]{handlers}()} beforehand, e.g., by calling 
+#' `handlers("cli"); handlers(global = TRUE)`.
 #' 
 #' @param indir (character) What directory are the input files in?
 #' @param inext (character) What file extension should be looked for in `indir` 
