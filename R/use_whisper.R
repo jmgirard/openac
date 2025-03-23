@@ -111,6 +111,61 @@ aw_prep_audio <- function(
   ffmpeg(arg)
 }
 
+# aw_prep_audio_dir ------------------------------------------------------------
+
+#' Run aw_prep_audio() on multiple files in a directory
+#' 
+#' Find all media files with a specified extension in a specified directory and 
+#' then extract an audio file for acoustic analysis from each. Can be optionally
+#' run in parallel by running `plan()` beforehand.
+#' 
+#' @param indir (string) What directory contains the input files?
+#' @param inext (string) What file extension should be looked for in `indir` 
+#'   (e.g., "mp4" or "mp3")?
+#' @param outdir (string) What directory should the audio files be output to?
+#' @param recursive (logical, default=FALSE) Should files in subdirectories
+#'  within `indir` be included?
+#' @inheritDotParams aw_prep_audio stream afilters
+#' @return `NULL`
+#' @export
+#' 
+aw_prep_audio_dir <- function(
+  indir, 
+  inext, 
+  outdir, 
+  recursive = FALSE,
+  ...
+) {
+  # Validate input
+  stopifnot(dir.exists(indir))
+  stopifnot(rlang::is_string(inext))
+  stopifnot(rlang::is_string(outdir))
+  stopifnot(rlang::is_bool(recursive))
+  inext <- gsub("\\.", "", inext)
+  # Find input filenames
+  infiles <- list.files(
+    path = indir,
+    pattern = paste0(inext, "$"),
+    full.names = TRUE,
+    recursive = recursive
+  )
+  # Construct output filenames
+  outfiles <- gsub(indir, outdir, infiles)
+  outfiles <- gsub(inext, "wav", outfiles)
+  # Iterate os_prep_audio() over infiles
+  p <- progressr::progressor(along = infiles)
+  furrr::future_pwalk(
+    .l = data.frame(
+      infile = infiles,
+      outfile = outfiles
+    ),
+    .f = function(infile, outfile) {
+      aw_prep_audio(infile, outfile, ...)
+      p() # update progress
+    }
+  )
+}
+
 
 # aw_get_model -----------------------------------------------------------------
 
@@ -267,13 +322,10 @@ aw_transcribe_wav <- function(
 #' apply \code{\link{aw_transcribe}} to each to transcribe them. If the input files are
 #' not in the format expected by Whisper, they will be converted first.
 #' 
-#' Can optionally be run in parallel by using \code{\link[future]{plan}} 
-#' beforehand; however, whisper is much more computationally intensive than the 
-#' other programs in this package (especially when using CUDA) and thus trying 
-#' to run this in parallel could easily overwhelm your computer's resources.
-#' 
 #' Can optionally output a progress bar by using 
 #' \code{\link[progressr]{handlers}}.
+#' 
+#' Cannot be run in parallel due to using the GPU.
 #' 
 #' @param indir (character) What directory contains the input files?
 #' @param inext (character) What file extension should be looked for in `indir` 
@@ -343,7 +395,7 @@ aw_transcribe_dir <- function(
   }
   # Iterate aw_transcribe() over infiles
   p <- progressr::progressor(along = infiles)
-  furrr::future_pwalk(
+  purrr::pwalk(
     .l = df,
     .f = function(...) {
       do.call(
@@ -354,4 +406,3 @@ aw_transcribe_dir <- function(
     }
   )
 }
-

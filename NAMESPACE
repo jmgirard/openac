@@ -3,6 +3,7 @@
 export(aw_check_audio)
 export(aw_get_model)
 export(aw_prep_audio)
+export(aw_prep_audio_dir)
 export(aw_transcribe)
 export(aw_transcribe_dir)
 export(check_ffmpeg)

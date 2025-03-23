@@ -55,11 +55,8 @@ apply \code{\link{aw_transcribe}} to each to transcribe them. If the input files
 not in the format expected by Whisper, they will be converted first.
 }
 \details{
-Can optionally be run in parallel by using \code{\link[future]{plan}}
-beforehand; however, whisper is much more computationally intensive than the
-other programs in this package (especially when using CUDA) and thus trying
-to run this in parallel could easily overwhelm your computer's resources.
-
 Can optionally output a progress bar by using
 \code{\link[progressr]{handlers}}.
+
+Cannot be run in parallel due to using the GPU.
 }

@@ -188,8 +188,8 @@ os_prep_audio_dir <- function(
   stopifnot(dir.exists(indir))
   stopifnot(rlang::is_string(inext))
   stopifnot(rlang::is_string(outdir))
-  stopifnot(rlang::is_integerish(stream, n = 1), stream >= 0)
   stopifnot(rlang::is_bool(recursive))
+  inext <- gsub("\\.", "", inext)
   # Find input filenames
   infiles <- list.files(
     path = indir,
