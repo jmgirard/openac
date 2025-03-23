@@ -28,3 +28,10 @@ If provided an audio file, convert the specified audio stream to the proper
 format for Whisper. Or, if provided a video file, extract the specified audio
 stream and convert it to the proper format for Whisper.
 }
+\details{
+The audio filters applied when \code{afilters = TRUE} are normalizing loudness
+(loudnorm), filtering to human speech frequencies (lowpass, highpass),
+reducing noise in the frequency domain (afftdn), compressing dynamic range
+(compand), dynamically normalizing volume (dynaudnorm), and boosting subtle
+transient details (areverse, asubboost, areverse).
+}
