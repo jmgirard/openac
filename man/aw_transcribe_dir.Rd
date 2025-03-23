@@ -56,7 +56,8 @@ not in the format expected by Whisper, they will be converted first.
 }
 \details{
 Can optionally output a progress bar by using
-\code{\link[progressr]{handlers}}.
+\code{\link[progressr]{handlers}}, e.g., by calling
+\verb{handlers("cli"); handlers(global = TRUE)} before this code.
 
 Cannot be run in parallel due to using the GPU.
 }

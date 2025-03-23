@@ -116,8 +116,14 @@ aw_prep_audio <- function(
 #' Run aw_prep_audio() on multiple files in a directory
 #' 
 #' Find all media files with a specified extension in a specified directory and 
-#' then extract an audio file for acoustic analysis from each. Can be optionally
-#' run in parallel by running `plan()` beforehand.
+#' then extract an audio file for acoustic analysis from each. 
+#' 
+#' Can be optionally run in parallel by running `plan()` beforehand, e.g., by
+#' calling `plan("multisession", workers = 4)` before this code.
+#' 
+#' Can optionally output a progress bar by using 
+#' \code{\link[progressr]{handlers}}, e.g., by calling 
+#' `handlers("cli"); handlers(global = TRUE)` before this code.
 #' 
 #' @param indir (string) What directory contains the input files?
 #' @param inext (string) What file extension should be looked for in `indir` 
@@ -323,7 +329,8 @@ aw_transcribe_wav <- function(
 #' not in the format expected by Whisper, they will be converted first.
 #' 
 #' Can optionally output a progress bar by using 
-#' \code{\link[progressr]{handlers}}.
+#' \code{\link[progressr]{handlers}}, e.g., by calling 
+#' `handlers("cli"); handlers(global = TRUE)` before this code.
 #' 
 #' Cannot be run in parallel due to using the GPU.
 #' 
