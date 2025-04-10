@@ -35,13 +35,15 @@ files be saved to? If \code{NULL}, LLD files will not be output. Note that
 within \code{indir} be included?}
 
 \item{...}{
-  Arguments passed on to \code{\link[=os_extract]{os_extract}}
+  Arguments passed on to \code{\link[=os_extract]{os_extract}}, \code{\link[=os_prep_audio]{os_prep_audio}}
   \describe{
     \item{\code{config}}{(character, default="misc/emo_large") Which configuration file
 should be used to analyze \code{infile}? A list of available config files can be
 generated using \code{os_list_configs()}.}
-    \item{\code{audio_args}}{A list of optional arguments to forward to
-\code{\link{os_prep_audio}}.}
+    \item{\code{stream}}{(numeric, default=0) The index of the audio stream to extract
+(ffmpeg uses zero-indexing so 0 is the first stream).}
+    \item{\code{overwrite}}{Should outfile be overwritten if it already exists? It will
+be skipped otherwise. Defaults to TRUE.}
   }}
 }
 \value{

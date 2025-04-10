@@ -10,7 +10,7 @@ os_extract(
   aggfile = NULL,
   lldfile = NULL,
   config = "misc/emo_large",
-  audio_args = list()
+  ...
 )
 }
 \arguments{
@@ -33,8 +33,14 @@ LLD output to? If \code{NULL}, the LLD output will not be saved. Note that eithe
 should be used to analyze \code{infile}? A list of available config files can be
 generated using \code{os_list_configs()}.}
 
-\item{audio_args}{A list of optional arguments to forward to
-\code{\link{os_prep_audio}}.}
+\item{...}{
+  Arguments passed on to \code{\link[=os_prep_audio]{os_prep_audio}}
+  \describe{
+    \item{\code{stream}}{(numeric, default=0) The index of the audio stream to extract
+(ffmpeg uses zero-indexing so 0 is the first stream).}
+    \item{\code{overwrite}}{Should outfile be overwritten if it already exists? It will
+be skipped otherwise. Defaults to TRUE.}
+  }}
 }
 \value{
 A character vector including opensmile output.

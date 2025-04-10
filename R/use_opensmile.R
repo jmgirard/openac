@@ -250,8 +250,7 @@ os_prep_audio_dir <- function(
 #' @param config (character, default="misc/emo_large") Which configuration file
 #' should be used to analyze `infile`? A list of available config files can be
 #' generated using `os_list_configs()`.
-#' @param audio_args A list of optional arguments to forward to
-#'   \code{\link{os_prep_audio}}.
+#' @inheritDotParams os_prep_audio stream overwrite
 #' @return A character vector including opensmile output.
 #' @export
 #'
@@ -261,7 +260,7 @@ os_extract <- function(
   aggfile = NULL,
   lldfile = NULL,
   config = "misc/emo_large",
-  audio_args = list()
+  ...
 ) {
   # Input validation will be handled by subfunctions
   # Preallocate temp
@@ -273,15 +272,10 @@ os_extract <- function(
       wavfile <- tempfile(fileext = ".wav")
     }
     # Prepare audio stream as wavfile/tempfile
-    do.call(
-      what = os_prep_audio,
-      args = c(
-        list(
-          infile = infile,
-          outfile = wavfile
-        ),
-        audio_args
-      )
+    x <- os_prep_audio(
+      infile = infile,
+      outfile = wavfile,
+      ...
     )
   } else {
     wavfile <- infile
@@ -379,7 +373,8 @@ os_extract_wav <- function(
 #' `aggdir` or `llddir` (or both) must be non-NULL.
 #' @param recursive (logical, default=FALSE) Should files in subdirectories
 #'  within `indir` be included?
-#' @inheritDotParams os_extract config audio_args
+#' @inheritDotParams os_extract config
+#' @inheritDotParams os_prep_audio stream overwrite
 #' @return `NULL`
 #' @export
 #'
