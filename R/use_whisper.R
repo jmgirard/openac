@@ -47,10 +47,10 @@ aw_check_audio <- function(infile, verbose = FALSE) {
 #' If provided an audio file, convert the specified audio stream to the proper
 #' format for Whisper. Or, if provided a video file, extract the specified audio
 #' stream and convert it to the proper format for Whisper.
-#' 
-#' The audio filters applied when `afilters = TRUE` are normalizing loudness 
-#' (loudnorm), filtering to human speech frequencies (lowpass, highpass), 
-#' reducing noise in the frequency domain (afftdn), compressing dynamic range 
+#'
+#' The audio filters applied when `afilters = TRUE` are normalizing loudness
+#' (loudnorm), filtering to human speech frequencies (lowpass, highpass),
+#' reducing noise in the frequency domain (afftdn), compressing dynamic range
 #' (compand), dynamically normalizing volume (dynaudnorm), and boosting subtle
 #' transient details (areverse, asubboost, areverse).
 #'
@@ -60,15 +60,18 @@ aw_check_audio <- function(infile, verbose = FALSE) {
 #'   file to create containing only the specified audio stream from `infile`.
 #' @param stream An optional number indicating the index of the audio stream in
 #'   `infile` to convert or extract. Note that ffmpeg uses zero-indexing so the
-#'   default of 0 is the first stream (default = 0).
+#'   default of 0 is the first stream. Defaults to 0.
+#' @param overwrite Should outfile be overwritten if it already exists? It will
+#'   be silently skipped otherwise. Defaults to TRUE.
 #' @param afilters Should audio filters be used to try to improve audio quality?
 #'   (See Details.) Defaults to FALSE.
 #' @return A string containing the text output from ffmpeg.
 #' @export
 aw_prep_audio <- function(
-  infile, 
-  outfile, 
+  infile,
+  outfile,
   stream = 0,
+  overwrite = TRUE,
   afilters = FALSE
 ) {
   # Validate input
@@ -76,6 +79,11 @@ aw_prep_audio <- function(
   stopifnot(rlang::is_string(outfile))
   stopifnot(rlang::is_integerish(stream, n = 1), stream >= 0)
   stopifnot(rlang::is_bool(afilters))
+  stopifnot(rlang::is_bool(overwrite))
+  # Return early if overwrite is TRUE and outfile exists
+  if (overwrite == FALSE && file.exists(outfile)) {
+    return("Skipped")
+  }
   # Check that the requested audio stream exists
   stopifnot((stream + 1) <= ffp_count_streams(infile)['Audio'])
   # Create output directory if necessary
@@ -120,31 +128,31 @@ aw_prep_audio <- function(
 # aw_prep_audio_dir ------------------------------------------------------------
 
 #' Run aw_prep_audio() on multiple files in a directory
-#' 
-#' Find all media files with a specified extension in a specified directory and 
-#' then extract an audio file for acoustic analysis from each. 
-#' 
-#' Can be optionally run in parallel by running \code{\link[future]{plan}()} 
+#'
+#' Find all media files with a specified extension in a specified directory and
+#' then extract an audio file for acoustic analysis from each.
+#'
+#' Can be optionally run in parallel by running \code{\link[future]{plan}()}
 #' beforehand, e.g., by calling `plan("multisession", workers = 4)`.
-#' 
-#' Can optionally output a progress bar by using 
-#' \code{\link[progressr]{handlers}()} beforehand, e.g., by calling 
+#'
+#' Can optionally output a progress bar by using
+#' \code{\link[progressr]{handlers}()} beforehand, e.g., by calling
 #' `handlers("cli"); handlers(global = TRUE)`.
-#' 
+#'
 #' @param indir (string) What directory contains the input files?
-#' @param inext (string) What file extension should be looked for in `indir` 
+#' @param inext (string) What file extension should be looked for in `indir`
 #'   (e.g., "mp4" or "mp3")?
 #' @param outdir (string) What directory should the audio files be output to?
 #' @param recursive (logical, default=FALSE) Should files in subdirectories
 #'  within `indir` be included?
-#' @inheritDotParams aw_prep_audio stream afilters
+#' @inheritDotParams aw_prep_audio stream overwrite afilters
 #' @return `NULL`
 #' @export
-#' 
+#'
 aw_prep_audio_dir <- function(
-  indir, 
-  inext, 
-  outdir, 
+  indir,
+  inext,
+  outdir,
   recursive = FALSE,
   ...
 ) {
@@ -219,7 +227,7 @@ aw_get_model <- function(...) {
 #'   whisper output list object to (must end with '.rds').
 #' @param csvfile Either NULL or a string indicating the path to save a
 #'   human-readable version of the transcript to (must end with '.csv').
-#' @param audio_args A list of optional arguments to forward to 
+#' @param audio_args A list of optional arguments to forward to
 #'   \code{\link{aw_prep_audio}}.
 #' @param whisper_args A list of optional arguments to forward to
 #'   \code{\link[audio.whisper]{predict.whisper}}.
@@ -249,10 +257,10 @@ aw_transcribe <- function(
       what = aw_prep_audio,
       args = c(
         list(
-          infile = infile, 
+          infile = infile,
           outfile = wavfile
         ),
-        audio_args 
+        audio_args
       )
     )
   } else {
@@ -288,9 +296,9 @@ aw_transcribe_wav <- function(
   stopifnot(file.exists(infile), aw_check_audio(infile))
   stopifnot(class(model) == "whisper")
   stopifnot(rlang::is_string(language))
-  stopifnot(is.null(rdsfile) || 
+  stopifnot(is.null(rdsfile) ||
     (rlang::is_string(rdsfile) && tools::file_ext(rdsfile) == "rds"))
-  stopifnot(is.null(csvfile) || 
+  stopifnot(is.null(csvfile) ||
     (rlang::is_string(csvfile) && tools::file_ext(csvfile) == "csv"))
   stopifnot(is.list(whisper_args))
   # Run whisper
@@ -329,22 +337,22 @@ aw_transcribe_wav <- function(
 # aw_transcribe_dir ------------------------------------------------------------
 
 #' Transcribe multiple media files with Whisper
-#' 
-#' Find all files in a specified directory with a specified extension and then 
+#'
+#' Find all files in a specified directory with a specified extension and then
 #' apply \code{\link{aw_transcribe}} to each to transcribe them. If the input files are
 #' not in the format expected by Whisper, they will be converted first.
-#' 
-#' Can optionally output a progress bar by using 
-#' \code{\link[progressr]{handlers}}, e.g., by calling 
+#'
+#' Can optionally output a progress bar by using
+#' \code{\link[progressr]{handlers}}, e.g., by calling
 #' `handlers("cli"); handlers(global = TRUE)` before this code.
-#' 
+#'
 #' Cannot be run in parallel due to using the GPU.
-#' 
+#'
 #' @param indir (character) What directory contains the input files?
-#' @param inext (character) What file extension should be looked for in `indir` 
+#' @param inext (character) What file extension should be looked for in `indir`
 #'   (e.g., "mp4" or "mp3")?
 #' @param wavdir (character, default=NULL) What directory should the prepared
-#'   WAV files be saved to? If `NULL`, temporary WAV files will be created and 
+#'   WAV files be saved to? If `NULL`, temporary WAV files will be created and
 #'   later discarded.
 #' @param rdsdir (character, default=NULL) What directory should the RDS output
 #'   files be saved to? If `NULL`, RDS files will not be output.
@@ -355,13 +363,13 @@ aw_transcribe_wav <- function(
 #' @inheritDotParams aw_transcribe model language audio_args whisper_args
 #' @return A list object containing the whisper output for each input file.
 #' @export
-#' 
+#'
 aw_transcribe_dir <- function(
-  indir, 
-  inext, 
+  indir,
+  inext,
   wavdir = NULL,
-  rdsdir = NULL, 
-  csvdir = NULL, 
+  rdsdir = NULL,
+  csvdir = NULL,
   recursive = FALSE,
   ...
 ) {
@@ -412,7 +420,7 @@ aw_transcribe_dir <- function(
     .l = df,
     .f = function(...) {
       do.call(
-        what = aw_transcribe, 
+        what = aw_transcribe,
         args = c(list(...), extra_args)
       )
       p() # update progress

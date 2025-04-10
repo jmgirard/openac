@@ -4,7 +4,7 @@
 \alias{os_prep_audio}
 \title{Prepare an audio stream for analysis by opensmile}
 \usage{
-os_prep_audio(infile, outfile, stream = 0)
+os_prep_audio(infile, outfile, stream = 0, overwrite = TRUE)
 }
 \arguments{
 \item{infile}{(character) What is the filepath of the audio or video file
@@ -14,6 +14,9 @@ to import?}
 
 \item{stream}{(numeric, default=0) The index of the audio stream to extract
 (ffmpeg uses zero-indexing so 0 is the first stream).}
+
+\item{overwrite}{Should outfile be overwritten if it already exists? It will
+be skipped otherwise. Defaults to TRUE.}
 }
 \value{
 A character vector containing the output of ffmpeg.

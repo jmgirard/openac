@@ -40,8 +40,8 @@ within \code{indir} be included?}
     \item{\code{config}}{(character, default="misc/emo_large") Which configuration file
 should be used to analyze \code{infile}? A list of available config files can be
 generated using \code{os_list_configs()}.}
-    \item{\code{stream}}{(numeric, default=0) The index of the audio stream to extract
-(ffmpeg uses zero-indexing so 0 is the first stream).}
+    \item{\code{audio_args}}{A list of optional arguments to forward to
+\code{\link{os_prep_audio}}.}
   }}
 }
 \value{

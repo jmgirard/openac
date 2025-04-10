@@ -4,7 +4,7 @@
 \alias{aw_prep_audio}
 \title{Prepare an audio stream for analysis by Whisper}
 \usage{
-aw_prep_audio(infile, outfile, stream = 0, afilters = FALSE)
+aw_prep_audio(infile, outfile, stream = 0, overwrite = TRUE, afilters = FALSE)
 }
 \arguments{
 \item{infile}{A required string indicating the filepath to the input audio or
@@ -15,7 +15,10 @@ file to create containing only the specified audio stream from \code{infile}.}
 
 \item{stream}{An optional number indicating the index of the audio stream in
 \code{infile} to convert or extract. Note that ffmpeg uses zero-indexing so the
-default of 0 is the first stream (default = 0).}
+default of 0 is the first stream. Defaults to 0.}
+
+\item{overwrite}{Should outfile be overwritten if it already exists? It will
+be silently skipped otherwise. Defaults to TRUE.}
 
 \item{afilters}{Should audio filters be used to try to improve audio quality?
 (See Details.) Defaults to FALSE.}

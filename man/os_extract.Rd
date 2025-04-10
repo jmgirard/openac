@@ -6,19 +6,16 @@
 \usage{
 os_extract(
   infile,
-  stream = 0,
   wavfile = NULL,
   aggfile = NULL,
   lldfile = NULL,
-  config = "misc/emo_large"
+  config = "misc/emo_large",
+  audio_args = list()
 )
 }
 \arguments{
 \item{infile}{(character) What is the filepath for the input file to be
 analyzed? The proper format can be created by \code{os_prep_audio()}.}
-
-\item{stream}{(numeric, default=0) The index of the audio stream to extract
-(ffmpeg uses zero-indexing so 0 is the first stream).}
 
 \item{wavfile}{(character, default=NULL) Either NULL or a string indicating
 the path to save the prepared version of \code{infile} to (must end with '.wav').
@@ -35,6 +32,9 @@ LLD output to? If \code{NULL}, the LLD output will not be saved. Note that eithe
 \item{config}{(character, default="misc/emo_large") Which configuration file
 should be used to analyze \code{infile}? A list of available config files can be
 generated using \code{os_list_configs()}.}
+
+\item{audio_args}{A list of optional arguments to forward to
+\code{\link{os_prep_audio}}.}
 }
 \value{
 A character vector including opensmile output.

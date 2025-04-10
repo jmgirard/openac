@@ -12,7 +12,7 @@
 #' @export
 #' @examples
 #' opensmile('-h')
-#' 
+#'
 opensmile <- function(arg) {
   # Validate input
   stopifnot(rlang::is_string(arg))
@@ -31,15 +31,15 @@ os <- opensmile
 # os_list_configs --------------------------------------------------------------
 
 #' List openSMILE configuration files
-#' 
+#'
 #' Return a list of all configuration (.config) files found in the openSMILE
 #' installation folder.
-#' 
+#'
 #' @return A character vector containing the configuration files found.
 #' @export
 #' @examples
 #' os_list_configs()
-#' 
+#'
 os_list_configs <- function() {
   # Find opensmile install directory
   fd <- dirname(find_opensmile())
@@ -78,7 +78,7 @@ os_check_config <- function(config) {
 
 #' Check if an audio file is ready for analysis by openSMILE
 #'
-#' Check if an audio file has the proper format for openSMILE, i.e., the 
+#' Check if an audio file has the proper format for openSMILE, i.e., the
 #' pcm_s16le audio codec and 1 audio channel.
 #'
 #' @param infile A required string indicating the filepath of the audio file to
@@ -123,24 +123,31 @@ os_check_audio <- function(infile, verbose = FALSE) {
 # os_prep_audio ----------------------------------------------------------------
 
 #' Prepare an audio stream for analysis by opensmile
-#' 
+#'
 #' Import an audio or video file and export an audio file for acoustic analysis.
-#' Extract the audio stream specified by `stream` and then transcode it to a 
+#' Extract the audio stream specified by `stream` and then transcode it to a
 #' mono (i.e., single channel) 16-bit PCM .wav file at 44.1kHz sampling rate.
-#' 
-#' @param infile (character) What is the filepath of the audio or video file 
+#'
+#' @param infile (character) What is the filepath of the audio or video file
 #'   to import?
 #' @param outfile (character) What is the filepath of the .wav file to create?
-#' @param stream (numeric, default=0) The index of the audio stream to extract 
+#' @param stream (numeric, default=0) The index of the audio stream to extract
 #' (ffmpeg uses zero-indexing so 0 is the first stream).
+#' @param overwrite Should outfile be overwritten if it already exists? It will
+#'   be skipped otherwise. Defaults to TRUE.
 #' @return A character vector containing the output of ffmpeg.
 #' @export
-#' 
-os_prep_audio <- function(infile, outfile, stream = 0) {
+#'
+os_prep_audio <- function(infile, outfile, stream = 0, overwrite = TRUE) {
   # Validate input
   stopifnot(file.exists(infile))
   stopifnot(rlang::is_string(outfile))
   stopifnot(rlang::is_integerish(stream, n = 1), stream >= 0)
+  stopifnot(rlang::is_bool(overwrite))
+  # Return early if overwrite is TRUE and outfile exists
+  if (overwrite == FALSE && file.exists(outfile)) {
+    return("Skipped")
+  }
   # Create outfile directory if needed
   if (!dir.exists(dirname(outfile))) {
     dir.create(dirname(outfile), recursive = TRUE)
@@ -162,31 +169,31 @@ os_prep_audio <- function(infile, outfile, stream = 0) {
 # os_prep_audio_dir ------------------------------------------------------------
 
 #' Run os_prep_audio() on multiple files in a directory
-#' 
-#' Find all media files with a specified extension in a specified directory and 
+#'
+#' Find all media files with a specified extension in a specified directory and
 #' then extract an audio file for acoustic analysis from each.
-#' 
-#' Can be optionally run in parallel by running \code{\link[future]{plan}()} 
+#'
+#' Can be optionally run in parallel by running \code{\link[future]{plan}()}
 #' beforehand, e.g., by calling `plan("multisession", workers = 4)`.
-#' 
-#' Can optionally output a progress bar by using 
-#' \code{\link[progressr]{handlers}()} beforehand, e.g., by calling 
+#'
+#' Can optionally output a progress bar by using
+#' \code{\link[progressr]{handlers}()} beforehand, e.g., by calling
 #' `handlers("cli"); handlers(global = TRUE)`.
-#' 
+#'
 #' @param indir (string) What directory contains the input files?
-#' @param inext (string) What file extension should be looked for in `indir` 
+#' @param inext (string) What file extension should be looked for in `indir`
 #'   (e.g., "mp4" or "mp3")?
 #' @param outdir (string) What directory should the audio files be output to?
 #' @param recursive (logical, default=FALSE) Should files in subdirectories
 #'  within `indir` be included?
-#' @inheritDotParams os_prep_audio stream
+#' @inheritDotParams os_prep_audio stream overwrite
 #' @return `NULL`
 #' @export
-#' 
+#'
 os_prep_audio_dir <- function(
-  indir, 
-  inext, 
-  outdir, 
+  indir,
+  inext,
+  outdir,
   recursive = FALSE,
   ...
 ) {
@@ -224,36 +231,37 @@ os_prep_audio_dir <- function(
 # os_extract -------------------------------------------------------------------
 
 #' Extract opensmile features
-#' 
-#' Extract openSMILE acoustic features from an audio file based on a config 
-#' file. Lower level descriptors (LLDs) will be calculated per frame and then 
+#'
+#' Extract openSMILE acoustic features from an audio file based on a config
+#' file. Lower level descriptors (LLDs) will be calculated per frame and then
 #' summarized into an aggregate (AGG) file.
-#' 
+#'
 #' @param infile (character) What is the filepath for the input file to be
 #' analyzed? The proper format can be created by `os_prep_audio()`.
-#' @param wavfile (character, default=NULL) Either NULL or a string indicating 
-#' the path to save the prepared version of `infile` to (must end with '.wav'). 
+#' @param wavfile (character, default=NULL) Either NULL or a string indicating
+#' the path to save the prepared version of `infile` to (must end with '.wav').
 #' If NULL, a temporary file will be created and later discarded.
-#' @param aggfile (character, default=NULL) What is the filepath to write the 
+#' @param aggfile (character, default=NULL) What is the filepath to write the
 #' AGG output to? If `NULL`, the AGG output will not be saved. Note that either
 #' `aggfile` or `lldfile` (or both) must be non-NULL.
-#' @param lldfile (character, default=NULL) What is the filepath to write the 
+#' @param lldfile (character, default=NULL) What is the filepath to write the
 #' LLD output to? If `NULL`, the LLD output will not be saved. Note that either
 #' `aggfile` or `lldfile` (or both) must be non-NULL.
-#' @param config (character, default="misc/emo_large") Which configuration file 
+#' @param config (character, default="misc/emo_large") Which configuration file
 #' should be used to analyze `infile`? A list of available config files can be
 #' generated using `os_list_configs()`.
-#' @inheritParams os_prep_audio
+#' @param audio_args A list of optional arguments to forward to
+#'   \code{\link{os_prep_audio}}.
 #' @return A character vector including opensmile output.
 #' @export
-#' 
+#'
 os_extract <- function(
-  infile, 
-  stream = 0,
+  infile,
   wavfile = NULL,
-  aggfile = NULL, 
+  aggfile = NULL,
   lldfile = NULL,
-  config = "misc/emo_large"
+  config = "misc/emo_large",
+  audio_args = list()
 ) {
   # Input validation will be handled by subfunctions
   # Preallocate temp
@@ -265,10 +273,15 @@ os_extract <- function(
       wavfile <- tempfile(fileext = ".wav")
     }
     # Prepare audio stream as wavfile/tempfile
-    x <- os_prep_audio(
-      infile = infile,
-      outfile = wavfile,
-      stream = stream
+    do.call(
+      what = os_prep_audio,
+      args = c(
+        list(
+          infile = infile,
+          outfile = wavfile
+        ),
+        audio_args
+      )
     )
   } else {
     wavfile <- infile
@@ -297,9 +310,9 @@ os_extract_wav <- function(
 ) {
   # Validate inputs
   stopifnot(file.exists(infile), os_check_audio(infile))
-  stopifnot(is.null(aggfile) || 
+  stopifnot(is.null(aggfile) ||
    (rlang::is_string(aggfile) && tools::file_ext(aggfile) == "csv"))
-  stopifnot(is.null(lldfile) || 
+  stopifnot(is.null(lldfile) ||
     (rlang::is_string(lldfile) && tools::file_ext(lldfile) == "csv"))
   config <- os_check_config(config)
   # Create output directories if necessary
@@ -319,7 +332,7 @@ os_extract_wav <- function(
       no = ''
     ),
     ifelse(
-      test = !is.null(lldfile), 
+      test = !is.null(lldfile),
       yes = paste0(' -lldcsvoutput "', lldfile, '"'),
       no = ''
     ),
@@ -342,40 +355,40 @@ os_extract_wav <- function(
 # os_extract_dir ---------------------------------------------------------------
 
 #' Run os_extract() on multiple files in a directory
-#' 
+#'
 #' Find all .wav files in a specified directory and then extract opensmile
 #' features from each (according to `config`).
-#' 
-#' Can be optionally run in parallel by running \code{\link[future]{plan}()} 
+#'
+#' Can be optionally run in parallel by running \code{\link[future]{plan}()}
 #' beforehand, e.g., by calling `plan("multisession", workers = 4)`.
-#' 
-#' Can optionally output a progress bar by using 
-#' \code{\link[progressr]{handlers}()} beforehand, e.g., by calling 
+#'
+#' Can optionally output a progress bar by using
+#' \code{\link[progressr]{handlers}()} beforehand, e.g., by calling
 #' `handlers("cli"); handlers(global = TRUE)`.
-#' 
+#'
 #' @param indir (character) What directory contains the input .wav files?
 #' @param inext (character) What file extension to look for in `indir`?
-#' @param wavdir (character, default=NULL) What directory should the prepared 
+#' @param wavdir (character, default=NULL) What directory should the prepared
 #' WAV audio files be saved to? If `NULL`, temporary WAV files will be created
 #' and then discarded (if needed).
-#' @param aggdir (character, default=NULL) What directory should the AGG output 
-#' files be saved to? If `NULL`, AGG files will not be output. Note that 
+#' @param aggdir (character, default=NULL) What directory should the AGG output
+#' files be saved to? If `NULL`, AGG files will not be output. Note that
 #' `aggdir` or `llddir` (or both) must be non-NULL.
 #' @param llddir (character, default=NULL) What directory should the LLD output
-#' files be saved to? If `NULL`, LLD files will not be output. Note that 
+#' files be saved to? If `NULL`, LLD files will not be output. Note that
 #' `aggdir` or `llddir` (or both) must be non-NULL.
 #' @param recursive (logical, default=FALSE) Should files in subdirectories
 #'  within `indir` be included?
-#' @inheritDotParams os_extract stream config
+#' @inheritDotParams os_extract config audio_args
 #' @return `NULL`
 #' @export
-#' 
+#'
 os_extract_dir <- function(
-  indir, 
+  indir,
   inext,
   wavdir = NULL,
-  aggdir = NULL, 
-  llddir = NULL, 
+  aggdir = NULL,
+  llddir = NULL,
   recursive = FALSE,
   ...
 ) {
@@ -427,7 +440,7 @@ os_extract_dir <- function(
     .l = df,
     .f = function(...) {
       do.call(
-        what = os_extract, 
+        what = os_extract,
         args = c(list(...), extra_args)
       )
       p() # update progress
@@ -446,4 +459,3 @@ os_fix_csv <- function(infile) {
   # Write out opensmile output in traditional format
   write.csv(df, file = infile, row.names = FALSE)
 }
-

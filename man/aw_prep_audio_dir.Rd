@@ -22,7 +22,9 @@ within \code{indir} be included?}
   \describe{
     \item{\code{stream}}{An optional number indicating the index of the audio stream in
 \code{infile} to convert or extract. Note that ffmpeg uses zero-indexing so the
-default of 0 is the first stream (default = 0).}
+default of 0 is the first stream. Defaults to 0.}
+    \item{\code{overwrite}}{Should outfile be overwritten if it already exists? It will
+be silently skipped otherwise. Defaults to TRUE.}
     \item{\code{afilters}}{Should audio filters be used to try to improve audio quality?
 (See Details.) Defaults to FALSE.}
   }}

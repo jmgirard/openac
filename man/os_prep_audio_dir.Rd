@@ -22,6 +22,8 @@ within \code{indir} be included?}
   \describe{
     \item{\code{stream}}{(numeric, default=0) The index of the audio stream to extract
 (ffmpeg uses zero-indexing so 0 is the first stream).}
+    \item{\code{overwrite}}{Should outfile be overwritten if it already exists? It will
+be skipped otherwise. Defaults to TRUE.}
   }}
 }
 \value{
