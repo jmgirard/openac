@@ -138,18 +138,17 @@ install_openface_win <- function(download_url = NULL, install_dir = NULL) {
 install_openface_apt <- function() {
   script_url <- "https://raw.githubusercontent.com/TadasBaltrusaitis/OpenFace/master/install.sh"
   tf <- tempfile()
-  status <-
-    utils::download.file(
-      url = script_url,
-      destfile = tf,
-      mode = "wb"
-    )
+  # Download the shell script to temporary file
+  status <- utils::download.file(url = script_url, destfile = tf, mode = "wb")
   if (status != 0) {
     warning("File download failed")
     return(FALSE)
   }
+  # Give permission to execute the temporary file
   Sys.chmod(tf, mode = "0755")
-  system2(tf, stdout = TRUE, stderr = TRUE)
+  # Execute the shell script using bash
+  system2("bash", args = tf, stdout = TRUE, stderr = TRUE)
+  # Remove the temporary file
   unlink(tf)
 }
 
