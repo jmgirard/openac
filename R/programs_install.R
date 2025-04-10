@@ -132,6 +132,28 @@ install_openface_win <- function(download_url = NULL, install_dir = NULL) {
   return(TRUE)
 }
 
+# install_openface_apt ---------------------------------------------------------
+
+#' @export
+install_openface_apt <- function() {
+  script_url <- "https://github.com/TadasBaltrusaitis/OpenFace/blob/master/install.sh"
+  tf <- tempfile()
+  status <-
+    utils::download.file(
+      url = script_url,
+      destfile = tf,
+      mode = "wb"
+    )
+  if (status != 0) {
+    warning("File download failed")
+    return(FALSE)
+  }
+  Sys.chmod(tf, mode = "0755")
+  system2(tf, stdout = TRUE, stderr = TRUE)
+  unlink(tf)
+}
+
+
 
 # install_opensmile_win --------------------------------------------------------
 
