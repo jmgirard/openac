@@ -136,7 +136,7 @@ install_openface_win <- function(download_url = NULL, install_dir = NULL) {
 
 #' @export
 install_openface_apt <- function() {
-  script_url <- "https://github.com/TadasBaltrusaitis/OpenFace/blob/master/install.sh"
+  script_url <- "https://raw.githubusercontent.com/TadasBaltrusaitis/OpenFace/master/install.sh"
   tf <- tempfile()
   status <-
     utils::download.file(
