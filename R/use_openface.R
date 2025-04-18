@@ -127,7 +127,7 @@ of_extract_dir <- function(
   stopifnot(dir.exists(indir))
   stopifnot(rlang::is_string(inext))
   stopifnot(rlang::is_string(outdir))
-  stopifnot(rlang::is_bool(recursiive))
+  stopifnot(rlang::is_bool(recursive))
   stopifnot(rlang::is_bool(progress))
   # Find input filepaths
   infiles <- list.files(
