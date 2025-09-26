@@ -135,16 +135,20 @@ aw_prep_audio <- function(
 #' Can be optionally run in parallel by running \code{\link[future]{plan}()}
 #' beforehand, e.g., by calling `plan("multisession", workers = 4)`.
 #'
-#' Can optionally output a progress bar by using
-#' \code{\link[progressr]{handlers}()} beforehand, e.g., by calling
-#' `handlers("cli"); handlers(global = TRUE)`.
-#'
 #' @param indir (string) What directory contains the input files?
 #' @param inext (string) What file extension should be looked for in `indir`
 #'   (e.g., "mp4" or "mp3")?
 #' @param outdir (string) What directory should the audio files be output to?
-#' @param recursive (logical, default=FALSE) Should files in subdirectories
+#' @param recursive (logical, default = FALSE) Should files in subdirectories
 #'  within `indir` be included?
+#' @param progress (string, default = "auto") Controls progress reporting.
+#'   One of `"auto"`, `"on"`, or `"off"`.
+#'   - `"auto"`: Emit `progressr` signals but do not force display; a progress
+#'     bar appears only if the caller has enabled a handler (e.g.,
+#'     `progressr::with_progress()` or a global handler).
+#'   - `"on"`: Wraps the call in `progressr::with_progress()` so progress will
+#'     render using any available handler.
+#'   - `"off"`: Suppresses progress signals via `progressr::without_progress()`.
 #' @inheritDotParams aw_prep_audio stream overwrite afilters
 #' @return `NULL`
 #' @export
@@ -154,6 +158,7 @@ aw_prep_audio_dir <- function(
   inext,
   outdir,
   recursive = FALSE,
+  progress = c("auto", "on", "off"),
   ...
 ) {
   # Validate input
@@ -161,29 +166,50 @@ aw_prep_audio_dir <- function(
   stopifnot(rlang::is_string(inext))
   stopifnot(rlang::is_string(outdir))
   stopifnot(rlang::is_bool(recursive))
-  inext <- gsub("\\.", "", inext)
+  progress <- match.arg(progress)
+  # Drop leading extension dot if present
+  inext <- gsub("^\\.", "", inext)
   # Find input filenames
   infiles <- list.files(
     path = indir,
-    pattern = paste0(inext, "$"),
+    pattern = paste0("\\.", inext, "$"),
     full.names = TRUE,
-    recursive = recursive
+    recursive = recursive,
+    ignore.case = TRUE
   )
+  if (length(infiles) == 0L) {
+    return(invisible(character()))
+  }
   # Construct output filenames
-  outfiles <- gsub(indir, outdir, infiles)
-  outfiles <- gsub(inext, "wav", outfiles)
+  indir_abs   <- fs::path_abs(indir)
+  infiles_abs <- fs::path_abs(infiles)
+  outdir_abs  <- fs::path_abs(outdir)
+  rel <- fs::path_rel(infiles_abs, start = indir_abs)
+  if (any(startsWith(rel, ".."))) {
+    cli::cli_abort("All input files must be located under 'indir'.")
+  }
+  outfiles <- fs::path(outdir_abs, rel)
+  outfiles <- fs::path_ext_set(outfiles, "wav")
+  fs::dir_create(fs::path_dir(outfiles))
   # Iterate os_prep_audio() over infiles
-  p <- progressr::progressor(along = infiles)
-  furrr::future_pwalk(
-    .l = data.frame(
-      infile = infiles,
-      outfile = outfiles
-    ),
-    .f = function(infile, outfile) {
-      aw_prep_audio(infile, outfile, ...)
-      p() # update progress
-    }
-  )
+  run <- function() {
+    p <- progressr::progressor(steps = length(infiles_abs))
+    furrr::future_pwalk(
+      .l = list(infile = infiles_abs, outfile = outfiles),
+      .f = function(infile, outfile) {
+        aw_prep_audio(infile, outfile, ...)
+        p(message = basename(infile))
+      }
+    )
+  }
+  if (progress == "on") {
+    progressr::with_progress(run())
+  } else if (progress == "off") {
+    progressr::without_progress(run())
+  } else {
+    run()
+  }
+  invisible(outfiles)
 }
 
 
@@ -360,8 +386,16 @@ aw_transcribe_wav <- function(
 #'   files be saved to? If `NULL`, CSV files will not be output.
 #' @param recursive (logical, default=FALSE) Should files in subdirectories
 #'  within `indir` be included?
+#' @param progress (string, default = "auto") Controls progress reporting.
+#'   One of `"auto"`, `"on"`, or `"off"`.
+#'   - `"auto"`: Emit `progressr` signals but do not force display; a progress
+#'     bar appears only if the caller has enabled a handler (e.g.,
+#'     `progressr::with_progress()` or a global handler).
+#'   - `"on"`: Wraps the call in `progressr::with_progress()` so progress will
+#'     render using any available handler.
+#'   - `"off"`: Suppresses progress signals via `progressr::without_progress()`.
 #' @inheritDotParams aw_transcribe model language audio_args whisper_args
-#' @return A list object containing the whisper output for each input file.
+#' @return (Invisibly) the character vector of input files processed.
 #' @export
 #'
 aw_transcribe_dir <- function(
@@ -371,6 +405,7 @@ aw_transcribe_dir <- function(
   rdsdir = NULL,
   csvdir = NULL,
   recursive = FALSE,
+  progress = c("auto", "on", "off"),
   ...
 ) {
   # Validate inputs
@@ -380,50 +415,68 @@ aw_transcribe_dir <- function(
   stopifnot(is.null(rdsdir) || rlang::is_string(rdsdir))
   stopifnot(is.null(csvdir) || rlang::is_string(csvdir))
   stopifnot(rlang::is_bool(recursive))
+  progress <- match.arg(progress)
   extra_args <- list(...)
   # Find input filepaths
+  inext <- sub("^\\.", "", inext)
   infiles <- list.files(
     path = indir,
-    pattern = paste0(inext, "$"),
+    pattern = paste0("\\.", inext, "$"),
     full.names = TRUE,
-    recursive = recursive
+    recursive = recursive,
+    ignore.case = TRUE
   )
-  # Construct iteration data frame
-  df <- data.frame(infile = infiles)
-  # If saving prepared WAV files...
+  if (length(infiles) == 0L) return(invisible(character()))
+  # Normalize paths
+  indir_abs <- fs::path_abs(indir)
+  infiles_abs <- fs::path_abs(infiles)
+  rel <- fs::path_rel(infiles_abs, start = indir_abs)
+  if (any(startsWith(rel, ".."))) {
+    stop("All input files must be located under 'indir'.")
+  }
+  # Build iteration data frame
+  df <- data.frame(infile = infiles_abs, stringsAsFactors = FALSE)
+  # WAV outputs
   if (!is.null(wavdir)) {
-    # Construct WAV output filepaths
-    wavfiles <- gsub(indir, wavdir, infiles)
-    wavfiles <- gsub(inext, "wav", wavfiles)
-    # Add to iteration data frame
-    df <- cbind(df, wavfile = wavfiles)
+    wavdir_abs <- fs::path_abs(wavdir)
+    wavfiles <- fs::path(wavdir_abs, rel)
+    wavfiles <- fs::path_ext_set(wavfiles, "wav")
+    fs::dir_create(fs::path_dir(wavfiles))
+    df$wavfile <- wavfiles
   }
-  # If exporting RDS output...
+  # RDS outputs
   if (!is.null(rdsdir)) {
-    # Construct RDS output filepaths
-    rdsfiles <- gsub(indir, rdsdir, infiles)
-    rdsfiles <- gsub(inext, "rds", rdsfiles)
-    # Add to iteration data frame
-    df <- cbind(df, rdsfile = rdsfiles)
+    rdsdir_abs <- fs::path_abs(rdsdir)
+    rdsfiles <- fs::path(rdsdir_abs, rel)
+    rdsfiles <- fs::path_ext_set(rdsfiles, "rds")
+    fs::dir_create(fs::path_dir(rdsfiles))
+    df$rdsfile <- rdsfiles
   }
-  # If exporting CSV output...
+  # CSV outputs
   if (!is.null(csvdir)) {
-    # Construct CSV output filepaths
-    csvfiles <- gsub(indir, csvdir, infiles)
-    csvfiles <- gsub(inext, "csv", csvfiles)
-    # Add to iteration data frame
-    df <- cbind(df, csvfile = csvfiles)
+    csvdir_abs <- fs::path_abs(csvdir)
+    csvfiles <- fs::path(csvdir_abs, rel)
+    csvfiles <- fs::path_ext_set(csvfiles, "csv")
+    fs::dir_create(fs::path_dir(csvfiles))
+    df$csvfile <- csvfiles
   }
-  # Iterate aw_transcribe() over infiles
-  p <- progressr::progressor(along = infiles)
-  purrr::pwalk(
-    .l = df,
-    .f = function(...) {
-      do.call(
-        what = aw_transcribe,
-        args = c(list(...), extra_args)
-      )
-      p() # update progress
-    }
-  )
+  # Work runner
+  run <- function() {
+    p <- progressr::progressor(steps = nrow(df))
+    purrr::pwalk(
+      .l = df,
+      .f = function(...) {
+        do.call(what = aw_transcribe, args = c(list(...), extra_args))
+        p(message = basename(list(...)$infile))
+      }
+    )
+  }
+  if (progress == "on") {
+    progressr::with_progress(run())
+  } else if (progress == "off") {
+    progressr::without_progress(run())
+  } else {
+    run()
+  }
+  invisible(infiles_abs)
 }

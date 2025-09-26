@@ -132,6 +132,43 @@ install_openface_win <- function(download_url = NULL, install_dir = NULL) {
   return(TRUE)
 }
 
+# install_openface_mac ---------------------------------------------------------
+
+install_openface_mac <- function(install_dir = NULL) {
+  if (is.null(install_dir)) {
+    install_dir <- file.path(rappdirs::user_data_dir("openac", "R"), "openface")
+  }
+  if (!dir.exists(install_dir)) {
+    status <- dir.create(install_dir, recursive = TRUE)
+    if (status == FALSE) return(FALSE)
+  }
+
+  sh <- '
+    #!/bin/bash
+    # script to install openFace for mac 
+
+    brew update
+    brew install gcc 
+    brew install boost
+    brew install tbb
+    brew install openblas
+    brew install --build-from-source dlib
+    brew install wget
+    brew install opencv
+
+    git clone https://github.com/TadasBaltrusaitis/OpenFace.git
+
+    mkdir build
+    cd build
+    cmake -D WITH_OPENMP=ON CMAKE_BUILD_TYPE=RELEASE ..  
+    make
+
+    cd ..
+    bash download_models.sh 
+    cp lib/local/LandmarkDetector/model/patch_experts/*.dat build/bin/model/patch_experts/
+  '
+}
+
 # install_opensmile_win --------------------------------------------------------
 
 #TODO: write documentation
@@ -195,7 +232,7 @@ install_opensmile_mac <- function(
       ifelse(
         arch == "armv8",
         "opensmile-3.0.2-macos-armv8.zip",
-        "opensmile-3.0.2-windows-x86_64.zip"
+        "opensmile-3.0.2-macos-x86_64.zip"
       )
     )
   }

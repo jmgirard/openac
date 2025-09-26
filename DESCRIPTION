@@ -9,6 +9,7 @@ License: GPL (>= 3)
 Imports: 
     archive,
     cli,
+    fs,
     furrr,
     future,
     pak,
