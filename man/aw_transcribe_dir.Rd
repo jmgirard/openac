@@ -11,6 +11,7 @@ aw_transcribe_dir(
   rdsdir = NULL,
   csvdir = NULL,
   recursive = FALSE,
+  progress = c("auto", "on", "off"),
   ...
 )
 }
@@ -33,6 +34,17 @@ files be saved to? If \code{NULL}, CSV files will not be output.}
 \item{recursive}{(logical, default=FALSE) Should files in subdirectories
 within \code{indir} be included?}
 
+\item{progress}{(string, default = "auto") Controls progress reporting.
+One of \code{"auto"}, \code{"on"}, or \code{"off"}.
+\itemize{
+\item \code{"auto"}: Emit \code{progressr} signals but do not force display; a progress
+bar appears only if the caller has enabled a handler (e.g.,
+\code{progressr::with_progress()} or a global handler).
+\item \code{"on"}: Wraps the call in \code{progressr::with_progress()} so progress will
+render using any available handler.
+\item \code{"off"}: Suppresses progress signals via \code{progressr::without_progress()}.
+}}
+
 \item{...}{
   Arguments passed on to \code{\link[=aw_transcribe]{aw_transcribe}}
   \describe{
@@ -47,7 +59,7 @@ all languages the model can handle: see
   }}
 }
 \value{
-A list object containing the whisper output for each input file.
+(Invisibly) the character vector of input files processed.
 }
 \description{
 Find all files in a specified directory with a specified extension and then

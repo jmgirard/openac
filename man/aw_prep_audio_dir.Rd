@@ -4,7 +4,14 @@
 \alias{aw_prep_audio_dir}
 \title{Run aw_prep_audio() on multiple files in a directory}
 \usage{
-aw_prep_audio_dir(indir, inext, outdir, recursive = FALSE, ...)
+aw_prep_audio_dir(
+  indir,
+  inext,
+  outdir,
+  recursive = FALSE,
+  progress = c("auto", "on", "off"),
+  ...
+)
 }
 \arguments{
 \item{indir}{(string) What directory contains the input files?}
@@ -14,8 +21,19 @@ aw_prep_audio_dir(indir, inext, outdir, recursive = FALSE, ...)
 
 \item{outdir}{(string) What directory should the audio files be output to?}
 
-\item{recursive}{(logical, default=FALSE) Should files in subdirectories
+\item{recursive}{(logical, default = FALSE) Should files in subdirectories
 within \code{indir} be included?}
+
+\item{progress}{(string, default = "auto") Controls progress reporting.
+One of \code{"auto"}, \code{"on"}, or \code{"off"}.
+\itemize{
+\item \code{"auto"}: Emit \code{progressr} signals but do not force display; a progress
+bar appears only if the caller has enabled a handler (e.g.,
+\code{progressr::with_progress()} or a global handler).
+\item \code{"on"}: Wraps the call in \code{progressr::with_progress()} so progress will
+render using any available handler.
+\item \code{"off"}: Suppresses progress signals via \code{progressr::without_progress()}.
+}}
 
 \item{...}{
   Arguments passed on to \code{\link[=aw_prep_audio]{aw_prep_audio}}
@@ -39,8 +57,4 @@ then extract an audio file for acoustic analysis from each.
 \details{
 Can be optionally run in parallel by running \code{\link[future]{plan}()}
 beforehand, e.g., by calling \code{plan("multisession", workers = 4)}.
-
-Can optionally output a progress bar by using
-\code{\link[progressr]{handlers}()} beforehand, e.g., by calling
-\verb{handlers("cli"); handlers(global = TRUE)}.
 }
