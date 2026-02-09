@@ -30,9 +30,8 @@ aw_check_audio <- function(infile, verbose = FALSE) {
   if (length(dat) < 3) {
     if (verbose) {
       cli::cli_warn(c(
-        "!" = "ffprobe failed to retrieve audio metadata for {.file {infile}}",
-        "i" = "This usually means the file has no audio streams or is corrupted.",
-        "i" = "Returning {.val FALSE} so conversion is attempted."
+        "!" = "No audio stream found in {.file {basename(infile)}}",
+        "i" = "Returning FALSE."
       ))
     }
     return(FALSE)
@@ -100,7 +99,7 @@ aw_prep_audio <- function(
     return("Skipped")
   }
   # Check that the requested audio stream exists
-  stopifnot((stream + 1) <= ffp_count_streams(infile)['Audio'])
+  stopifnot((stream + 1) <= ffp_count_streams(infile)[['Audio']])
   # Create output directory if necessary
   if (!dir.exists(dirname(outfile))) {
     dir.create(dirname(outfile), recursive = TRUE)
@@ -139,6 +138,7 @@ aw_prep_audio <- function(
   # Run ffmpeg command
   ffmpeg(arg)
 }
+
 
 # aw_prep_audio_dir ------------------------------------------------------------
 
@@ -284,7 +284,14 @@ aw_transcribe <- function(
   audio_args = list(),
   whisper_args = list()
 ) {
-  # Input validation will be handled by subfunctions
+  # Check for audio
+  has_audio <- tryCatch({
+    ffp_count_streams(infile)[['Audio']] > 0
+  }, error = function(e) FALSE)
+  if (is.na(has_audio) || !has_audio) {
+    cli::cli_alert_warning("Skipping {.file {basename(infile)}}: No audio streams detected.")
+    return(NULL)
+  }
   # Preallocate temp
   temp <- FALSE
   if (aw_check_audio(infile) == FALSE) {
