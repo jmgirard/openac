@@ -39,8 +39,8 @@ aw_check_audio <- function(infile, verbose = FALSE) {
   }
   # Check ffprobe output
   tests <- c(
-    No_Video = streams["Video"] == 0,
-    One_Stream = streams["Audio"] == 1,
+    No_Video = streams[["Video"]] == 0,
+    One_Stream = streams[["Audio"]] == 1,
     Right_Codec = dat[[1]] == "pcm_s16le",
     Sample_Rate = dat[[2]] == "16000",
     One_Channel = dat[[3]] == "1"
