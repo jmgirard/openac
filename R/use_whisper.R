@@ -19,12 +19,24 @@ aw_check_audio <- function(infile, verbose = FALSE) {
   # Create ffprobe command
   arg <- paste0(
     '-v error',
+    ' -select_streams a', 
     ' -show_entries stream=codec_name,sample_rate,channels',
     ' -of default=noprint_wrappers=1:nokey=1',
     ' "', infile, '"'
   )
   # Run ffprobe command
   dat <- ffprobe(arg)
+  # Validate ffprobe output
+  if (length(dat) < 3) {
+    if (verbose) {
+      cli::cli_warn(c(
+        "!" = "ffprobe failed to retrieve audio metadata for {.file {infile}}",
+        "i" = "This usually means the file has no audio streams or is corrupted.",
+        "i" = "Returning {.val FALSE} so conversion is attempted."
+      ))
+    }
+    return(FALSE)
+  }
   # Check ffprobe output
   tests <- c(
     No_Video = streams["Video"] == 0,
@@ -34,7 +46,10 @@ aw_check_audio <- function(infile, verbose = FALSE) {
     One_Channel = dat[[3]] == "1"
   )
   # If verbose, state the result
-  if (verbose) print(tests)
+  if (verbose) {
+    cli::cli_h2("Audio Check Results")
+    cli::cli_ul(items = tests)
+  }
   # Return single logical
   all(tests)
 }
