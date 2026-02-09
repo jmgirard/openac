@@ -43,25 +43,22 @@ ffp <- ffprobe
 ffp_count_streams <- function(infile) {
   # Validate inputs
   stopifnot(file.exists(infile))
-  # Check if there is a video stream
+  
+  # Get types for ALL streams
   arg <- paste0(
     '-v error',
-    ' -select_streams v:0',
-    ' -show_entries stream=codec_type',
+    ' -show_entries stream=codec_type', 
     ' -of csv=p=0',
     ' "', infile, '"'
   )
-  vcount <- length(ffprobe(arg))
-  # Check if there is an audio stream
-  arg2 <- paste0(
-    '-v error',
-    ' -select_streams a:0',
-    ' -show_entries stream=codec_type',
-    ' -of csv=p=0',
-    ' "', infile, '"'
-  )
-  acount <- length(ffprobe(arg2))
+  
+  # Run ffprobe
+  stream_types <- ffprobe(arg)
+  
+  # Count occurrences in R
+  vcount <- sum(stream_types == "video")
+  acount <- sum(stream_types == "audio")
+  
   # Construct output vector
   c(Video = vcount, Audio = acount)
 }
-
