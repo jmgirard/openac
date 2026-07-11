@@ -3,7 +3,7 @@
 - **Status:** review   <!-- mirror; cairn/ROADMAP.md is the authority -->
 - **Priority:** high   <!-- high | normal | low -->
 - **Depends on:** —
-- **Branch/PR:** m04-check-hygiene   <!-- PR URL once opened -->
+- **Branch/PR:** m04-check-hygiene · https://github.com/jmgirard/openac/pull/3
 
 ## Goal
 
@@ -94,6 +94,8 @@ cleanly apart from the vignettes (which M05 handles).
   content edits.
 - 2026-07-11: all tasks done. `test()` 67 pass; `check()` (vignettes off) =
   0E/0W/0N except the 2 named vignette warnings (M05). Status → review.
+- 2026-07-11: review — PR #3 opened; fresh evidence re-gathered; independent
+  Opus review clean (1 nit fixed: `install_opensmile_win` `@return` wording).
 
 ## Decisions
 <!-- milestone-local; promote cross-cutting ones to cairn/DECISIONS.md -->
@@ -102,4 +104,23 @@ cleanly apart from the vignettes (which M05 handles).
   → D-006 (cross-cutting; in cairn/DECISIONS.md).
 
 ## Review
-<!-- filled by /milestone-review -->
+
+_Reviewed 2026-07-11 · PR #3 · branch `m04-check-hygiene`._
+
+**Acceptance criteria (fresh evidence):**
+- Examples 0 errors ✓; missing-docs clean ✓; Rd xrefs clean ✓; deps clean
+  (`purrr` in, `pak` out) ✓; possible-problems no undefined globals ✓;
+  hidden-files + subdirectories clean ✓; `document()` no diff ✓,
+  `test-openface.R` removed ✓, `test()` 67 pass ✓.
+- `check()` (vignettes off) = 0E / 0W / 0N apart from the 2 named vignette
+  warnings (M05). Full-vignette check still errors — that is M05's scope.
+
+**Consistency gate:** `document()` idempotent ✓; README.Rmd/.md untouched &
+in sync ✓; no pkgdown site (no `_pkgdown.yml` row owed) ✓; no NEWS entry
+(hygiene only, no user-visible behavior change) ✓; no new top-level tracked
+files (`.claude` now ignored) ✓.
+
+**Independent Opus review (fresh context):** no blockers, no regressions,
+no out-of-scope changes. One NIT — `install_opensmile_win` `@return` wrongly
+said "(invisibly returned)"; fixed to match the macOS twin. No CI configured
+(no `.github/workflows`), so no remote checks to gate on.

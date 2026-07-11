@@ -182,7 +182,7 @@ install_openface_mac <- function(install_dir = NULL) {
 #'   If `NULL`, a per-user data directory (via [rappdirs::user_data_dir()]) is
 #'   used.
 #' @return A logical: `TRUE` on success, `FALSE` if the download or directory
-#'   creation failed (invisibly returned by the underlying steps).
+#'   creation failed.
 #' @examples
 #' \dontrun{
 #' install_opensmile_win()

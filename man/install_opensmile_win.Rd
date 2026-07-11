@@ -16,7 +16,7 @@ used.}
 }
 \value{
 A logical: \code{TRUE} on success, \code{FALSE} if the download or directory
-creation failed (invisibly returned by the underlying steps).
+creation failed.
 }
 \description{
 Download a prebuilt openSMILE release for Windows and install it into a
