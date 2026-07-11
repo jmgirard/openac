@@ -2,6 +2,7 @@
 
 _The only authority on milestone status. Grouped by status, not ID._
 _Last hygiene check: 2026-07-11 (M05 merged — full check() green)_
+_Released 0.1.0 (GitHub) 2026-07-11._
 
 ## Milestones
 

@@ -4,18 +4,49 @@
 # openac
 
 <!-- badges: start -->
+
 <!-- badges: end -->
 
-The goal of openac is to …
+openac provides R wrappers around external, open-source
+affective-computing tools — ffmpeg/ffprobe, OpenFace, openSMILE, and
+Whisper (via audio.whisper) — so researchers can run them from a single,
+consistent R interface. It covers tool discovery, installation, and
+configuration; audio/video preparation; single-file and batch extraction
+(with parallelism and progress); and reading each tool’s output into a
+tidy tibble.
 
 ## Installation
 
 You can install the development version of openac from
-[GitHub](https://github.com/) with:
+[GitHub](https://github.com/jmgirard/openac) with:
 
 ``` r
-# install.packages("devtools")
-devtools::install_github("jmgirard/openac")
+# install.packages("pak")
+pak::pak("jmgirard/openac")
+```
+
+openac calls external command-line tools; install and register the ones
+you need (e.g. `install_opensmile_mac()` / `install_opensmile_win()`, or
+point openac at an existing install with `set_opensmile()`).
+
+## Example
+
+Extract acoustic features from a folder of audio files in parallel, then
+read one result into a tidy tibble:
+
+``` r
+library(openac)
+
+# Extract eGeMAPS features from every .wav under audio/ into features/.
+os_extract_dir(
+  indir = "audio",
+  inext = "wav",
+  aggdir = "features",
+  config = "egemaps/v02/eGeMAPSv02"
+)
+
+# Read one aggregate output into a one-row-per-file tidy tibble.
+feats <- os_read("features/clip01_agg.csv")
 ```
 
 ## Code of Conduct
