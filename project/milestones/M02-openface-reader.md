@@ -1,6 +1,6 @@
 # M02: OpenFace tidy reader (`of_read`)
 
-- **Status:** in-progress   <!-- mirror; project/ROADMAP.md is the authority -->
+- **Status:** review   <!-- mirror; project/ROADMAP.md is the authority -->
 - **Priority:** normal   <!-- high | normal | low -->
 - **Depends on:** M01   <!-- inherits reader-family conventions (naming, wide tibble, tibble Import) -->
 - **Branch/PR:** m02-openface-reader   <!-- PR URL once opened -->
@@ -52,7 +52,8 @@ tidy tibble (one row per frame), following the M01 reader-family pattern.
       read CSV, `trimws()` names, coerce to tibble; `cli::cli_abort()` on bad
       input.
 - [x] Roxygen doc + `@examples`; `Rscript -e 'devtools::document()'`.
-- [ ] `devtools::test()` green; `check()` adds no new problems (verify).
+- [x] `devtools::test()` green; `check()` adds no new problems (verified
+      2026-07-11 — `of_read` appears only in the pre-existing globals NOTE).
 
 ## Work log
 <!-- append-only; one line per entry; absolute dates -->
@@ -62,6 +63,9 @@ tidy tibble (one row per frame), following the M01 reader-family pattern.
   `check.names=FALSE`) + hand-built 3-frame fixture + 5 tests (20 assertions,
   all green). No dependency change (`tibble` already imported via M01). Same
   amended check criterion as M01. `check()` verification pending.
+- 2026-07-11: verified `of_read` adds zero new check errors/warnings (only a
+  read.csv line in the globals NOTE). Noted M01's `os_read.Rd` broken
+  `os_fix_csv` xref → added to cleanup candidate. Status → review.
 
 ## Decisions
 <!-- milestone-local; promote cross-cutting ones to project/DECISIONS.md -->
