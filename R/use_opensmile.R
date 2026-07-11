@@ -454,3 +454,59 @@ os_fix_csv <- function(infile) {
   # Write out opensmile output in traditional format
   write.csv(df, file = infile, row.names = FALSE)
 }
+
+
+# os_read ----------------------------------------------------------------------
+
+#' Read openSMILE output into a tidy tibble
+#'
+#' Read an openSMILE output CSV --- either an aggregate/functionals file
+#' (from `-csvoutput`, one row) or a low-level descriptor file (from
+#' `-lldcsvoutput`, one row per frame) --- into a wide
+#' [tibble][tibble::tibble]. There is one row per observation and one column
+#' per feature, alongside the openSMILE metadata columns (`name`, and
+#' `frameTime` for LLD output).
+#'
+#' The delimiter is detected automatically, so both the native
+#' semicolon-delimited output openSMILE writes and the comma-delimited form
+#' produced by [os_fix_csv()] are accepted. Feature names are preserved
+#' verbatim, including non-syntactic names such as `pcm_fftMag_mfcc[1]`.
+#'
+#' @param file (character) Path to an openSMILE output CSV, as written by
+#' [os_extract()] (its `aggfile` or `lldfile`).
+#' @return A [tibble][tibble::tibble] with one row per observation and one
+#' column per openSMILE metadata field and feature.
+#' @seealso [os_extract()], which produces the output files.
+#' @examples
+#' \dontrun{
+#' os_extract("audio.wav", aggfile = "agg.csv", lldfile = "lld.csv")
+#' agg <- os_read("agg.csv")
+#' lld <- os_read("lld.csv")
+#' }
+#' @export
+os_read <- function(file) {
+  # Validate input
+  if (!rlang::is_string(file)) {
+    cli::cli_abort(
+      "{.arg file} must be a single string, not {.obj_type_friendly {file}}."
+    )
+  }
+  if (!file.exists(file)) {
+    cli::cli_abort("Can't find the file {.file {file}}.")
+  }
+  header <- readLines(file, n = 1L, warn = FALSE)
+  if (length(header) == 0L || !nzchar(header)) {
+    cli::cli_abort("The file {.file {file}} is empty.")
+  }
+  # openSMILE writes ';'-delimited output; os_fix_csv() rewrites it to ','.
+  sep <- if (grepl(";", header, fixed = TRUE)) ";" else ","
+  df <- read.csv(
+    file = file,
+    sep = sep,
+    dec = ".",
+    quote = "\"'",         # tolerate single- or double-quoted instance names
+    check.names = FALSE,    # keep feature names like pcm_fftMag_mfcc[1]
+    stringsAsFactors = FALSE
+  )
+  tibble::as_tibble(df)
+}

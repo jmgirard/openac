@@ -1,0 +1,5 @@
+name;frameTime;pcm_RMSenergy_sma;F0final_sma
+audio1.wav;0.000000;0.010000;0.000000
+audio1.wav;0.010000;0.020000;110.500000
+audio1.wav;0.020000;0.030000;112.250000
+audio1.wav;0.030000;0.025000;0.000000

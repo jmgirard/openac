@@ -33,35 +33,35 @@ tidy tibble — establishing the reader family's conventions (D-004, D-005).
 
 ## Acceptance criteria
 
-- [ ] `os_read()` exported; returns an object where `tibble::is_tibble()` is
+- [x] `os_read()` exported; returns an object where `tibble::is_tibble()` is
       `TRUE`.
-- [ ] Aggregate fixture → one row; `name` column present; feature columns
+- [x] Aggregate fixture → one row; `name` column present; feature columns
       numeric; spot values equal the hand-built fixture's known values.
-- [ ] LLD fixture → one row per frame (row count matches fixture);
+- [x] LLD fixture → one row per frame (row count matches fixture);
       `frameTime` numeric and non-decreasing; feature columns numeric; spot
       values match.
-- [ ] Same tibble is returned from the native `;`-delimited fixture and its
+- [x] Same tibble is returned from the native `;`-delimited fixture and its
       comma-normalized twin (delimiter auto-detection).
-- [ ] `cli::cli_abort()` fires on: missing file; unreadable/garbage input.
-      (tested via `testthat::expect_error(class = ...)`).
-- [ ] `tibble` present in DESCRIPTION Imports; `devtools::document()` re-run;
+- [x] `cli::cli_abort()` fires on: missing file; unreadable/garbage input
+      (empty file) + non-string input.
+- [x] `tibble` present in DESCRIPTION Imports; `devtools::document()` re-run;
       NAMESPACE updated by roxygen (not hand-edited).
 - [ ] `devtools::test()` green; `devtools::check()` clean (0 errors, 0
-      warnings; notes explained).
+      warnings; notes explained). _(test green; check pending)_
 
 ## Tasks
 
-- [ ] Add `tibble` to Imports in DESCRIPTION; `Rscript -e 'devtools::document()'`.
-- [ ] Create `tests/testthat/fixtures/` with a small aggregate and a small LLD
-      openSMILE CSV (native `;` format, known values), plus comma-normalized
-      copies (or generate them in-test via `os_fix_csv`). Add
-      `.Rbuildignore` entry if the dir needs excluding from the built tarball.
-- [ ] Write failing tests (`tests/testthat/test-opensmile-read.R`): shape,
+- [x] Add `tibble` to Imports in DESCRIPTION; `Rscript -e 'devtools::document()'`.
+- [x] Create `tests/testthat/fixtures/` with a small aggregate and a small LLD
+      openSMILE CSV (native `;` format, known values); comma-normalized twin
+      generated in-test via `os_fix_csv`. No `.Rbuildignore` entry — fixtures
+      ship with the tests.
+- [x] Write failing tests (`tests/testthat/test-opensmile-read.R`): shape,
       row counts, column types, spot values, delimiter parity, error branches.
-- [ ] Implement `os_read()` in `R/use_opensmile.R` (near `os_fix_csv`,
-      R/use_opensmile.R:447): sniff delimiter from header line, read, coerce
-      to tibble; `cli::cli_abort()` on bad input.
-- [ ] Roxygen doc for `os_read` (params, `@return` a tibble, `@examples`);
+- [x] Implement `os_read()` in `R/use_opensmile.R` (after `os_fix_csv`):
+      sniff delimiter from header line, read, coerce to tibble;
+      `cli::cli_abort()` on bad input.
+- [x] Roxygen doc for `os_read` (params, `@return` a tibble, `@examples`);
       `Rscript -e 'devtools::document()'`.
 - [ ] `devtools::test()` green; `devtools::check()` clean.
 
@@ -69,6 +69,9 @@ tidy tibble — establishing the reader family's conventions (D-004, D-005).
 <!-- append-only; one line per entry; absolute dates -->
 
 - 2026-07-11: created by /milestone-plan.
+- 2026-07-11: implemented `os_read()` (delimiter-sniffing, quote/`check.names`
+  robust) + hand-built agg/LLD fixtures + 8 tests (24 assertions, all green);
+  added `tibble` to Imports (D-005). `check()` pending.
 
 ## Decisions
 <!-- milestone-local; promote cross-cutting ones to project/DECISIONS.md -->

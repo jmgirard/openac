@@ -6,9 +6,6 @@
 \usage{
 aw_get_model(...)
 }
-\arguments{
-\item{...}{further arguments, passed on to the internal C++ function \code{whisper_load_model}}
-}
 \value{
 The result from \code{audio.whisper::whisper()}.
 }
