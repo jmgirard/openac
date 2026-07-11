@@ -171,8 +171,22 @@ install_openface_mac <- function(install_dir = NULL) {
 
 # install_opensmile_win --------------------------------------------------------
 
-#TODO: write documentation
-
+#' Install openSMILE on Windows
+#'
+#' Download a prebuilt openSMILE release for Windows and install it into a
+#' local directory, then register the `SMILExtract.exe` location with openac.
+#'
+#' @param download_url An optional string giving the URL of the openSMILE
+#'   Windows archive to download. If `NULL`, a pinned official release is used.
+#' @param install_dir An optional string giving the directory to install into.
+#'   If `NULL`, a per-user data directory (via [rappdirs::user_data_dir()]) is
+#'   used.
+#' @return A logical: `TRUE` on success, `FALSE` if the download or directory
+#'   creation failed.
+#' @examples
+#' \dontrun{
+#' install_opensmile_win()
+#' }
 #' @export
 install_opensmile_win <- function(download_url = NULL, install_dir = NULL) {
 
@@ -213,8 +227,25 @@ install_opensmile_win <- function(download_url = NULL, install_dir = NULL) {
 
 # install_opensmile_mac --------------------------------------------------------
 
-# TODO: Write documentation
-
+#' Install openSMILE on macOS
+#'
+#' Download a prebuilt openSMILE release for macOS and install it into a local
+#' directory, then register the `SMILExtract` location with openac.
+#'
+#' @param download_url An optional string giving the URL of the openSMILE macOS
+#'   archive to download. If `NULL`, a pinned official release matching `arch`
+#'   is used.
+#' @param install_dir An optional string giving the directory to install into.
+#'   If `NULL`, a per-user data directory (via [rappdirs::user_data_dir()]) is
+#'   used.
+#' @param arch The CPU architecture to install for, either `"armv8"` (Apple
+#'   silicon) or `"x86_64"` (Intel). Ignored when `download_url` is supplied.
+#' @return A logical: `TRUE` on success, `FALSE` if the download or directory
+#'   creation failed.
+#' @examples
+#' \dontrun{
+#' install_opensmile_mac()
+#' }
 #' @export
 install_opensmile_mac <- function(
   download_url = NULL, 

@@ -36,7 +36,7 @@ render using any available handler.
 }}
 
 \item{...}{
-  Arguments passed on to \code{\link[=aw_prep_audio]{aw_prep_audio}}
+  Arguments passed on to \code{\link{aw_prep_audio}}
   \describe{
     \item{\code{stream}}{An optional number indicating the index of the audio stream in
 \code{infile} to convert or extract. Note that ffmpeg uses zero-indexing so the

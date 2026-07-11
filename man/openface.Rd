@@ -20,7 +20,9 @@ A character vector containing the output of openface.
 Attempt to find and run openface with the specified arguments.
 }
 \examples{
+\dontrun{
 openface('-h')
+}
 
 }
 \references{

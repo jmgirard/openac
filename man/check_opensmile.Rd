@@ -14,6 +14,8 @@ A logical indicating whether opensmile is working (TRUE) or not
 Check that opensmile is installed and accessible and working properly.
 }
 \examples{
+\dontrun{
 check_opensmile()
+}
 
 }

@@ -20,7 +20,9 @@ A character vector containing the output of ffprobe.
 Attempt to find and run ffprobe with the specified arguments.
 }
 \examples{
+\dontrun{
 ffprobe('-version')
+}
 
 }
 \references{

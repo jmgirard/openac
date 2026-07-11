@@ -1,4 +1,4 @@
-# openac (development version)
+# openac 0.0.0.9000
 
 * New `os_read()` reads openSMILE CSV output — either an aggregate
   (functionals) file or a per-frame low-level descriptor (LLD) file — into a

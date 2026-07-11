@@ -25,7 +25,7 @@ per feature, alongside the openSMILE metadata columns (\code{name}, and
 \details{
 The delimiter is detected automatically, so both the native
 semicolon-delimited output openSMILE writes and the comma-delimited form
-produced by \code{\link[=os_fix_csv]{os_fix_csv()}} are accepted. Feature names are preserved
+produced by \code{os_fix_csv()} are accepted. Feature names are preserved
 verbatim, including non-syntactic names such as \code{pcm_fftMag_mfcc[1]}.
 }
 \examples{

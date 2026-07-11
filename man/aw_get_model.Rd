@@ -7,7 +7,8 @@
 aw_get_model(...)
 }
 \arguments{
-\item{...}{further arguments, passed on to the internal C++ function \code{whisper_load_model}}
+\item{...}{Arguments passed on to \code{audio.whisper::whisper()}; see that
+function's documentation for the available parameters.}
 }
 \value{
 The result from \code{audio.whisper::whisper()}.
@@ -18,5 +19,5 @@ This function is an alias for \code{audio.whisper::whisper()}. Refer to
 and usage details.
 }
 \seealso{
-\code{\link[audio.whisper:whisper]{audio.whisper::whisper()}}
+\code{audio.whisper::whisper()}
 }

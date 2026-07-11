@@ -19,11 +19,11 @@ aw_transcribe(
 \item{infile}{A required string indicating the file path to an audio or video
 file containing an audio stream to transcribe.}
 
-\item{model}{A required model object produced by \code{\link{whisper}}.}
+\item{model}{A required model object produced by \code{audio.whisper::whisper()}.}
 
 \item{language}{The language of the audio. Defaults to 'auto'. For a list of
 all languages the model can handle: see
-\code{\link[audio.whisper]{whisper_languages}}.}
+\code{audio.whisper::whisper_languages()}.}
 
 \item{wavfile}{Either NULL or a string indicating the path to save the
 prepared version of \code{infile} to (must end with '.wav'). If NULL, a
@@ -39,7 +39,7 @@ human-readable version of the transcript to (must end with '.csv').}
 \code{\link{aw_prep_audio}}.}
 
 \item{whisper_args}{A list of optional arguments to forward to
-\code{\link[audio.whisper]{predict.whisper}}.}
+\code{audio.whisper::predict.whisper()}.}
 }
 \value{
 A list object containing the full whisper output.

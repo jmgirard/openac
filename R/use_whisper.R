@@ -236,8 +236,9 @@ aw_prep_audio_dir <- function(
 #' `audio.whisper::whisper()` for full documentation of available parameters
 #' and usage details.
 #'
-#' @inheritParams audio.whisper::whisper
-#' @seealso [audio.whisper::whisper()]
+#' @param ... Arguments passed on to `audio.whisper::whisper()`; see that
+#'   function's documentation for the available parameters.
+#' @seealso `audio.whisper::whisper()`
 #' @return The result from `audio.whisper::whisper()`.
 #' @export
 aw_get_model <- function(...) {
@@ -257,10 +258,10 @@ aw_get_model <- function(...) {
 #'
 #' @param infile A required string indicating the file path to an audio or video
 #'   file containing an audio stream to transcribe.
-#' @param model A required model object produced by \code{\link{whisper}}.
+#' @param model A required model object produced by \code{audio.whisper::whisper()}.
 #' @param language The language of the audio. Defaults to 'auto'. For a list of
 #'   all languages the model can handle: see
-#'   \code{\link[audio.whisper]{whisper_languages}}.
+#'   \code{audio.whisper::whisper_languages()}.
 #' @param wavfile Either NULL or a string indicating the path to save the
 #'   prepared version of `infile` to (must end with '.wav'). If NULL, a
 #'   temporary file will be created and later discarded.
@@ -271,7 +272,7 @@ aw_get_model <- function(...) {
 #' @param audio_args A list of optional arguments to forward to
 #'   \code{\link{aw_prep_audio}}.
 #' @param whisper_args A list of optional arguments to forward to
-#'   \code{\link[audio.whisper]{predict.whisper}}.
+#'   \code{audio.whisper::predict.whisper()}.
 #' @return A list object containing the full whisper output.
 #' @export
 aw_transcribe <- function(
@@ -485,6 +486,10 @@ aw_transcribe_dir <- function(
   # Work runner
   run <- function() {
     p <- progressr::progressor(steps = nrow(df))
+    # Sequential by design (D-006): whisper.cpp (via audio.whisper) is already
+    # internally multi-threaded, so parallelizing across files would
+    # oversubscribe the CPU / thrash a single GPU. purrr::pwalk, not
+    # furrr::future_pwalk, encodes that intent.
     purrr::pwalk(
       .l = df,
       .f = function(...) {

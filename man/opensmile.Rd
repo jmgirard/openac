@@ -20,7 +20,9 @@ A character vector containing the output of openface.
 Attempt to find and run opensmile with the specified arguments.
 }
 \examples{
+\dontrun{
 opensmile('-h')
+}
 
 }
 \references{
