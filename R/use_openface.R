@@ -152,3 +152,52 @@ of_extract_dir <- function(
   )
 }
 
+
+# of_read ----------------------------------------------------------------------
+
+#' Read OpenFace output into a tidy tibble
+#'
+#' Read an OpenFace output CSV (as written by [of_extract()]) into a wide
+#' [tibble][tibble::tibble] with one row per detected face per frame (OpenFace
+#' uses a multi-face model, so a frame with several faces yields several rows
+#' sharing a `frame` but differing in `face_id`). Metadata columns (`frame`,
+#' `face_id`, `timestamp`, `confidence`, `success`) come first, followed by
+#' whichever feature blocks OpenFace emitted (gaze, head pose, 2D/3D facial
+#' landmarks, PDM parameters, and action-unit intensities `AU*_r` and
+#' presences `AU*_c`), all passed through as-is.
+#'
+#' OpenFace writes space-padded column headers (e.g. `" confidence"`); the
+#' leading/trailing whitespace is stripped from the column names.
+#'
+#' @param file (character) Path to an OpenFace output CSV.
+#' @return A [tibble][tibble::tibble] with one row per detected face per frame
+#' and one column per OpenFace metadata field and feature.
+#' @seealso [of_extract()], which produces the output file.
+#' @examples
+#' \dontrun{
+#' of_extract("video.mp4", outfile = "video.csv")
+#' faces <- of_read("video.csv")
+#' }
+#' @export
+of_read <- function(file) {
+  # Validate input
+  if (!rlang::is_string(file)) {
+    cli::cli_abort(
+      "{.arg file} must be a single string, not {.obj_type_friendly {file}}."
+    )
+  }
+  if (!file.exists(file)) {
+    cli::cli_abort("Can't find the file {.file {file}}.")
+  }
+  header <- readLines(file, n = 1L, warn = FALSE)
+  if (length(header) == 0L || !nzchar(header)) {
+    cli::cli_abort("The file {.file {file}} is empty.")
+  }
+  df <- read.csv(
+    file = file,
+    check.names = FALSE,    # preserve OpenFace column names verbatim...
+    stringsAsFactors = FALSE
+  )
+  names(df) <- trimws(names(df))  # ...then strip OpenFace's header padding
+  tibble::as_tibble(df)
+}
