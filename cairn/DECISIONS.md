@@ -94,3 +94,33 @@ milestones exercise the layout the plugin actually ships. Earlier D-entries
 keep `project/` verbatim (append-only); archived milestones likewise.
 **Consequences:** `.Rbuildignore` and CLAUDE.md updated; live milestone
 mirrors now cite `cairn/ROADMAP.md`.
+
+### D-008 (2026-07-11): Tidy-reader family API contract (RR01)
+
+**Context:** `aw_read` (M03) is the third reader (`os_read`, `of_read`,
+`aw_read`); the family's conventions were diverging with no stated contract and
+a 1.0 API freeze approaching (D-002). A Fable review (RB01/RR01, archived)
+examined input signature, column policy, value transformation, and shared shape.
+**Decision:** Adopt a reader-family contract, to be written into DESIGN
+"Conventions": (1) **Input forms** — a reader accepts every form its tool's
+output natively exists in: a `file` path for file-only tools
+(`os_read`/`of_read`); the in-memory object *plus* the `.rds`/`.csv` sidecars
+the wrapper writes, as `x`, for R-native tools (`aw_read`); all accepted forms
+yield identical output. (2) **Faithful-but-tidy columns** — pass through every
+data-bearing column; drop only redundant re-encodings of retained columns
+(`segment_offset` = `from` in ms may go; `speaker` must NOT — it is
+diarization's payload, surfaced as a conditional column when present).
+(3) **Lossless type-parsing only** — readers may parse encoded scalars into
+natural R types (timestamp strings → numeric seconds) but never
+filter/aggregate/derive; **time is numeric seconds** across all readers.
+(4) Verbatim tool column names (mechanical whitespace cleanup only); grain
+stated in each reader's first roxygen sentence. Rejected: teaching
+`os_read`/`of_read` to accept objects (none exist); `aw_read` path-only (a disk
+round-trip for nothing); retaining the timestamp strings; locking a
+cross-reader `long=` shape pre-1.0 (heterogeneous outputs; additive later; GP4
+`tidyr` pressure); a `speaker = TRUE` flag (the reader can see diarization).
+**Consequences:** M03 gains a conditional `speaker` column, a CSV `colClasses`
+parity fix, and a ≥1 h timestamp test; DESIGN "Conventions"/"Function Families"
+gain the readers and this contract. Future readers inherit it. `long=TRUE`,
+whisper `$tokens`, OpenFace block-subsetting, and a multi-file/`id`-column batch
+idiom stay ROADMAP candidates (additive; D-002).
