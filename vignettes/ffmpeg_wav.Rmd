@@ -10,68 +10,73 @@ vignette: >
 ```{r, include = FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
-  comment = "#>"
+  comment = "#>",
+  # The chunks below drive the ffmpeg binary over a folder of your own videos,
+  # so they are shown for reference but not run when the vignette is built.
+  eval = FALSE
 )
 ```
 
+This vignette shows how to pull the audio track out of a folder of video files
+and write it to WAV files ready for acoustic analysis. `os_prep_audio()` wraps
+**ffmpeg** to extract and convert an audio stream to the format openSMILE
+expects; running it across many files in parallel is a matter of pairing it
+with **furrr**.
+
 ```{r setup}
-#| message: false
-
-# Load openac package
 library(openac)
-
-# Load parallelization packages
 library(future)
 library(furrr)
 ```
 
+First confirm that openac can find a working ffmpeg (see `set_ffmpeg()` if not):
+
 ```{r}
-# Check that ffmpeg is configured properly
 check_ffmpeg()
 ```
 
+List the input videos and derive a matching WAV path for each output:
+
 ```{r}
-# Find input video files to process
 infiles <- list.files(
   path = "Z:/DynAMoS/Stimuli/Video",
-  pattern = ".mp4$",
+  pattern = "\\.mp4$",
   full.names = TRUE,
   recursive = TRUE
 )
 
-# Create output WAV filenames
-
-# # Replace directory path
-outfiles <- gsub(
-  pattern = "/Stimuli/Video/",
-  replacement = "/Stimuli/Audio/",
-  x = infiles
-)
-
-# # Replace file extension
-outfiles <- gsub(
-  pattern = ".mp4",
-  replacement = ".wav",
-  x = outfiles
-)
+# Mirror the input paths into an Audio/ folder, swapping the extension.
+outfiles <- gsub("/Stimuli/Video/", "/Stimuli/Audio/", infiles)
+outfiles <- gsub("\\.mp4$", ".wav", outfiles)
 ```
 
-```{r}
-# Set up parallelization
-future::plan("multisession", workers = 4)
+Set a parallel plan and map `os_prep_audio()` over the input/output pairs:
 
-# Run extract_audio() on each file
-furrr::future_walk2(
+```{r}
+plan("multisession", workers = 4)
+
+future_walk2(
   .x = infiles,
   .y = outfiles,
-  .f = openac::extract_wav
+  .f = os_prep_audio
 )
 ```
 
+For this common "every file in a directory" case you can skip the manual file
+bookkeeping entirely and let `os_prep_audio_dir()` find, pair, and process the
+files for you:
+
 ```{r}
-# Check that the output files were created
-list.files(
-  path = "Z:/DynAMoS/Stimuli/Audio",
-  pattern = ".wav$"
+os_prep_audio_dir(
+  indir = "Z:/DynAMoS/Stimuli/Video",
+  inext = "mp4",
+  outdir = "Z:/DynAMoS/Stimuli/Audio",
+  recursive = TRUE
 )
+```
+
+Finally, confirm the WAV files were written:
+
+```{r}
+list.files(path = "Z:/DynAMoS/Stimuli/Audio", pattern = "\\.wav$")
 ```

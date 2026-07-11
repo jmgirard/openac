@@ -10,76 +10,81 @@ vignette: >
 ```{r, include = FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
-  comment = "#>"
+  comment = "#>",
+  # The chunks below drive the OpenFace binary over a folder of your own
+  # videos, so they are shown for reference but not run at build time.
+  eval = FALSE
 )
 ```
 
+This vignette extracts facial-behavior features from a folder of videos with
+**OpenFace**, running many files at once via **furrr**. `of_extract()` writes
+one CSV of frame-level features per video; `of_read()` later turns any such CSV
+into a tidy tibble.
+
 ```{r setup}
-#| message: false
-
-# Load openac package
 library(openac)
-
-# Load parallelization packages
 library(future)
 library(furrr)
 ```
 
+Confirm that openac can find a working OpenFace install (see `set_openface()`
+if not):
+
 ```{r}
-# Check that openface is configured properly
 check_openface()
 ```
 
-```{r}
-#| eval: false
+List the input videos and derive a matching CSV path for each output:
 
-# Find input video files to process
+```{r}
 infiles <- list.files(
   path = "Z:/DynAMoS/Stimuli/Video",
-  pattern = ".mp4$",
+  pattern = "\\.mp4$",
   full.names = TRUE,
   recursive = TRUE
 )
 
-# Create output CSV filenames
-
-# # Replace directory path
-outfiles <- gsub(
-  pattern = "/Stimuli/Video/",
-  replacement = "/Features/openface/",
-  x = infiles
-)
-
-# # Replace file extension
-outfiles <- gsub(
-  pattern = ".mp4",
-  replacement = ".csv",
-  x = outfiles
-)
+outfiles <- gsub("/Stimuli/Video/", "/Features/openface/", infiles)
+outfiles <- gsub("\\.mp4$", ".csv", outfiles)
 ```
 
+Set a parallel plan and map `of_extract()` over the input/output pairs. Extra
+arguments (here the point-distribution model plus wild and multi-view modes)
+are forwarded to every call:
+
 ```{r}
-#| eval: false
+plan("multisession", workers = 4)
 
-# Set up parallelization
-future::plan("multisession", workers = 4)
-
-# Run extract_openface() on each file
-furrr::future_walk2(
+future_walk2(
   .x = infiles,
   .y = outfiles,
-  .f = openac::extract_openface,
+  .f = of_extract,
   pdm = TRUE,
   wild = TRUE,
   multiview = TRUE
 )
 ```
 
+For the whole-directory case, `of_extract_dir()` finds and processes every
+matching file for you:
+
 ```{r}
-# Check that the output files were created
-list.files(
-  path = "Z:/DynAMoS/Features/openface",
-  pattern = ".csv$"
+of_extract_dir(
+  indir = "Z:/DynAMoS/Stimuli/Video",
+  inext = "mp4",
+  outdir = "Z:/DynAMoS/Features/openface",
+  recursive = TRUE,
+  pdm = TRUE,
+  wild = TRUE,
+  multiview = TRUE
 )
 ```
 
+Confirm the feature files were written, and read one into a tidy tibble:
+
+```{r}
+list.files(path = "Z:/DynAMoS/Features/openface", pattern = "\\.csv$")
+
+faces <- of_read("Z:/DynAMoS/Features/openface/example.csv")
+```
