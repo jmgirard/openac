@@ -46,7 +46,7 @@ render using any available handler.
 }}
 
 \item{...}{
-  Arguments passed on to \code{\link{aw_transcribe}}
+  Arguments passed on to \code{\link[=aw_transcribe]{aw_transcribe}}
   \describe{
     \item{\code{model}}{A required model object produced by \code{\link{whisper}}.}
     \item{\code{language}}{The language of the audio. Defaults to 'auto'. For a list of

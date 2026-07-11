@@ -35,7 +35,7 @@ files be saved to? If \code{NULL}, LLD files will not be output. Note that
 within \code{indir} be included?}
 
 \item{...}{
-  Arguments passed on to \code{\link{os_extract}}, \code{\link{os_prep_audio}}
+  Arguments passed on to \code{\link[=os_extract]{os_extract}}, \code{\link[=os_prep_audio]{os_prep_audio}}
   \describe{
     \item{\code{config}}{(character, default="misc/emo_large") Which configuration file
 should be used to analyze \code{infile}? A list of available config files can be
