@@ -3,7 +3,7 @@
 - **Status:** review   <!-- mirror; cairn/ROADMAP.md is the authority -->
 - **Priority:** normal   <!-- high | normal | low -->
 - **Depends on:** M04   <!-- check must be clean apart from vignettes first -->
-- **Branch/PR:** m05-vignette-rewrite   <!-- PR URL once opened -->
+- **Branch/PR:** m05-vignette-rewrite · https://github.com/jmgirard/openac/pull/5
 
 ## Goal
 
@@ -64,9 +64,27 @@ Fix the three stale vignettes so they use the current API and pass every
   a natural (not "new content") pointer.
 - 2026-07-11: rewrote all 3 vignettes to the current API; full `check()` now
   0E/0W/0N (the M04+M05 green-up arc is complete). Status → review.
+- 2026-07-11: review — PR #5; fresh evidence re-gathered (full check 0E/0W/0N);
+  independent Opus review APPROVE (clean); NEWS entry added. Awaiting merge.
 
 ## Decisions
 <!-- milestone-local; promote cross-cutting ones to cairn/DECISIONS.md -->
 
 ## Review
-<!-- filled by /milestone-review -->
+
+_Reviewed 2026-07-11 · PR #5 · branch `m05-vignette-rewrite`._
+
+**Acceptance criteria (fresh evidence):** all met. Removed function names →
+0 (grep). `eval = FALSE` set globally in each of the 3 vignettes. Vignettes
+knit (`tools::buildVignettes()`). **Full `devtools::check()` (vignettes
+built) → 0E / 0W / 0N** — the M04+M05 green-up arc is complete.
+
+**Consistency gate:** `document()` idempotent ✓; README untouched & in sync
+✓; no pkgdown site ✓; NEWS entry added for the vignette fix ✓; no new
+top-level files ✓.
+
+**Independent Opus review (fresh context):** APPROVE — no blockers, no
+should-fix, no nits. Verified every function call/argument against the real
+exported signatures (incl. `os_extract_dir`'s aggdir/llddir requirement) and
+all prose claims; confirmed the config modernization (`egemaps/v02/eGeMAPSv02`)
+and anchored regex patterns as improvements.

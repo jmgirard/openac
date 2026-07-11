@@ -10,3 +10,6 @@
   `aw_transcribe()`, or its `.rds`/`.csv` output — into a tidy tibble with one
   row per segment, parsing the `HH:MM:SS.mmm` timestamps to numeric seconds and
   keeping a `speaker` column for diarized transcripts.
+* The parallel-processing vignettes now use the current extraction functions
+  (`os_prep_audio()`, `of_extract()`, `os_extract()`) and point to the `_dir`
+  batch helpers and the new tidy readers.
