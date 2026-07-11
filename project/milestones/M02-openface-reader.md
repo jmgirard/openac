@@ -1,9 +1,9 @@
 # M02: OpenFace tidy reader (`of_read`)
 
-- **Status:** planned   <!-- mirror; project/ROADMAP.md is the authority -->
+- **Status:** in-progress   <!-- mirror; project/ROADMAP.md is the authority -->
 - **Priority:** normal   <!-- high | normal | low -->
 - **Depends on:** M01   <!-- inherits reader-family conventions (naming, wide tibble, tibble Import) -->
-- **Branch/PR:** —   <!-- m02-openface-reader; PR URL once opened -->
+- **Branch/PR:** m02-openface-reader   <!-- PR URL once opened -->
 
 ## Goal
 
