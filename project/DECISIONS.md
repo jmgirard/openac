@@ -23,3 +23,17 @@ improve (e.g., the move toward tidy outputs).
 the exported API may break freely between releases.
 **Consequences:** Renames and return-shape changes need no soft-deprecation
 period; revisit this decision at the 1.0 release.
+
+### D-003 (2026-07-11): Principles pass — IP1 extended; IP2/IP3 adopted
+
+**Context:** User interview stress-testing the original design principles
+and considering new ones (IP changes require a recorded decision).
+**Decision:** IP1 extended to also forbid writes outside user-specified or
+`rappdirs` locations. Adopted IP2 (source media never modified/deleted) and
+IP3 (no data egress without explicit opt-in; cloud tools permissible only
+behind unmistakable opt-in). Also adopted GP5 (transparent calls) and GP6
+(resilient batches); reworded GP1 (post-processing outputs in scope) and
+GP2 (batch capability, not API shape).
+**Consequences:** Future HuggingFace-style wrappers must run locally or
+gate cloud use behind explicit opt-in; batch and high-level functions
+converge on GP5/GP6 as they are touched.

@@ -72,18 +72,40 @@ the eventual goal**, so code converges on CRAN standards as it goes.
 _GP<n> = Guiding (tradeable with stated justification) · IP<n> = Inviolable
 (hard constraint; changing one requires an explicit decision in DECISIONS.md)._
 
-- **GP1 — Thin wrappers.** openac shapes I/O and orchestrates external
-  tools; it does not reimplement a tool's internal algorithm.
-- **GP2 — Batch parity.** Every single-file operation aims to have a batch
-  `_dir` counterpart.
-- **IP1 — No hard-coded tool paths.** External-tool locations are always
-  discovered (`Sys.which`) or user-configured (`set_program`), never
-  hard-coded in the package.
+- **GP1 — Thin wrappers.** openac never re-derives the signals themselves
+  (no face tracking, feature extraction, or transcription of its own — that
+  is the tools' job), but parsing, cleaning, and aggregating tool *outputs*
+  is squarely in scope.
+- **GP2 — Batch parity.** Every single-file operation has a batch
+  counterpart with parallelism (`future`/`furrr`) and progress
+  (`progressr`). The principle is the capability, not the API shape — the
+  current `_dir(indir, inext)` idiom may evolve (e.g., toward vectorized
+  path inputs) under D-002.
 - **GP3 — Cross-platform where possible.** Wrappers (find/check/run) work on
   Windows/macOS/Linux; `install_*` helpers are best-effort per platform.
 - **GP4 — Lean dependencies.** The current Imports list is acceptable but
   shrinks where easy; new Imports need real justification (and, per the
   guardrails, a question-gate + D-entry).
+- **GP5 — Transparent calls.** The exact external command a high-level
+  function constructs is discoverable/reportable by the user (methods
+  sections, version-drift debugging). Retrofit opportunistically.
+- **GP6 — Resilient batches.** Batch operations skip-and-report per-file
+  failures rather than aborting the run — a crash on file 412 of 500
+  overnight is the failure mode to design against.
+- **IP1 — No hard-coded paths, no surprise writes.** External-tool locations
+  are always discovered (`Sys.which`) or user-configured (`set_program`),
+  never hard-coded; openac writes only to user-specified locations or its
+  own `rappdirs` config/cache dirs.
+- **IP2 — Source media are sacrosanct.** No code path modifies or deletes a
+  user's original media files; transformations always write new outputs.
+  (In-place edits of openac-*generated* intermediates — e.g., `os_fix_csv`
+  rewriting an openSMILE output CSV — fall outside this rule but stay rare
+  and explicit.)
+- **IP3 — No silent data egress.** Participant data never leaves the user's
+  machine without explicit, unmistakable opt-in; processing is local by
+  default. Cloud-backed wrappers are permissible down the road *only*
+  behind such opt-in (IRB/consent constraints). Network access otherwise
+  fetches only tools/models, at user request.
 
 ## Architecture
 
@@ -129,3 +151,8 @@ them without attaching the upstream packages.
   breakage.
 - 2026-07-11: Essentially no automated tests (one empty stub); recent bug
   fixes shipped without regression tests.
+- 2026-07-11: GP5 unmet — high-level functions build their command strings
+  internally with no way for users to inspect/report them; retrofit when
+  touched.
+- 2026-07-11: GP6 unevenly met — some `_dir` functions skip bad files
+  (audio-less inputs), but resilience is ad hoc, not a designed contract.
