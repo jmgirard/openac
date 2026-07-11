@@ -1,6 +1,6 @@
 # M03: whisper transcript tidy reader (`aw_read`)
 
-- **Status:** blocked   <!-- mirror; cairn/ROADMAP.md is the authority -->
+- **Status:** in-progress   <!-- mirror; cairn/ROADMAP.md is the authority -->
 - **Priority:** normal   <!-- high | normal | low -->
 - **Depends on:** M01   <!-- inherits reader-family conventions (naming, wide tibble, tibble Import) -->
 - **Branch/PR:** m03-whisper-reader   <!-- PR URL once opened -->
@@ -18,7 +18,8 @@ result into a tidy tibble — one row per segment — following the M01 pattern.
   `.rds` (full object) / `.csv` (`out$data`) that `aw_transcribe()` writes
   (R/use_whisper.R:367,378).
 - Returns a tibble, one row per segment: `segment` (int), `from`/`to`
-  (numeric seconds), `text` (chr, verbatim).
+  (numeric seconds), `text` (chr, verbatim), plus `speaker` (chr) **when and
+  only when** the input carries it (RR01/D-008 — faithful-but-tidy).
 - Parse whisper `HH:MM:SS.mmm` timestamps to numeric seconds.
 - Empty transcript (no segments) → zero-row tibble with the right columns,
   not an error.
@@ -26,8 +27,10 @@ result into a tidy tibble — one row per segment — following the M01 pattern.
 
 **Out:**
 - Token-level output (`$tokens`) → candidate row.
-- Speaker diarization columns → candidate (only if upstream provides them).
 - openSMILE reader → M01; OpenFace reader → M02.
+
+_(RR01/D-008: `speaker` moved from Out → In — dropping it is silent data loss.
+`segment_offset` stays dropped as a redundant re-encoding of `from`.)_
 
 ## Acceptance criteria
 
@@ -44,6 +47,19 @@ result into a tidy tibble — one row per segment — following the M01 pattern.
       from the 2 pre-existing vignette warnings (M05's scope; see 2026-07-11
       amendment). Verified with vignettes off, as in M04.
 
+_Added by RR01 ingestion (D-008):_
+- [ ] (R1) A diarized input yields a `speaker` column; a non-diarized input
+      yields no `speaker` column; `segment_offset` still dropped. Fixture
+      gains a `diarize = TRUE` variant.
+- [ ] (R2) Three-form parity holds for adversarial text — a segment whose
+      text is literally `"NA"` and an all-numeric-text transcript survive the
+      `.csv` path identically to object/`.rds` (`colClasses` pinned).
+- [ ] (R3) Timestamp oracle covers a ≥ 1 h segment (e.g. `"01:02:03.500"` →
+      `3723.5`).
+- [ ] (R4) DESIGN "Conventions" records the reader-family contract and
+      "Function Families" lists `os_read`/`of_read`/`aw_read` (docs).
+- [ ] (R5) Garbage timestamps warn via `cli`, not a raw `as.numeric` warning.
+
 ## Tasks
 
 - [x] Build a fixture mirroring the `audio.whisper` result structure
@@ -59,6 +75,17 @@ result into a tidy tibble — one row per segment — following the M01 pattern.
 - [x] Roxygen doc + `@examples`; `Rscript -e 'devtools::document()'`.
 - [x] `devtools::test()` green (92 pass); `devtools::check()` clean (vignettes
       off) — NEWS entry added for `aw_read()`.
+
+_Added by RR01 ingestion:_
+- [ ] (R1) Preserve `speaker` conditionally in `aw_read`; update roxygen,
+      tests (+ diarized fixture variant), and `cairn/references/audiowhisper.md`.
+- [ ] (R2) Pin `colClasses` (`text`/`from`/`to`/`speaker`) in the `.csv`
+      branch of `aw_read_data()`; add adversarial-text parity tests.
+- [ ] (R3) Add a ≥ 1 h timestamp case to the oracle test.
+- [ ] (R4) Write the reader-family contract into DESIGN; list the readers in
+      "Function Families".
+- [ ] (R5) Make garbage-timestamp warnings `cli`-style.
+- [ ] Re-run `devtools::document()`, `test()`, `check()` (vignettes off).
 
 ## Work log
 <!-- append-only; one line per entry; absolute dates -->
@@ -87,11 +114,20 @@ result into a tidy tibble — one row per segment — following the M01 pattern.
   RR-ingested decisions stay coherent while M03 is unmerged. Held from merge
   until the RR is ingested — the RR may recommend changing `aw_read`
   (columns/timestamps).
+- 2026-07-11: ingested RR01 → D-008 (reader-family contract). Apply in M03:
+  R1 preserve `speaker`, R2 CSV `colClasses` parity fix (a real defect —
+  `"NA"`/numeric text corrupted via `.csv`), R3 ≥1h test, R4 DESIGN contract,
+  R5 cli timestamp warnings. R6 (accept bare `$data`) + R7 (multi-file `id`
+  idiom) → candidates. R8–R12 rejected (see RR01 table). RB01/RR01 archived;
+  status → in-progress.
 
 ## Decisions
 <!-- milestone-local; promote cross-cutting ones to cairn/DECISIONS.md -->
 
 - Inherits D-004 (naming) and D-005 (`tibble` Import) from M01.
+- D-008 (2026-07-11, cross-cutting): tidy-reader family API contract, from
+  RR01. Drives the R1–R5 tasks above. Supersedes M03's earlier scope note
+  that deferred `speaker` to a candidate.
 
 ## Review
 <!-- filled by /milestone-review -->
