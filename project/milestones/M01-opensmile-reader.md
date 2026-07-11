@@ -1,9 +1,9 @@
 # M01: openSMILE tidy reader (`os_read`)
 
-- **Status:** planned   <!-- mirror; project/ROADMAP.md is the authority -->
+- **Status:** in-progress   <!-- mirror; project/ROADMAP.md is the authority -->
 - **Priority:** high   <!-- high | normal | low -->
 - **Depends on:** —
-- **Branch/PR:** —   <!-- m01-opensmile-reader; PR URL once opened -->
+- **Branch/PR:** m01-opensmile-reader   <!-- PR URL once opened -->
 
 ## Goal
 
