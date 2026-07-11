@@ -158,7 +158,9 @@ of_extract_dir <- function(
 #' Read OpenFace output into a tidy tibble
 #'
 #' Read an OpenFace output CSV (as written by [of_extract()]) into a wide
-#' [tibble][tibble::tibble] with one row per frame. Metadata columns (`frame`,
+#' [tibble][tibble::tibble] with one row per detected face per frame (OpenFace
+#' uses a multi-face model, so a frame with several faces yields several rows
+#' sharing a `frame` but differing in `face_id`). Metadata columns (`frame`,
 #' `face_id`, `timestamp`, `confidence`, `success`) come first, followed by
 #' whichever feature blocks OpenFace emitted (gaze, head pose, 2D/3D facial
 #' landmarks, PDM parameters, and action-unit intensities `AU*_r` and
@@ -168,8 +170,8 @@ of_extract_dir <- function(
 #' leading/trailing whitespace is stripped from the column names.
 #'
 #' @param file (character) Path to an OpenFace output CSV.
-#' @return A [tibble][tibble::tibble] with one row per frame and one column per
-#' OpenFace metadata field and feature.
+#' @return A [tibble][tibble::tibble] with one row per detected face per frame
+#' and one column per OpenFace metadata field and feature.
 #' @seealso [of_extract()], which produces the output file.
 #' @examples
 #' \dontrun{
@@ -199,4 +201,3 @@ of_read <- function(file) {
   names(df) <- trimws(names(df))  # ...then strip OpenFace's header padding
   tibble::as_tibble(df)
 }
-

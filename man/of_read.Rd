@@ -10,12 +10,14 @@ of_read(file)
 \item{file}{(character) Path to an OpenFace output CSV.}
 }
 \value{
-A \link[tibble:tibble]{tibble} with one row per frame and one column per
-OpenFace metadata field and feature.
+A \link[tibble:tibble]{tibble} with one row per detected face per frame
+and one column per OpenFace metadata field and feature.
 }
 \description{
 Read an OpenFace output CSV (as written by \code{\link[=of_extract]{of_extract()}}) into a wide
-\link[tibble:tibble]{tibble} with one row per frame. Metadata columns (\code{frame},
+\link[tibble:tibble]{tibble} with one row per detected face per frame (OpenFace
+uses a multi-face model, so a frame with several faces yields several rows
+sharing a \code{frame} but differing in \code{face_id}). Metadata columns (\code{frame},
 \code{face_id}, \code{timestamp}, \code{confidence}, \code{success}) come first, followed by
 whichever feature blocks OpenFace emitted (gaze, head pose, 2D/3D facial
 landmarks, PDM parameters, and action-unit intensities \verb{AU*_r} and
