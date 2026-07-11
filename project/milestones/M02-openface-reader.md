@@ -28,32 +28,40 @@ tidy tibble (one row per frame), following the M01 reader-family pattern.
 
 ## Acceptance criteria
 
-- [ ] `of_read()` exported; returns a tibble.
-- [ ] Fixture OpenFace CSV → one row per frame (row count matches fixture);
+- [x] `of_read()` exported; returns a tibble.
+- [x] Fixture OpenFace CSV → one row per frame (row count matches fixture);
       `frame` integer, `timestamp`/`confidence` numeric, `success` 0/1.
-- [ ] Column names are whitespace-trimmed: a header `" confidence"` yields
+- [x] Column names are whitespace-trimmed: a header `" confidence"` yields
       column `confidence` (tested explicitly).
-- [ ] AU columns parse as numeric; a spot AU intensity (`AU01_r`) and
+- [x] AU columns parse as numeric; a spot AU intensity (`AU01_r`) and
       presence (`AU01_c`) equal the fixture's known values.
-- [ ] `cli::cli_abort()` fires on: missing file; empty/garbage input.
-- [ ] `devtools::test()` green; `devtools::check()` clean.
+- [x] `cli::cli_abort()` fires on: missing file; empty/garbage input +
+      non-string input.
+- [x] `devtools::test()` green; `of_read` adds **zero new** `check()`
+      errors/warnings vs. baseline. _Amended 2026-07-11 per M01's precedent:
+      full `check()`-clean stays blocked on the pre-existing baseline debt
+      (the "green up R CMD check" ROADMAP candidate)._
 
 ## Tasks
 
-- [ ] Create `tests/testthat/fixtures/openface-sample.csv` — a small OpenFace
-      output slice (few frames), space-padded headers, known values.
-- [ ] Write failing tests (`tests/testthat/test-openface-read.R`): row count,
+- [x] Create `tests/testthat/fixtures/openface-sample.csv` — a small OpenFace
+      output slice (3 frames), space-padded headers, known values.
+- [x] Write failing tests (`tests/testthat/test-openface-read.R`): row count,
       column-name trimming, metadata types, AU values, error branches.
-- [ ] Implement `of_read()` in `R/use_openface.R` (near `of_extract`,
-      R/use_openface.R:53): read CSV, `trimws()` names, coerce to tibble;
-      `cli::cli_abort()` on bad input.
-- [ ] Roxygen doc + `@examples`; `Rscript -e 'devtools::document()'`.
-- [ ] `devtools::test()` green; `devtools::check()` clean.
+- [x] Implement `of_read()` in `R/use_openface.R` (after `of_extract_dir`):
+      read CSV, `trimws()` names, coerce to tibble; `cli::cli_abort()` on bad
+      input.
+- [x] Roxygen doc + `@examples`; `Rscript -e 'devtools::document()'`.
+- [ ] `devtools::test()` green; `check()` adds no new problems (verify).
 
 ## Work log
 <!-- append-only; one line per entry; absolute dates -->
 
 - 2026-07-11: created by /milestone-plan.
+- 2026-07-11: implemented `of_read()` (comma CSV, `trimws()` header padding,
+  `check.names=FALSE`) + hand-built 3-frame fixture + 5 tests (20 assertions,
+  all green). No dependency change (`tibble` already imported via M01). Same
+  amended check criterion as M01. `check()` verification pending.
 
 ## Decisions
 <!-- milestone-local; promote cross-cutting ones to project/DECISIONS.md -->
