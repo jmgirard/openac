@@ -3,7 +3,7 @@
 - **Status:** review   <!-- mirror; cairn/ROADMAP.md is the authority -->
 - **Priority:** normal   <!-- high | normal | low -->
 - **Depends on:** M01   <!-- inherits reader-family conventions (naming, wide tibble, tibble Import) -->
-- **Branch/PR:** m03-whisper-reader   <!-- PR URL once opened -->
+- **Branch/PR:** m03-whisper-reader · https://github.com/jmgirard/openac/pull/4
 
 ## Goal
 
@@ -124,6 +124,8 @@ _Added by RR01 ingestion:_
   *insufficient*; verified empirically that `"NA"` text still coerced to `NA`,
   so the fix also needs `na.strings = character(0)` (new `aw_read_csv()`
   helper). Suite 108 pass; `check()` (vignettes off) 0E/0W/0N. Status → review.
+- 2026-07-11: review — PR #4; fresh evidence re-gathered; independent Opus
+  review clean (2 nits applied, 1 rejected). Awaiting merge approval.
 
 ## Decisions
 <!-- milestone-local; promote cross-cutting ones to cairn/DECISIONS.md -->
@@ -134,4 +136,28 @@ _Added by RR01 ingestion:_
   that deferred `speaker` to a candidate.
 
 ## Review
-<!-- filled by /milestone-review -->
+
+_Reviewed 2026-07-11 · PR #4 · branch `m03-whisper-reader`._
+
+**Acceptance criteria (fresh evidence):** all met. `test()` 108 pass;
+`check()` (vignettes off) 0E/0W/0N apart from the 2 named vignette warnings
+(M05). Independently re-verified: hour-scale `01:02:03.500`→`3723.5`;
+three-form (object/`.rds`/`.csv`) parity for plain, diarized, and
+adversarial (`"NA"`/numeric) text; empty→0-row/4-col; both `cli_abort`
+branches fire. R1–R5 (speaker, CSV parity fix, ≥1h test, DESIGN contract,
+cli warnings) all present and tested.
+
+**Consistency gate:** `document()` idempotent ✓; README.Rmd/.md untouched &
+in sync ✓; no pkgdown site ✓; NEWS entry present (`aw_read`, no milestone
+numbers) ✓; no new top-level tracked files ✓.
+
+**Independent Opus review (fresh context):** clean — no blockers, no
+should-fix. Empirically stress-tested parity (embedded quotes/commas/
+newlines, actual-NA, empty string) and confirmed correct. Three NITs: (1)
+document the deliberate `na.strings` trade → **applied** (comment); (2) error
+tests assert message not class → **applied** (added `class = "rlang_error"`);
+(3) garbage in both `from` and `to` emits two `cli_warn`s → **rejected**
+(reviewer agreed it is harmless and arguably clearer than one merged warning).
+
+**Provenance:** design settled via Fable escalation RB01/RR01 → D-008
+(archived under `cairn/reviews/archive/`).

@@ -606,6 +606,9 @@ aw_read_csv <- function(x) {
   chr <- intersect(c("text", "from", "to", "speaker"), header)
   col_classes <- rep("character", length(chr))
   names(col_classes) <- chr
+  # na.strings = character(0) is the deliberate trade: whisper never emits an
+  # actual-NA text field, and literal "NA" text is the realistic case, so we
+  # favour reading "NA" back as the string "NA" over honouring a missing value.
   read.csv(x, colClasses = col_classes, na.strings = character(0),
            check.names = FALSE, stringsAsFactors = FALSE)
 }

@@ -117,20 +117,21 @@ test_that("aw_read() empty-transcript output is identical across forms", {
 })
 
 test_that("aw_read() errors on wrong-type input", {
-  expect_error(aw_read(42), "transcription")            # not an object or path
-  expect_error(aw_read(list(foo = 1)), "transcription") # list without $data
-  expect_error(aw_read(c("a.rds", "b.rds")), "single")  # length > 1
+  # cli::cli_abort() signals rlang_error conditions (DESIGN Conventions).
+  expect_error(aw_read(42), "transcription", class = "rlang_error")
+  expect_error(aw_read(list(foo = 1)), "transcription", class = "rlang_error")
+  expect_error(aw_read(c("a.rds", "b.rds")), "single", class = "rlang_error")
 })
 
 test_that("aw_read() errors on a missing file path", {
-  expect_error(aw_read(tempfile(fileext = ".rds")), "find")
+  expect_error(aw_read(tempfile(fileext = ".rds")), "find", class = "rlang_error")
 })
 
 test_that("aw_read() errors on an unsupported file extension", {
   f <- tempfile(fileext = ".txt")
   file.create(f)
   on.exit(unlink(f), add = TRUE)
-  expect_error(aw_read(f), "\\.rds")
+  expect_error(aw_read(f), "\\.rds", class = "rlang_error")
 })
 
 # --- RR01 / D-008: preserve speaker, CSV parity, hour-scale, cli warnings ----
