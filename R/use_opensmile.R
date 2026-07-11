@@ -504,8 +504,10 @@ os_read <- function(file) {
     file = file,
     sep = sep,
     dec = ".",
-    quote = "\"'",         # tolerate single- or double-quoted instance names
-    check.names = FALSE,    # keep feature names like pcm_fftMag_mfcc[1]
+    quote = "\"",          # double-quote only (read.csv default); adding the
+                           # single quote would make an unquoted instance name
+                           # containing an apostrophe swallow the rest of the file
+    check.names = FALSE,   # keep feature names like pcm_fftMag_mfcc[1]
     stringsAsFactors = FALSE
   )
   tibble::as_tibble(df)

@@ -85,6 +85,10 @@ tidy tibble — establishing the reader family's conventions (D-004, D-005).
 - 2026-07-11: user chose to keep M01 focused (amend criterion to "no new
   check errors/warnings vs baseline") and track baseline debt as a separate
   cleanup milestone candidate. Status → review.
+- 2026-07-11: review — draft PR #1; fresh test (24 pass) + consistency gate
+  clean (os_read docs in sync; NEWS entry added). Independent Opus review:
+  fixed apostrophe-name parsing bug (F1) + added NaN/Inf/NA + header-only
+  tests (F2/F3); tests now 36 pass. F5 → fixture-fidelity candidate.
 
 ## Decisions
 <!-- milestone-local; promote cross-cutting ones to project/DECISIONS.md -->
@@ -120,5 +124,17 @@ _Reviewed 2026-07-11 (branch `m01-opensmile-reader`, PR #1)._
   `tests/`; NEWS.md is a standard build file).
 - No CI workflows in repo → no CI gate.
 
-**Independent fresh-context review (Opus subagent):** _pending — triage below._
+**Independent fresh-context review (Opus subagent):** no blockers; criteria
+met. Triage of findings:
+- **Fixed now** — F1 (correctness): `quote = "\"'"` made an unquoted instance
+  name containing an apostrophe (e.g. `Bob's interview.wav`) silently swallow
+  the file (0 rows). Changed to double-quote-only + regression test.
+- **Fixed now** — F2/F3 (test gaps): added coverage for `NaN`/`Inf`/`NA`
+  feature values and a header-only (0-row) file. (Test count 24 → 36.)
+- **Accepted, no change** — F4 (lexical delimiter sniff on line 1) and F6
+  (parity test is a re-read by design; independent oracles are the agg/LLD
+  value tests). Documented as known limitations.
+- **Follow-up candidate** — F5: hand-built fixtures don't fully mirror real
+  openSMILE output (name quoting, `frameTime` in functionals). Validate
+  against a real run → ROADMAP candidate.
 

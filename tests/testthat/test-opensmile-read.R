@@ -67,14 +67,48 @@ test_that("os_read() preserves non-syntactic feature names (e.g. mfcc[1])", {
   expect_equal(out[["pcm_fftMag_mfcc[1]"]], -42.5)
 })
 
-test_that("os_read() strips a quoted instance name", {
-  # Some openSMILE builds single-quote the instance name.
+test_that("os_read() handles an instance name containing an apostrophe", {
+  # Regression: quote = "\"'" made an unquoted apostrophe open a phantom
+  # quoted string and swallow the rest of the file (silent 0-row result).
+  # openSMILE instance names are audio filenames, where apostrophes are common.
   tmp <- tempfile(fileext = ".csv")
   on.exit(unlink(tmp), add = TRUE)
   writeLines(c("name;frameTime;pcm_RMSenergy_sma",
-               "'audio1.wav';0.000000;0.01"), tmp)
+               "Bob's interview.wav;0.000000;0.0100",
+               "Bob's interview.wav;0.010000;0.0200"), tmp)
   out <- os_read(tmp)
-  expect_equal(out$name, "audio1.wav")
+  expect_equal(nrow(out), 2L)
+  expect_equal(out$name, rep("Bob's interview.wav", 2))
+  expect_equal(out$pcm_RMSenergy_sma, c(0.01, 0.02))
+})
+
+test_that("os_read() parses NaN, Inf, and empty (NA) feature values as numeric", {
+  tmp <- tempfile(fileext = ".csv")
+  on.exit(unlink(tmp), add = TRUE)
+  # Two rows so each column carries a real number alongside the sentinel;
+  # the empty field (trailing ';') in row 2 becomes NA within a numeric column.
+  writeLines(c("name;frameTime;a;b;c",
+               "audio1.wav;0.000000;NaN;Inf;1.5",
+               "audio1.wav;0.010000;0.5;0.5;"), tmp)
+  out <- os_read(tmp)
+  expect_type(out$a, "double")
+  expect_type(out$b, "double")
+  expect_type(out$c, "double")
+  expect_true(is.nan(out$a[1]))
+  expect_true(is.infinite(out$b[1]) && out$b[1] > 0)
+  expect_true(is.na(out$c[2]))
+  expect_equal(out$c[1], 1.5)
+})
+
+test_that("os_read() returns a 0-row tibble for a header-only file", {
+  # A valid openSMILE header with no data rows is empty, not an error.
+  tmp <- tempfile(fileext = ".csv")
+  on.exit(unlink(tmp), add = TRUE)
+  writeLines("name;frameTime;pcm_RMSenergy_sma", tmp)
+  out <- os_read(tmp)
+  expect_true(tibble::is_tibble(out))
+  expect_equal(nrow(out), 0L)
+  expect_equal(names(out), c("name", "frameTime", "pcm_RMSenergy_sma"))
 })
 
 test_that("os_read() errors on bad input", {
