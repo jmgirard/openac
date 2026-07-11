@@ -1,9 +1,9 @@
 # M04: R CMD check hygiene (docs, namespace, build, examples)
 
-- **Status:** planned   <!-- mirror; cairn/ROADMAP.md is the authority -->
+- **Status:** in-progress   <!-- mirror; cairn/ROADMAP.md is the authority -->
 - **Priority:** high   <!-- high | normal | low -->
 - **Depends on:** —
-- **Branch/PR:** —   <!-- m04-check-hygiene; PR URL once opened -->
+- **Branch/PR:** m04-check-hygiene   <!-- PR URL once opened -->
 
 ## Goal
 
@@ -79,6 +79,7 @@ cleanly apart from the vignettes (which M05 handles).
 
 - 2026-07-11: created by /milestone-plan (promoted from the "green up R CMD
   check" candidate; split hygiene here, vignettes → M05).
+- 2026-07-11: started; branch m04-check-hygiene cut from main.
 
 ## Decisions
 <!-- milestone-local; promote cross-cutting ones to cairn/DECISIONS.md -->
