@@ -2,23 +2,32 @@
 
 ## Purpose & Scope
 
-<!-- Drafted by cairn-init from DESCRIPTION + a read of R/. Refine these
-     lines — they are honest observations, not gospel. -->
-
 openac provides R wrappers around external, open-source affective-computing
-command-line tools so R users can run them from a single, consistent
-interface. It does not implement the underlying algorithms; it locates,
-installs, configures, and drives external binaries and packages, then shapes
-their inputs/outputs for R workflows.
+tools so researchers can run them from a single, consistent R interface. The
+primary audience is **affective-science researchers** (including the
+maintainer's lab and collaborators) who are comfortable in R but not at the
+command line — the package exists to spare them the terminal.
 
 Wrapped tools: **ffmpeg** / **ffprobe** (media transcode & probe), **OpenFace**
 (facial behavior extraction), **openSMILE** (acoustic feature extraction), and
-**whisper** (via the `audio.whisper` package, speech transcription).
+**whisper** (via the `audio.whisper` package, speech transcription). The
+roster grows **opportunistically** — no fixed roadmap, but a tool earns a
+wrapper family when it is (a) open-source and freely available, (b) extracts
+or processes affective/behavioral signals, and (c) drivable non-interactively
+(CLI or R-callable). Modern ML tools (e.g., HuggingFace models) are of
+long-term interest (see ROADMAP candidates).
 
 In scope: tool discovery/installation/configuration, audio/video
 preparation, per-file and batch (`_dir`) extraction, parallel iteration
-(via `future`/`furrr`) with progress (`progressr`).
+(via `future`/`furrr`) with progress (`progressr`), and — direction, mostly
+unbuilt — **reading tool outputs into tidy R data frames** (`os_fix_csv` is
+the seed; see ROADMAP candidates).
 Out of scope: reimplementing any tool's algorithm; hosting model weights.
+
+Platforms: all three (Windows/macOS/Linux) **where possible** — wrappers
+(find/check/run) should work everywhere; `install_*` helpers are
+best-effort per platform. Distribution is GitHub-only today with **CRAN as
+the eventual goal**, so code converges on CRAN standards as it goes.
 
 ## Function Families
 
@@ -42,8 +51,6 @@ Out of scope: reimplementing any tool's algorithm; hosting model weights.
 
 ## Conventions
 
-<!-- Observed patterns, stated as facts. Confirm/extend. -->
-
 - Tool-family prefixes: `of_` (OpenFace), `os_` (openSMILE), `aw_`
   (audio.whisper); ffmpeg/ffprobe use full or `ffm`/`ffp` names.
 - Verb families mirror the program lifecycle: `check_` / `find_` / `set_` /
@@ -53,11 +60,12 @@ Out of scope: reimplementing any tool's algorithm; hosting model weights.
 - Platform-specific installers are suffixed `_win` / `_mac`.
 - Short aliases exist for the low-level passthroughs: `ffm`, `ffp`, `of`,
   `os`.
-- **Current** input validation is `stopifnot()` + `rlang::is_string` /
-  `rlang::is_bool` predicates; failures/missing tools signal via base
-  `warning()`, not `cli::cli_abort()`. (cairn's R guardrail asks that *new*
-  user-facing conditions use `cli`/`rlang` — so existing code and the
-  guardrail diverge; see Known issues.)
+- Conditions: **new code uses `cli::cli_abort()`/`cli_warn()`; legacy
+  `stopifnot()` + base `warning()` migrates opportunistically when touched**
+  (no wholesale conversion milestone). Better messages matter for a
+  non-technical audience.
+- Pre-1.0, the exported API may **break freely** — no deprecation ceremony
+  until 1.0 (explicit waiver, D-002).
 
 ## Design Principles
 
@@ -71,6 +79,11 @@ _GP<n> = Guiding (tradeable with stated justification) · IP<n> = Inviolable
 - **IP1 — No hard-coded tool paths.** External-tool locations are always
   discovered (`Sys.which`) or user-configured (`set_program`), never
   hard-coded in the package.
+- **GP3 — Cross-platform where possible.** Wrappers (find/check/run) work on
+  Windows/macOS/Linux; `install_*` helpers are best-effort per platform.
+- **GP4 — Lean dependencies.** The current Imports list is acceptable but
+  shrinks where easy; new Imports need real justification (and, per the
+  guardrails, a question-gate + D-entry).
 
 ## Architecture
 
@@ -100,6 +113,19 @@ them without attaching the upstream packages.
 ## Known issues
 
 <!-- Running list of accepted warts; each line dated. -->
-- 2026-07-11: Validation/signaling style is legacy `stopifnot()` + base
-  `warning()`, diverging from cairn's `cli::cli_abort()` guardrail for new
-  conditions. Migration is a candidate, not yet scheduled.
+- 2026-07-11: Legacy `stopifnot()` + base `warning()` style persists until
+  code is touched (opportunistic migration to `cli` — see Conventions).
+- 2026-07-11: **External-tool version drift** — wrappers assume particular
+  tool versions/flag sets; upstream updates can silently break arg
+  construction. No version pinning or detection yet.
+- 2026-07-11: **Messy real-world media** — recordings with missing audio
+  streams, odd codecs, or multiple streams keep surprising the pipeline
+  (recent fixes: stream counting, audio-less files, video-vs-audio checks).
+- 2026-07-11: **OpenFace availability** — effectively unmaintained upstream
+  and hard to install (especially mac/Linux); a structural risk for the
+  `of_*` family.
+- 2026-07-11: **Windows-biased testing** — most real use has been on
+  Windows; mac/Linux paths are lightly exercised and may have quiet
+  breakage.
+- 2026-07-11: Essentially no automated tests (one empty stub); recent bug
+  fixes shipped without regression tests.
