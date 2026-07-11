@@ -38,6 +38,24 @@ GP2 (batch capability, not API shape).
 gate cloud use behind explicit opt-in; batch and high-level functions
 converge on GP5/GP6 as they are touched.
 
+### D-006 (2026-07-11): Add `purrr` to Imports, remove `pak`; whisper batch is sequential by design
+
+**Context:** `R CMD check` flagged `purrr` used-but-undeclared
+(`use_whisper.R:488` `purrr::pwalk`) and `pak` declared-but-unused. Planning
+the check cleanup (M04). The `purrr::pwalk` in `aw_transcribe_dir()` is
+deliberate: whisper is compute-intensive and `whisper.cpp` (via
+`audio.whisper`) is already internally multi-threaded, so parallelizing
+*across files* would oversubscribe the CPU or thrash a single GPU for no gain.
+The CPU-bound `*_dir()` functions use `furrr::future_pwalk` (parallelizable).
+**Decision:** Add `purrr` to Imports and keep the deliberately sequential
+whisper loop (documented with a code comment). Remove `pak` from Imports
+(unused in package code). Considered and rejected: replacing `purrr::pwalk`
+with `furrr::future_pwalk` under a temporary `plan(sequential)` — more code, a
+fragile plan save/restore, and no benefit given whisper's internal threading.
+**Consequences:** DESCRIPTION gains `purrr`, drops `pak` (in M04). The
+furrr-vs-purrr split now encodes parallelism intent (furrr = parallelizable,
+purrr = deliberately sequential); note this in DESIGN when touched.
+
 ### D-004 (2026-07-11): Reader family named `<tool>_read()`
 
 **Context:** Planning the tidy-reader family (M01 openSMILE, M02 OpenFace,
