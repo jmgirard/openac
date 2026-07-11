@@ -51,27 +51,55 @@ Out of scope: reimplementing any tool's algorithm; hosting model weights.
 - Batch variants carry a `_dir` suffix and iterate with `furrr` +
   `progressr`.
 - Platform-specific installers are suffixed `_win` / `_mac`.
-- User-facing conditions use `cli` / `rlang`.
+- Short aliases exist for the low-level passthroughs: `ffm`, `ffp`, `of`,
+  `os`.
+- **Current** input validation is `stopifnot()` + `rlang::is_string` /
+  `rlang::is_bool` predicates; failures/missing tools signal via base
+  `warning()`, not `cli::cli_abort()`. (cairn's R guardrail asks that *new*
+  user-facing conditions use `cli`/`rlang` — so existing code and the
+  guardrail diverge; see Known issues.)
 
 ## Design Principles
 
-<!-- cairn-init does NOT invent principles. Below are CANDIDATES inferred
-     from the code for the user to accept, reword, or delete. Mark each as
-     GP<n> (Guiding — tradeable with justification) or IP<n> (Inviolable —
-     hard constraint) once confirmed. -->
+_GP<n> = Guiding (tradeable with stated justification) · IP<n> = Inviolable
+(hard constraint; changing one requires an explicit decision in DECISIONS.md)._
 
-- _Candidate:_ Thin wrappers — openac shapes I/O and orchestrates, it does
-  not reimplement tool internals.
-- _Candidate:_ Every per-file operation has a `_dir` batch counterpart.
-- _Candidate:_ External-tool locations are discovered/configured, never
-  hard-coded.
+- **GP1 — Thin wrappers.** openac shapes I/O and orchestrates external
+  tools; it does not reimplement a tool's internal algorithm.
+- **GP2 — Batch parity.** Every single-file operation aims to have a batch
+  `_dir` counterpart.
+- **IP1 — No hard-coded tool paths.** External-tool locations are always
+  discovered (`Sys.which`) or user-configured (`set_program`), never
+  hard-coded in the package.
 
 ## Architecture
 
-<!-- Fill in as it stabilizes: how programs are located & cached (rappdirs),
-     how args are marshalled to the CLIs, how batch iteration & progress are
-     wired. -->
+**Program discovery & configuration.** `find_program(program)` resolves an
+external tool by (1) `Sys.which()` on `PATH`, then (2) a per-program config
+file `<program>_location.txt` under `rappdirs::user_config_dir("openac",
+"R")`. `set_program()` writes that file. Resolution returns an absolute path
+(`tools::file_path_as_absolute`) or `NULL` with a `warning()`. `check_*`
+report installed/working status; `install_*_{win,mac}` fetch and place
+binaries.
+
+**Calling the CLIs.** Each tool has a low-level passthrough (`ffmpeg()`,
+`ffprobe()`, `openface()`, `opensmile()`) that takes a single
+space-separated argument string and runs
+`system2(find_<tool>(), args = arg, stdout = TRUE, stderr = TRUE)`,
+returning captured output as a character vector. Typed high-level functions
+(`of_extract()`, `os_extract()`, `aw_transcribe()`, …) validate named
+parameters and assemble the argument string, then delegate to the
+passthrough.
+
+**Batch & parallelism.** `*_dir()` functions enumerate input files by
+extension and map the single-file operation across them via `furrr`/`future`
+(user sets strategy with `plan()`), surfacing progress through `progressr`
+(`handlers()`). Both control functions are re-exported so users configure
+them without attaching the upstream packages.
 
 ## Known issues
 
 <!-- Running list of accepted warts; each line dated. -->
+- 2026-07-11: Validation/signaling style is legacy `stopifnot()` + base
+  `warning()`, diverging from cairn's `cli::cli_abort()` guardrail for new
+  conditions. Migration is a candidate, not yet scheduled.
