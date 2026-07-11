@@ -3,7 +3,7 @@
 - **Status:** review   <!-- mirror; project/ROADMAP.md is the authority -->
 - **Priority:** normal   <!-- high | normal | low -->
 - **Depends on:** M01   <!-- inherits reader-family conventions (naming, wide tibble, tibble Import) -->
-- **Branch/PR:** m02-openface-reader   <!-- PR URL once opened -->
+- **Branch/PR:** m02-openface-reader · https://github.com/jmgirard/openac/pull/2
 
 ## Goal
 
@@ -73,4 +73,28 @@ tidy tibble (one row per frame), following the M01 reader-family pattern.
 - Inherits D-004 (naming) and D-005 (`tibble` Import) from M01.
 
 ## Review
-<!-- filled by /milestone-review -->
+
+_Reviewed 2026-07-11 (branch `m02-openface-reader`, PR #2)._
+
+**Acceptance criteria — fresh evidence:**
+- Returns a tibble; 3 frames; `frame` integer, `timestamp`/`confidence`
+  double, `success` 0/1; header whitespace trimmed; `AU01_r`/`AU01_c` numeric
+  with correct values; error branches (non-string / missing / empty) — all
+  verified by `devtools::test()`: full suite **56 pass, 0 fail** (1 unrelated
+  skip: empty `test-openface.R` stub).
+- Amended criterion: `of_read` adds **zero new** `check()` errors/warnings vs
+  baseline. Confirmed 2026-07-11 (appears only in the pre-existing globals
+  NOTE).
+
+**Consistency gate:**
+- `devtools::document()` leaves `man/of_read.Rd` unchanged → docs in sync.
+  (Same roxygen 8.0.0-vs-7.3.3 collateral churn on unrelated pages — reverted,
+  not shipped; tracked in cleanup candidate.)
+- README unchanged by M02 → no rebuild.
+- No `_pkgdown.yml` → pkgdown check N/A.
+- NEWS.md has an `of_read` entry.
+- No new top-level files (fixture under `tests/`) → no `.Rbuildignore`.
+- No CI workflows → no CI gate.
+
+**Independent fresh-context review (Opus subagent):** _pending — triage below._
+
