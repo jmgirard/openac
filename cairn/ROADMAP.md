@@ -9,7 +9,7 @@ _Last hygiene check: 2026-07-11 (M04 merged)_
 |---|---|---|---|---|---|
 | M01 | openSMILE tidy reader (`os_read`) | done | — | high | [archive](milestones/archive/M01-opensmile-reader.md) |
 | M02 | OpenFace tidy reader (`of_read`) | done | M01 | normal | [archive](milestones/archive/M02-openface-reader.md) |
-| M03 | whisper tidy reader (`aw_read`) | review | M01 | normal | [M03](milestones/M03-whisper-reader.md) |
+| M03 | whisper tidy reader (`aw_read`) | blocked | M01 | normal | [M03](milestones/M03-whisper-reader.md) |
 | M04 | R CMD check hygiene (docs, namespace, build) | done | — | high | [archive](milestones/archive/M04-check-hygiene.md) |
 | M05 | Rewrite stale vignettes | planned | M04 | normal | [M05](milestones/M05-vignette-rewrite.md) |
 

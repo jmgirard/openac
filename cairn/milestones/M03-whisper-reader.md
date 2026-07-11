@@ -1,6 +1,6 @@
 # M03: whisper transcript tidy reader (`aw_read`)
 
-- **Status:** review   <!-- mirror; cairn/ROADMAP.md is the authority -->
+- **Status:** blocked   <!-- mirror; cairn/ROADMAP.md is the authority -->
 - **Priority:** normal   <!-- high | normal | low -->
 - **Depends on:** M01   <!-- inherits reader-family conventions (naming, wide tibble, tibble Import) -->
 - **Branch/PR:** m03-whisper-reader   <!-- PR URL once opened -->
@@ -82,6 +82,11 @@ result into a tidy tibble — one row per segment — following the M01 pattern.
 - 2026-07-11: implemented `aw_read()` (+ internal `aw_read_data`,
   `aw_parse_timestamp`); 25 new tests, all green; suite 92 pass;
   `check()` (vignettes off) 0E/0W/0N. Status → review.
+- 2026-07-11: blocked on RB01 (tidy-reader family API contract, Fable
+  escalation). Brief created on this branch (not main) so M03's status and the
+  RR-ingested decisions stay coherent while M03 is unmerged. Held from merge
+  until the RR is ingested — the RR may recommend changing `aw_read`
+  (columns/timestamps).
 
 ## Decisions
 <!-- milestone-local; promote cross-cutting ones to cairn/DECISIONS.md -->
