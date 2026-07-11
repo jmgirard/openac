@@ -12,8 +12,8 @@ or a string path to its \code{.rds} or \code{.csv} output.}
 }
 \value{
 A \link[tibble:tibble]{tibble} with one row per segment and columns
-\code{segment} (integer), \code{from}/\code{to} (numeric seconds), and \code{text}
-(character).
+\code{segment} (integer), \code{from}/\code{to} (numeric seconds), \code{text} (character),
+and --- for diarized transcriptions --- \code{speaker} (character).
 }
 \description{
 Turn the result of \code{\link[=aw_transcribe]{aw_transcribe()}} into a tidy \link[tibble:tibble]{tibble}
@@ -24,9 +24,11 @@ output.
 }
 \details{
 Whisper's \code{HH:MM:SS.mmm} start/end timestamps are parsed to numeric seconds.
-Segment text is preserved verbatim (Whisper often emits a leading space).
-Extra columns such as \code{segment_offset} (and \code{speaker}, when diarizing) are
-dropped; token-level output is out of scope.
+Segment text is preserved verbatim (Whisper often emits a leading space). A
+\code{speaker} column is kept when (and only when) the transcription carries one
+--- i.e. it was produced with diarization. The redundant \code{segment_offset}
+(the start time re-encoded in milliseconds) is dropped, as is token-level
+output (out of scope).
 }
 \examples{
 \dontrun{

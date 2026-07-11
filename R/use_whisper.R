@@ -520,15 +520,17 @@ aw_transcribe_dir <- function(
 #' output.
 #'
 #' Whisper's `HH:MM:SS.mmm` start/end timestamps are parsed to numeric seconds.
-#' Segment text is preserved verbatim (Whisper often emits a leading space).
-#' Extra columns such as `segment_offset` (and `speaker`, when diarizing) are
-#' dropped; token-level output is out of scope.
+#' Segment text is preserved verbatim (Whisper often emits a leading space). A
+#' `speaker` column is kept when (and only when) the transcription carries one
+#' --- i.e. it was produced with diarization. The redundant `segment_offset`
+#' (the start time re-encoded in milliseconds) is dropped, as is token-level
+#' output (out of scope).
 #'
 #' @param x A Whisper transcription: the object returned by [aw_transcribe()],
 #'   or a string path to its `.rds` or `.csv` output.
 #' @return A [tibble][tibble::tibble] with one row per segment and columns
-#'   `segment` (integer), `from`/`to` (numeric seconds), and `text`
-#'   (character).
+#'   `segment` (integer), `from`/`to` (numeric seconds), `text` (character),
+#'   and --- for diarized transcriptions --- `speaker` (character).
 #' @seealso [aw_transcribe()], which produces the input.
 #' @examples
 #' \dontrun{
@@ -538,12 +540,17 @@ aw_transcribe_dir <- function(
 #' @export
 aw_read <- function(x) {
   data <- aw_read_data(x)
-  tibble::tibble(
+  out <- tibble::tibble(
     segment = as.integer(data$segment),
     from    = aw_parse_timestamp(as.character(data$from)),
     to      = aw_parse_timestamp(as.character(data$to)),
     text    = as.character(data$text)
   )
+  # Keep the diarization payload when present; never silently drop it (D-008).
+  if ("speaker" %in% names(data)) {
+    out$speaker <- as.character(data$speaker)
+  }
+  out
 }
 
 # Resolve the various input forms to the transcript $data data.frame, validating
@@ -563,7 +570,7 @@ aw_read_data <- function(x) {
     data <- switch(
       ext,
       rds = readRDS(x)$data,
-      csv = read.csv(x, stringsAsFactors = FALSE, check.names = FALSE),
+      csv = aw_read_csv(x),
       cli::cli_abort(c(
         "{.arg x} must be a path to a {.file .rds} or {.file .csv} file.",
         "x" = "Can't read a {.file .{ext}} file: {.file {x}}."
@@ -588,12 +595,38 @@ aw_read_data <- function(x) {
   data
 }
 
+# Read aw_transcribe()'s CSV without read.csv()'s type inference mangling the
+# text columns: text that is literally "NA" must not become NA, and all-numeric
+# text must stay character with its leading space. This needs BOTH `colClasses`
+# (else numeric-looking text is read as a number) AND `na.strings = character(0)`
+# (else "NA" text is still converted to NA even in a character column). Pin only
+# the character columns actually present so every input form agrees (D-008 / RR01).
+aw_read_csv <- function(x) {
+  header <- names(read.csv(x, nrows = 0L, check.names = FALSE))
+  chr <- intersect(c("text", "from", "to", "speaker"), header)
+  col_classes <- rep("character", length(chr))
+  names(col_classes) <- chr
+  read.csv(x, colClasses = col_classes, na.strings = character(0),
+           check.names = FALSE, stringsAsFactors = FALSE)
+}
+
 # Parse Whisper "HH:MM:SS.mmm" timestamps to numeric seconds. Handles missing
-# minute/hour parts and is NA-safe; vectorised over a character vector.
+# minute/hour parts; NA and empty strings pass through as NA silently.
+# Genuinely unparseable, non-empty values yield NA with a single cli warning
+# (never a raw as.numeric() "NAs introduced by coercion" warning).
 aw_parse_timestamp <- function(x) {
-  vapply(strsplit(x, ":", fixed = TRUE), function(parts) {
+  secs <- vapply(strsplit(x, ":", fixed = TRUE), function(parts) {
     if (length(parts) == 0L || anyNA(parts)) return(NA_real_)
-    nums <- as.numeric(parts)
+    nums <- suppressWarnings(as.numeric(parts))
+    if (anyNA(nums)) return(NA_real_)
     sum(nums * 60^rev(seq_along(nums) - 1L))
   }, numeric(1))
+  bad <- is.na(secs) & !is.na(x) & nzchar(x)
+  if (any(bad)) {
+    cli::cli_warn(c(
+      "!" = "Couldn't parse {sum(bad)} Whisper timestamp(s) to seconds.",
+      "i" = "Returning NA for: {.val {unique(x[bad])}}."
+    ))
+  }
+  secs
 }

@@ -19,9 +19,9 @@ long-term interest (see ROADMAP candidates).
 
 In scope: tool discovery/installation/configuration, audio/video
 preparation, per-file and batch (`_dir`) extraction, parallel iteration
-(via `future`/`furrr`) with progress (`progressr`), and — direction, mostly
-unbuilt — **reading tool outputs into tidy R data frames** (`os_fix_csv` is
-the seed; see ROADMAP candidates).
+(via `future`/`furrr`) with progress (`progressr`), and **reading tool outputs
+into tidy R data frames** via the `<tool>_read()` family (`os_read`, `of_read`,
+`aw_read`; see the tidy-reader contract under Conventions).
 Out of scope: reimplementing any tool's algorithm; hosting model weights.
 
 Platforms: all three (Windows/macOS/Linux) **where possible** — wrappers
@@ -38,14 +38,16 @@ the eventual goal**, so code converges on CRAN standards as it goes.
 - **ffmpeg / ffprobe** — `ffmpeg()`, `ffprobe()` low-level arg passthroughs
   (+ `ffm`/`ffp` aliases), `ffp_count_streams()`.
 - **OpenFace (`of_*`)** — `openface()` passthrough (+ `of` alias),
-  `of_extract()`, `of_extract_dir()`.
+  `of_extract()`, `of_extract_dir()`, output reading (`of_read()`).
 - **openSMILE (`os_*`)** — `opensmile()` passthrough (+ `os` alias), config
   helpers (`os_list_configs`, `os_check_config`), audio prep
   (`os_check_audio`, `os_prep_audio`, `os_prep_audio_dir`), extraction
-  (`os_extract`, `os_extract_dir`), `os_fix_csv`.
+  (`os_extract`, `os_extract_dir`), output reading (`os_read`), `os_fix_csv`.
 - **whisper (`aw_*`)** — audio check/prep (`aw_check_audio`, `aw_prep_audio`,
   `aw_prep_audio_dir`), model fetch (`aw_get_model`), transcription
-  (`aw_transcribe`, `aw_transcribe_dir`).
+  (`aw_transcribe`, `aw_transcribe_dir`), transcript reading (`aw_read`).
+- **Tidy readers (`<tool>_read`)** — `os_read`, `of_read`, `aw_read` turn a
+  tool's raw output into a tidy tibble under one shared contract (Conventions).
 - **Re-exports** — `future::plan`, `progressr::handlers` (parallelism &
   progress control surfaced to users).
 
@@ -60,6 +62,17 @@ the eventual goal**, so code converges on CRAN standards as it goes.
 - Platform-specific installers are suffixed `_win` / `_mac`.
 - Short aliases exist for the low-level passthroughs: `ffm`, `ffp`, `of`,
   `os`.
+- **Tidy-reader contract** (`<tool>_read`, D-008): a reader turns one tool's
+  raw output into a tidy tibble. It **accepts every form that output natively
+  exists in** — a `file` path for file-only tools (`os_read`, `of_read`); the
+  in-memory object *plus* the `.rds`/`.csv` sidecars the wrapper writes, as
+  `x`, for R-native tools (`aw_read`) — and all accepted forms yield identical
+  output. It **passes through every data-bearing column** (dropping only
+  redundant re-encodings, e.g. whisper's `segment_offset`), does **lossless
+  type-parsing only** (never filtering, aggregating, or deriving), and reports
+  **time as numeric seconds** (`frameTime`, `timestamp`, `from`/`to`). Tool
+  column names are kept **verbatim** (mechanical whitespace cleanup only);
+  each reader states its row grain in its first roxygen sentence.
 - Conditions: **new code uses `cli::cli_abort()`/`cli_warn()`; legacy
   `stopifnot()` + base `warning()` migrates opportunistically when touched**
   (no wholesale conversion milestone). Better messages matter for a

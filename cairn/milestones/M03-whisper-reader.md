@@ -1,6 +1,6 @@
 # M03: whisper transcript tidy reader (`aw_read`)
 
-- **Status:** in-progress   <!-- mirror; cairn/ROADMAP.md is the authority -->
+- **Status:** review   <!-- mirror; cairn/ROADMAP.md is the authority -->
 - **Priority:** normal   <!-- high | normal | low -->
 - **Depends on:** M01   <!-- inherits reader-family conventions (naming, wide tibble, tibble Import) -->
 - **Branch/PR:** m03-whisper-reader   <!-- PR URL once opened -->
@@ -48,17 +48,17 @@ _(RR01/D-008: `speaker` moved from Out → In — dropping it is silent data los
       amendment). Verified with vignettes off, as in M04.
 
 _Added by RR01 ingestion (D-008):_
-- [ ] (R1) A diarized input yields a `speaker` column; a non-diarized input
+- [x] (R1) A diarized input yields a `speaker` column; a non-diarized input
       yields no `speaker` column; `segment_offset` still dropped. Fixture
       gains a `diarize = TRUE` variant.
-- [ ] (R2) Three-form parity holds for adversarial text — a segment whose
+- [x] (R2) Three-form parity holds for adversarial text — a segment whose
       text is literally `"NA"` and an all-numeric-text transcript survive the
       `.csv` path identically to object/`.rds` (`colClasses` pinned).
-- [ ] (R3) Timestamp oracle covers a ≥ 1 h segment (e.g. `"01:02:03.500"` →
+- [x] (R3) Timestamp oracle covers a ≥ 1 h segment (e.g. `"01:02:03.500"` →
       `3723.5`).
-- [ ] (R4) DESIGN "Conventions" records the reader-family contract and
+- [x] (R4) DESIGN "Conventions" records the reader-family contract and
       "Function Families" lists `os_read`/`of_read`/`aw_read` (docs).
-- [ ] (R5) Garbage timestamps warn via `cli`, not a raw `as.numeric` warning.
+- [x] (R5) Garbage timestamps warn via `cli`, not a raw `as.numeric` warning.
 
 ## Tasks
 
@@ -77,15 +77,15 @@ _Added by RR01 ingestion (D-008):_
       off) — NEWS entry added for `aw_read()`.
 
 _Added by RR01 ingestion:_
-- [ ] (R1) Preserve `speaker` conditionally in `aw_read`; update roxygen,
+- [x] (R1) Preserve `speaker` conditionally in `aw_read`; update roxygen,
       tests (+ diarized fixture variant), and `cairn/references/audiowhisper.md`.
-- [ ] (R2) Pin `colClasses` (`text`/`from`/`to`/`speaker`) in the `.csv`
+- [x] (R2) Pin `colClasses` (`text`/`from`/`to`/`speaker`) in the `.csv`
       branch of `aw_read_data()`; add adversarial-text parity tests.
-- [ ] (R3) Add a ≥ 1 h timestamp case to the oracle test.
-- [ ] (R4) Write the reader-family contract into DESIGN; list the readers in
+- [x] (R3) Add a ≥ 1 h timestamp case to the oracle test.
+- [x] (R4) Write the reader-family contract into DESIGN; list the readers in
       "Function Families".
-- [ ] (R5) Make garbage-timestamp warnings `cli`-style.
-- [ ] Re-run `devtools::document()`, `test()`, `check()` (vignettes off).
+- [x] (R5) Make garbage-timestamp warnings `cli`-style.
+- [x] Re-run `devtools::document()`, `test()`, `check()` (vignettes off).
 
 ## Work log
 <!-- append-only; one line per entry; absolute dates -->
@@ -120,6 +120,10 @@ _Added by RR01 ingestion:_
   R5 cli timestamp warnings. R6 (accept bare `$data`) + R7 (multi-file `id`
   idiom) → candidates. R8–R12 rejected (see RR01 table). RB01/RR01 archived;
   status → in-progress.
+- 2026-07-11: applied R1–R5. R2 note — the RR's `colClasses` one-liner was
+  *insufficient*; verified empirically that `"NA"` text still coerced to `NA`,
+  so the fix also needs `na.strings = character(0)` (new `aw_read_csv()`
+  helper). Suite 108 pass; `check()` (vignettes off) 0E/0W/0N. Status → review.
 
 ## Decisions
 <!-- milestone-local; promote cross-cutting ones to cairn/DECISIONS.md -->

@@ -21,6 +21,7 @@ So `"00:00:01.500"` = 1.5 s, `"00:01:02.750"` = 62.75 s.
 object via `saveRDS()` (`.rds`) and `write.csv(out$data, row.names = FALSE)`
 (`.csv`), so the CSV carries every `$data` column (incl. `segment_offset`).
 
-**Traces to:** M03 (`aw_read`) — fixture columns, timestamp oracle, and the
-requirement that `aw_read` selects `segment`/`from`/`to`/`text` and drops
-`segment_offset`/`speaker`.
+**Traces to:** M03 (`aw_read`) — fixture columns and timestamp oracle.
+Per RR01/D-008, `aw_read` keeps `segment`/`from`/`to`/`text` **and `speaker`
+when present** (diarization payload), and drops only `segment_offset` (a
+redundant re-encoding of `from` in ms).

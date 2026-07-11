@@ -7,7 +7,7 @@
 # One source of truth for all three input forms (object / .rds / .csv), so the
 # parity test cannot drift. The .csv is written exactly as aw_transcribe() does
 # it: write.csv(out$data, row.names = FALSE).
-make_aw_result <- function(empty = FALSE) {
+make_aw_result <- function(empty = FALSE, diarize = FALSE) {
   if (empty) {
     dat <- data.frame(
       segment        = integer(0),
@@ -26,17 +26,32 @@ make_aw_result <- function(empty = FALSE) {
       to             = c("00:00:01.500", "00:00:04.250", "00:01:02.750"),
       stringsAsFactors = FALSE
     )
+    # audio.whisper appends a `speaker` column to $data only when diarizing.
+    if (diarize) {
+      dat$speaker <- c("SPEAKER_00", "SPEAKER_01", "SPEAKER_00")
+    }
   }
   structure(
     list(
       n_segments = nrow(dat),
       data       = dat,
       tokens     = data.frame(),
-      params     = list(diarize = FALSE),
+      params     = list(diarize = diarize),
       timing     = list()
     ),
     class = "whisper_transcription"
   )
+}
+
+# Round-trip a result through the .rds and .csv forms aw_transcribe() writes,
+# returning aw_read()'s output for each of the three input forms.
+read_all_forms <- function(res) {
+  rds <- tempfile(fileext = ".rds")
+  csv <- tempfile(fileext = ".csv")
+  on.exit(unlink(c(rds, csv)))
+  saveRDS(res, rds)
+  write.csv(res$data, csv, row.names = FALSE)
+  list(obj = aw_read(res), rds = aw_read(rds), csv = aw_read(csv))
 }
 
 test_that("aw_read() returns a tidy tibble, one row per segment", {
@@ -116,4 +131,53 @@ test_that("aw_read() errors on an unsupported file extension", {
   file.create(f)
   on.exit(unlink(f), add = TRUE)
   expect_error(aw_read(f), "\\.rds")
+})
+
+# --- RR01 / D-008: preserve speaker, CSV parity, hour-scale, cli warnings ----
+
+test_that("aw_read() keeps a speaker column only for diarized input", {
+  plain <- aw_read(make_aw_result())
+  expect_false("speaker" %in% names(plain))
+
+  diar <- aw_read(make_aw_result(diarize = TRUE))
+  expect_identical(names(diar), c("segment", "from", "to", "text", "speaker"))
+  expect_type(diar$speaker, "character")
+  expect_identical(diar$speaker, c("SPEAKER_00", "SPEAKER_01", "SPEAKER_00"))
+})
+
+test_that("aw_read() preserves speaker identically across object/.rds/.csv", {
+  forms <- read_all_forms(make_aw_result(diarize = TRUE))
+  expect_identical(forms$obj, forms$rds)
+  expect_identical(forms$obj, forms$csv)
+  expect_true("speaker" %in% names(forms$csv))
+})
+
+test_that("aw_read() .csv path does not corrupt text that looks like NA", {
+  res <- make_aw_result()
+  res$data$text <- c("NA", " 42", " real text")   # NA-literal + all-numeric
+  forms <- read_all_forms(res)
+  # object path is the reference; csv must match it exactly (R2 defect).
+  expect_identical(forms$obj$text, c("NA", " 42", " real text"))
+  expect_identical(forms$csv$text, forms$obj$text)
+  expect_type(forms$csv$text, "character")
+})
+
+test_that("aw_read() parses hour-scale timestamps", {
+  res <- make_aw_result()
+  res$data$from <- c("01:02:03.500", "00:00:01.500", "00:01:00.000")
+  out <- aw_read(res)
+  expect_equal(out$from[[1]], 3723.5)   # 1*3600 + 2*60 + 3.5
+})
+
+test_that("aw_read() warns via cli (not base) on unparseable timestamps", {
+  res <- make_aw_result()
+  res$data$from[[2]] <- "not-a-time"
+  expect_warning(out <- aw_read(res), "timestamp", class = "rlang_warning")
+  expect_true(is.na(out$from[[2]]))
+  expect_equal(out$from[[1]], 0)        # good values still parse
+})
+
+test_that("aw_parse_timestamp() is NA/empty-safe without warning", {
+  expect_warning(res <- aw_parse_timestamp(c("00:00:01.500", NA, "")), NA)
+  expect_equal(res, c(1.5, NA, NA))
 })
