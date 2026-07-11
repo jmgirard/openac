@@ -72,6 +72,12 @@ tidy tibble — establishing the reader family's conventions (D-004, D-005).
 - 2026-07-11: implemented `os_read()` (delimiter-sniffing, quote/`check.names`
   robust) + hand-built agg/LLD fixtures + 8 tests (24 assertions, all green);
   added `tibble` to Imports (D-005). `check()` pending.
+- 2026-07-11: `check()` red on **pre-existing baseline debt**, not `os_read`:
+  audio.whisper Suggests missing (env); 3 stale vignettes calling renamed
+  fns; undocumented `install_opensmile_{mac,win}`/`os_check_config`;
+  `.claude` not Rbuildignored; base-fn globals note. `os_read` adds 0 new
+  errors/warnings. "check clean" criterion blocked on baseline — awaiting
+  user decision on scope.
 
 ## Decisions
 <!-- milestone-local; promote cross-cutting ones to project/DECISIONS.md -->
