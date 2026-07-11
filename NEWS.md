@@ -6,3 +6,6 @@
   feature names.
 * New `of_read()` reads an OpenFace output CSV into a tidy tibble (one row per
   frame), trimming the whitespace OpenFace pads its column headers with.
+* New `aw_read()` turns a Whisper transcription — the object from
+  `aw_transcribe()`, or its `.rds`/`.csv` output — into a tidy tibble with one
+  row per segment, parsing the `HH:MM:SS.mmm` timestamps to numeric seconds.

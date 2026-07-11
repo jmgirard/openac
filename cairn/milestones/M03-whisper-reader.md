@@ -1,6 +1,6 @@
 # M03: whisper transcript tidy reader (`aw_read`)
 
-- **Status:** in-progress   <!-- mirror; cairn/ROADMAP.md is the authority -->
+- **Status:** review   <!-- mirror; cairn/ROADMAP.md is the authority -->
 - **Priority:** normal   <!-- high | normal | low -->
 - **Depends on:** M01   <!-- inherits reader-family conventions (naming, wide tibble, tibble Import) -->
 - **Branch/PR:** m03-whisper-reader   <!-- PR URL once opened -->
@@ -31,32 +31,34 @@ result into a tidy tibble — one row per segment — following the M01 pattern.
 
 ## Acceptance criteria
 
-- [ ] `aw_read()` exported; returns a tibble with one row per segment.
-- [ ] `from`/`to` converted to numeric seconds — fixture `"00:00:01.500"`
+- [x] `aw_read()` exported; returns a tibble with one row per segment.
+- [x] `from`/`to` converted to numeric seconds — fixture `"00:00:01.500"`
       yields `1.5`; `text` preserved exactly (incl. leading spaces if present).
-- [ ] Same tibble from the in-memory result object, its `.rds`, and its
+- [x] Same tibble from the in-memory result object, its `.rds`, and its
       `.csv` form (all three round-trip to identical output).
-- [ ] Empty-transcript input → 0-row tibble with columns
+- [x] Empty-transcript input → 0-row tibble with columns
       `segment`, `from`, `to`, `text` (no error).
-- [ ] `cli::cli_abort()` fires on: wrong-type input; missing file for a path
+- [x] `cli::cli_abort()` fires on: wrong-type input; missing file for a path
       argument.
-- [ ] `devtools::test()` green; `devtools::check()` clean.
+- [x] `devtools::test()` green; `devtools::check()` clean — 0E/0W/0N apart
+      from the 2 pre-existing vignette warnings (M05's scope; see 2026-07-11
+      amendment). Verified with vignettes off, as in M04.
 
 ## Tasks
 
-- [ ] Build a fixture: a minimal list mirroring the `audio.whisper` result
-      structure (`$data` = data.frame of `segment`, `from`, `to`, `text`),
-      saved as `.rds`, plus a `.csv` twin of `$data`, under
-      `tests/testthat/fixtures/`. (No `audio.whisper` install needed —
-      `aw_read` only reshapes structure; guard any real-package path with
-      `skip_if_not_installed()`.)
-- [ ] Write failing tests (`tests/testthat/test-whisper-read.R`): segment
-      rows, time parsing, object/rds/csv parity, empty transcript, errors.
-- [ ] Implement `aw_read()` in `R/use_whisper.R`: dispatch on input
+- [x] Build a fixture mirroring the `audio.whisper` result structure
+      (class `whisper_transcription`; `$data` incl. `segment_offset`) via a
+      pure-R constructor in the test file, materialised to tempfile
+      `.rds`/`.csv` per test (no committed binary; no `audio.whisper` install).
+- [x] Write failing tests (`tests/testthat/test-whisper-read.R`): segment
+      rows, time parsing, object/rds/csv parity, empty transcript, errors,
+      and that `segment_offset` is dropped.
+- [x] Implement `aw_read()` in `R/use_whisper.R`: dispatch on input
       (object vs `.rds` vs `.csv`), reach `$data`, parse times, coerce to
       tibble; `cli::cli_abort()` on bad input.
-- [ ] Roxygen doc + `@examples`; `Rscript -e 'devtools::document()'`.
-- [ ] `devtools::test()` green; `devtools::check()` clean.
+- [x] Roxygen doc + `@examples`; `Rscript -e 'devtools::document()'`.
+- [x] `devtools::test()` green (92 pass); `devtools::check()` clean (vignettes
+      off) — NEWS entry added for `aw_read()`.
 
 ## Work log
 <!-- append-only; one line per entry; absolute dates -->
@@ -73,6 +75,13 @@ result into a tidy tibble — one row per segment — following the M01 pattern.
   to tempfile `.rds`/`.csv` per test, rather than committing a binary `.rds`
   blob. More transparent oracle; also tests that `aw_read` drops the extra
   `segment_offset` column.
+- 2026-07-11: amendment (minor) — final criterion "check() clean" scoped to
+  "clean apart from the 2 vignette warnings (M05)". Forced by the M04/M05
+  vignette split that post-dates M03's planning; mirrors M04's user-approved
+  treatment. M03 itself adds 0 new check findings.
+- 2026-07-11: implemented `aw_read()` (+ internal `aw_read_data`,
+  `aw_parse_timestamp`); 25 new tests, all green; suite 92 pass;
+  `check()` (vignettes off) 0E/0W/0N. Status → review.
 
 ## Decisions
 <!-- milestone-local; promote cross-cutting ones to cairn/DECISIONS.md -->
