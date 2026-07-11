@@ -3,7 +3,7 @@
 - **Status:** review   <!-- mirror; project/ROADMAP.md is the authority -->
 - **Priority:** high   <!-- high | normal | low -->
 - **Depends on:** —
-- **Branch/PR:** m01-opensmile-reader   <!-- PR URL once opened -->
+- **Branch/PR:** m01-opensmile-reader · https://github.com/jmgirard/openac/pull/1
 
 ## Goal
 
@@ -93,4 +93,32 @@ tidy tibble — establishing the reader family's conventions (D-004, D-005).
   cross-cutting, recorded in project/DECISIONS.md).
 
 ## Review
-<!-- filled by /milestone-review -->
+
+_Reviewed 2026-07-11 (branch `m01-opensmile-reader`, PR #1)._
+
+**Acceptance criteria — fresh evidence:**
+- Returns a tibble; agg (1 row, `name`, numeric features, spot values); LLD
+  (4 rows, `frameTime` numeric & non-decreasing); delimiter parity; error
+  branches (non-string / missing / empty) — all verified by
+  `devtools::test()`: **24 pass, 0 fail** (1 unrelated skip: empty
+  `test-openface.R` stub).
+- `tibble` present in DESCRIPTION Imports (D-005). Confirmed.
+- Amended criterion: `os_read` adds **zero new** `check()` errors/warnings vs
+  baseline. Confirmed 2026-07-11 (the sole `os_read` line in `check()` output
+  is one entry in a pre-existing globals NOTE, mirroring `os_fix_csv`).
+
+**Consistency gate:**
+- `devtools::document()` leaves `man/os_read.Rd` unchanged → os_read docs in
+  sync. (It does churn DESCRIPTION + 7 unrelated man pages via the roxygen
+  8.0.0-vs-pinned-7.3.3 mismatch — pre-existing env debt, tracked in the
+  cleanup candidate; reverted, not shipped.)
+- README.Rmd/README.md present; M01 does not change README content → no
+  rebuild needed.
+- No `_pkgdown.yml` → pkgdown check N/A.
+- NEWS.md created with an `os_read` entry (no NEWS.md existed before).
+- No new top-level files needing `.Rbuildignore` (fixtures live under
+  `tests/`; NEWS.md is a standard build file).
+- No CI workflows in repo → no CI gate.
+
+**Independent fresh-context review (Opus subagent):** _pending — triage below._
+
