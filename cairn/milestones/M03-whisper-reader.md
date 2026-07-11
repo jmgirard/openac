@@ -1,6 +1,6 @@
 # M03: whisper transcript tidy reader (`aw_read`)
 
-- **Status:** planned   <!-- mirror; project/ROADMAP.md is the authority -->
+- **Status:** planned   <!-- mirror; cairn/ROADMAP.md is the authority -->
 - **Priority:** normal   <!-- high | normal | low -->
 - **Depends on:** M01   <!-- inherits reader-family conventions (naming, wide tibble, tibble Import) -->
 - **Branch/PR:** —   <!-- m03-whisper-reader; PR URL once opened -->
@@ -64,7 +64,7 @@ result into a tidy tibble — one row per segment — following the M01 pattern.
 - 2026-07-11: created by /milestone-plan.
 
 ## Decisions
-<!-- milestone-local; promote cross-cutting ones to project/DECISIONS.md -->
+<!-- milestone-local; promote cross-cutting ones to cairn/DECISIONS.md -->
 
 - Inherits D-004 (naming) and D-005 (`tibble` Import) from M01.
 

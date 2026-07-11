@@ -83,3 +83,14 @@ lean dependencies; guardrails require a decision for dependency changes).
 truncated printing and list-column ergonomics; the cost is one light Import.
 **Consequences:** DESCRIPTION gains `tibble` (added in M01). Readers across
 M01–M03 return tibbles; revisit only if a leaner return type is ever needed.
+
+### D-007 (2026-07-11): Tracking dir renamed `project/` → `cairn/`
+
+**Context:** openac was scaffolded before the cairn plugin renamed its
+tracking directory (upstream D-008: `project/` collides with RStudio
+parlance and plausible pre-existing dirnames).
+**Decision:** Rename `project/` → `cairn/` mid-pilot so the remaining pilot
+milestones exercise the layout the plugin actually ships. Earlier D-entries
+keep `project/` verbatim (append-only); archived milestones likewise.
+**Consequences:** `.Rbuildignore` and CLAUDE.md updated; live milestone
+mirrors now cite `cairn/ROADMAP.md`.

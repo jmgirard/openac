@@ -1,6 +1,6 @@
 # M05: Rewrite stale vignettes
 
-- **Status:** planned   <!-- mirror; project/ROADMAP.md is the authority -->
+- **Status:** planned   <!-- mirror; cairn/ROADMAP.md is the authority -->
 - **Priority:** normal   <!-- high | normal | low -->
 - **Depends on:** M04   <!-- check must be clean apart from vignettes first -->
 - **Branch/PR:** —   <!-- m05-vignette-rewrite; PR URL once opened -->
@@ -52,7 +52,7 @@ Fix the three stale vignettes so they use the current API and pass every
   check" cleanup; depends on M04).
 
 ## Decisions
-<!-- milestone-local; promote cross-cutting ones to project/DECISIONS.md -->
+<!-- milestone-local; promote cross-cutting ones to cairn/DECISIONS.md -->
 
 ## Review
 <!-- filled by /milestone-review -->

@@ -1,6 +1,6 @@
 # M04: R CMD check hygiene (docs, namespace, build, examples)
 
-- **Status:** planned   <!-- mirror; project/ROADMAP.md is the authority -->
+- **Status:** planned   <!-- mirror; cairn/ROADMAP.md is the authority -->
 - **Priority:** high   <!-- high | normal | low -->
 - **Depends on:** —
 - **Branch/PR:** —   <!-- m04-check-hygiene; PR URL once opened -->
@@ -81,10 +81,10 @@ cleanly apart from the vignettes (which M05 handles).
   check" candidate; split hygiene here, vignettes → M05).
 
 ## Decisions
-<!-- milestone-local; promote cross-cutting ones to project/DECISIONS.md -->
+<!-- milestone-local; promote cross-cutting ones to cairn/DECISIONS.md -->
 
 - Dependency change (add `purrr`, remove `pak`) + whisper sequential-by-design
-  → D-006 (cross-cutting; in project/DECISIONS.md).
+  → D-006 (cross-cutting; in cairn/DECISIONS.md).
 
 ## Review
 <!-- filled by /milestone-review -->
