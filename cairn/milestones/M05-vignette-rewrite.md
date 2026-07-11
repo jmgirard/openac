@@ -1,6 +1,6 @@
 # M05: Rewrite stale vignettes
 
-- **Status:** in-progress   <!-- mirror; cairn/ROADMAP.md is the authority -->
+- **Status:** review   <!-- mirror; cairn/ROADMAP.md is the authority -->
 - **Priority:** normal   <!-- high | normal | low -->
 - **Depends on:** M04   <!-- check must be clean apart from vignettes first -->
 - **Branch/PR:** m05-vignette-rewrite   <!-- PR URL once opened -->
@@ -28,22 +28,24 @@ Fix the three stale vignettes so they use the current API and pass every
 
 ## Acceptance criteria
 
-- [ ] None of the 3 vignettes reference removed function names (grep for
+- [x] None of the 3 vignettes reference removed function names (grep for
       `extract_opensmile|extract_wav|extract_openface|extract_audio` → 0).
-- [ ] Tool-calling chunks are non-executing (`eval = FALSE`);
-      `checking running R code from vignettes` → 0 errors.
-- [ ] `checking package vignettes` and `checking files in 'vignettes'` →
-      clean; `devtools::build_vignettes()` succeeds.
-- [ ] `devtools::check()` (with M04 merged) → **0 errors, 0 warnings**; any
-      remaining NOTEs explained.
+- [x] Tool-calling chunks are non-executing (`eval = FALSE` set globally per
+      vignette); `checking running R code from vignettes` → 0 errors.
+- [x] `checking package vignettes` and `checking files in 'vignettes'` →
+      clean; vignettes knit (`tools::buildVignettes()` — see amendment).
+- [x] `devtools::check()` (with M04 merged) → **0 errors, 0 warnings, 0
+      notes** — full green, vignettes built.
 
 ## Tasks
 
-- [ ] Map each stale function call to its current-API equivalent (read the
-      `of_`/`os_`/`ffmpeg`/`aw_` families).
-- [ ] Rewrite the 3 `.Rmd` files; set tool chunks `eval = FALSE`.
-- [ ] `devtools::build_vignettes()`; confirm knit.
-- [ ] `devtools::check()` — confirm full green (0E/0W).
+- [x] Map each stale function call to its current-API equivalent:
+      `extract_wav`→`os_prep_audio`, `extract_openface`→`of_extract`,
+      `extract_opensmile`→`os_extract` (signatures verified against R/).
+- [x] Rewrite the 3 `.Rmd` files; set `eval = FALSE` globally; also point to
+      the `_dir` batch convenience functions and the `*_read()` readers.
+- [x] Confirm knit via `tools::buildVignettes()` (all 3 re-build cleanly).
+- [x] `devtools::check()` — full green: 0E / 0W / 0N.
 
 ## Work log
 <!-- append-only; one line per entry; absolute dates -->
@@ -51,6 +53,17 @@ Fix the three stale vignettes so they use the current API and pass every
 - 2026-07-11: created by /milestone-plan (vignette half of the "green up R CMD
   check" cleanup; depends on M04).
 - 2026-07-11: started; branch m05-vignette-rewrite cut from main.
+- 2026-07-11: amendment (minor) — used `tools::buildVignettes()` (base R) to
+  confirm knitting instead of `devtools::build_vignettes()`, which is
+  deprecated and requires the uninstalled `remotes` package. The authoritative
+  gate is the full `devtools::check()` anyway.
+- 2026-07-11: amendment (minor) — set `eval = FALSE` for the whole workflow
+  (not just tool chunks): the file-finding/path chunks reference absent data
+  and feed the tool chunks, so a coherent illustrative vignette runs nothing
+  past `library()`. Also added `_dir` batch functions + `*_read()` readers as
+  a natural (not "new content") pointer.
+- 2026-07-11: rewrote all 3 vignettes to the current API; full `check()` now
+  0E/0W/0N (the M04+M05 green-up arc is complete). Status → review.
 
 ## Decisions
 <!-- milestone-local; promote cross-cutting ones to cairn/DECISIONS.md -->

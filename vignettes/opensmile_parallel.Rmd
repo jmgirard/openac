@@ -10,71 +10,76 @@ vignette: >
 ```{r, include = FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
-  comment = "#>"
+  comment = "#>",
+  # The chunks below drive the openSMILE binary over a folder of your own
+  # audio, so they are shown for reference but not run at build time.
+  eval = FALSE
 )
 ```
 
+This vignette extracts acoustic features from a folder of WAV files with
+**openSMILE**, in parallel via **furrr**. `os_extract()` can write both an
+aggregate (functionals) CSV and a low-level-descriptor (per-frame) CSV per
+file; `os_read()` later turns either into a tidy tibble.
+
 ```{r setup}
-#| message: false
-
-# Load openac package
 library(openac)
-
-# Load parallelization packages
 library(future)
 library(furrr)
 ```
 
+Confirm that openac can find a working openSMILE install (see `set_opensmile()`
+if not, and `os_list_configs()` for the available feature configs):
+
 ```{r}
-# Check that opensmile is configured properly
 check_opensmile()
 ```
 
+List the input audio and derive aggregate/LLD output paths for each file:
+
 ```{r}
-# Find input video files to process
 infiles <- list.files(
   path = "Z:/DynAMoS/Stimuli/Audio",
-  pattern = ".wav$",
+  pattern = "\\.wav$",
   full.names = TRUE,
   recursive = TRUE
 )
 
-# Create aggregate output CSV filenames
-
-# # Replace directory path
-aggfiles <- gsub(
-  pattern = "/Stimuli/Audio/",
-  replacement = "/Features/opensmile/",
-  x = infiles
-)
-
-# # Replace file extension
-aggfiles <- gsub(
-  pattern = ".wav",
-  replacement = "_agg.csv",
-  x = aggfiles
-)
-
-# Create lower-level-descriptors output CSV filenames
-
-# # Replace file extension
-lldfiles <- gsub(
-  pattern = "_agg",
-  replacement = "_lld",
-  x = aggfiles
-)
+aggfiles <- gsub("/Stimuli/Audio/", "/Features/opensmile/", infiles)
+aggfiles <- gsub("\\.wav$", "_agg.csv", aggfiles)
+lldfiles <- gsub("_agg\\.csv$", "_lld.csv", aggfiles)
 ```
 
+Set a parallel plan and map `os_extract()` over the input/output triples. The
+`config` argument (forwarded to every call) selects the openSMILE feature set:
 
 ```{r}
-# Set up parallelization
-future::plan("multisession", workers = 4)
+plan("multisession", workers = 4)
 
-# Run extract_opensmile() on each file
-furrr::future_pwalk(
+future_pwalk(
   .l = list(infile = infiles, aggfile = aggfiles, lldfile = lldfiles),
-  .f = openac::extract_opensmile,
-  config = "is09-13/IS10_paraling"
+  .f = os_extract,
+  config = "egemaps/v02/eGeMAPSv02"
 )
 ```
 
+For the whole-directory case, `os_extract_dir()` finds and processes every
+matching file for you:
+
+```{r}
+os_extract_dir(
+  indir = "Z:/DynAMoS/Stimuli/Audio",
+  inext = "wav",
+  aggdir = "Z:/DynAMoS/Features/opensmile",
+  config = "egemaps/v02/eGeMAPSv02",
+  recursive = TRUE
+)
+```
+
+Confirm the feature files were written, and read one into a tidy tibble:
+
+```{r}
+list.files(path = "Z:/DynAMoS/Features/opensmile", pattern = "\\.csv$")
+
+feats <- os_read("Z:/DynAMoS/Features/opensmile/example_agg.csv")
+```

@@ -11,7 +11,7 @@ _Last hygiene check: 2026-07-11 (M03 merged)_
 | M02 | OpenFace tidy reader (`of_read`) | done | M01 | normal | [archive](milestones/archive/M02-openface-reader.md) |
 | M03 | whisper tidy reader (`aw_read`) | done | M01 | normal | [archive](milestones/archive/M03-whisper-reader.md) |
 | M04 | R CMD check hygiene (docs, namespace, build) | done | — | high | [archive](milestones/archive/M04-check-hygiene.md) |
-| M05 | Rewrite stale vignettes | in-progress | M04 | normal | [M05](milestones/M05-vignette-rewrite.md) |
+| M05 | Rewrite stale vignettes | review | M04 | normal | [M05](milestones/M05-vignette-rewrite.md) |
 
 ## Candidates
 <!-- unnumbered ideas; one line each: idea — added YYYY-MM-DD — links -->
