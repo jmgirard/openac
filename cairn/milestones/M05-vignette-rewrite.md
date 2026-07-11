@@ -1,9 +1,9 @@
 # M05: Rewrite stale vignettes
 
-- **Status:** planned   <!-- mirror; cairn/ROADMAP.md is the authority -->
+- **Status:** in-progress   <!-- mirror; cairn/ROADMAP.md is the authority -->
 - **Priority:** normal   <!-- high | normal | low -->
 - **Depends on:** M04   <!-- check must be clean apart from vignettes first -->
-- **Branch/PR:** —   <!-- m05-vignette-rewrite; PR URL once opened -->
+- **Branch/PR:** m05-vignette-rewrite   <!-- PR URL once opened -->
 
 ## Goal
 
@@ -50,6 +50,7 @@ Fix the three stale vignettes so they use the current API and pass every
 
 - 2026-07-11: created by /milestone-plan (vignette half of the "green up R CMD
   check" cleanup; depends on M04).
+- 2026-07-11: started; branch m05-vignette-rewrite cut from main.
 
 ## Decisions
 <!-- milestone-local; promote cross-cutting ones to cairn/DECISIONS.md -->
