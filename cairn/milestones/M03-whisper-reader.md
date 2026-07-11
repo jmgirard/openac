@@ -1,9 +1,9 @@
 # M03: whisper transcript tidy reader (`aw_read`)
 
-- **Status:** planned   <!-- mirror; cairn/ROADMAP.md is the authority -->
+- **Status:** in-progress   <!-- mirror; cairn/ROADMAP.md is the authority -->
 - **Priority:** normal   <!-- high | normal | low -->
 - **Depends on:** M01   <!-- inherits reader-family conventions (naming, wide tibble, tibble Import) -->
-- **Branch/PR:** —   <!-- m03-whisper-reader; PR URL once opened -->
+- **Branch/PR:** m03-whisper-reader   <!-- PR URL once opened -->
 
 ## Goal
 
@@ -62,6 +62,17 @@ result into a tidy tibble — one row per segment — following the M01 pattern.
 <!-- append-only; one line per entry; absolute dates -->
 
 - 2026-07-11: created by /milestone-plan.
+- 2026-07-11: started; branch m03-whisper-reader cut from main.
+- 2026-07-11: verified `audio.whisper` `predict.whisper()` output against its
+  source (bnosac/audio.whisper `R/whisper.R`). `$data` columns are `segment`,
+  `segment_offset`, `text`, `from`, `to` (+ `speaker` if diarized) — the plan
+  omitted `segment_offset`. `from`/`to` = `format(POSIXct + start/1000,
+  "%H:%M:%OS")` → `"HH:MM:SS.mmm"`. Reference note added.
+- 2026-07-11: amendment (minor) — fixture built in a testthat helper (pure-R
+  constructor incl. `segment_offset`, class `whisper_transcription`), written
+  to tempfile `.rds`/`.csv` per test, rather than committing a binary `.rds`
+  blob. More transparent oracle; also tests that `aw_read` drops the extra
+  `segment_offset` column.
 
 ## Decisions
 <!-- milestone-local; promote cross-cutting ones to cairn/DECISIONS.md -->
