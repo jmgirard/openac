@@ -7,7 +7,9 @@
 #' @return A logical indicating whether ffmpeg is working (TRUE) or not (FALSE).
 #' @export
 #' @examples
+#' \dontrun{
 #' check_ffmpeg()
+#' }
 #' 
 check_ffmpeg <- function() {
   # Try to find the ffmpeg executable
@@ -30,7 +32,9 @@ check_ffmpeg <- function() {
 #' @return A logical indicating whether ffprobe is working (TRUE) or not (FALSE).
 #' @export
 #' @examples
+#' \dontrun{
 #' check_ffprobe()
+#' }
 #' 
 check_ffprobe <- function() {
   # Try to find the ffprobe executable
@@ -54,7 +58,9 @@ check_ffprobe <- function() {
 #'   (FALSE).
 #' @export
 #' @examples
+#' \dontrun{
 #' check_openface()
+#' }
 #' 
 check_openface <- function() {
   # Try to find the openface executable
@@ -78,7 +84,9 @@ check_openface <- function() {
 #'   (FALSE).
 #' @export
 #' @examples
+#' \dontrun{
 #' check_opensmile()
+#' }
 #' 
 check_opensmile <- function() {
   # Try to find the opensmile executable

@@ -20,7 +20,9 @@ A character vector containing the output of ffmpeg.
 Attempt to find and run ffmpeg with the specified arguments.
 }
 \examples{
+\dontrun{
 ffmpeg('-version')
+}
 
 }
 \references{

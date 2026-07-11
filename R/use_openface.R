@@ -11,7 +11,9 @@
 #' @aliases of
 #' @export
 #' @examples
+#' \dontrun{
 #' openface('-h')
+#' }
 #' 
 openface <- function(arg) {
   # Validate input

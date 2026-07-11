@@ -14,6 +14,8 @@ A logical indicating whether openface is working (TRUE) or not
 Check that openface is installed and accessible and working properly.
 }
 \examples{
+\dontrun{
 check_openface()
+}
 
 }

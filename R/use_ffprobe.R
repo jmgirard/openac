@@ -11,7 +11,9 @@
 #' @aliases ffp
 #' @export
 #' @examples 
+#' \dontrun{
 #' ffprobe('-version')
+#' }
 #' 
 ffprobe <- function(arg) {
   # Validate input

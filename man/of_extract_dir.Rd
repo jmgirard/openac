@@ -19,7 +19,7 @@ in?}
 within \code{indir} be included?}
 
 \item{...}{
-  Arguments passed on to \code{\link[=of_extract]{of_extract}}
+  Arguments passed on to \code{\link{of_extract}}
   \describe{
     \item{\code{fp2D}}{(logical, default=TRUE) Should the output include 2D facial landmark points (in pixels)?}
     \item{\code{fp3D}}{(logical, default=TRUE) Should the output include 3D facial landmark points (in millimeters)?}

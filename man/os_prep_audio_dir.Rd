@@ -18,7 +18,7 @@ os_prep_audio_dir(indir, inext, outdir, recursive = FALSE, ...)
 within \code{indir} be included?}
 
 \item{...}{
-  Arguments passed on to \code{\link[=os_prep_audio]{os_prep_audio}}
+  Arguments passed on to \code{\link{os_prep_audio}}
   \describe{
     \item{\code{stream}}{(numeric, default=0) The index of the audio stream to extract
 (ffmpeg uses zero-indexing so 0 is the first stream).}

@@ -12,8 +12,8 @@ Imports:
     fs,
     furrr,
     future,
-    pak,
     progressr,
+    purrr,
     rappdirs,
     rlang,
     tibble,
@@ -30,6 +30,6 @@ Config/testthat/edition: 3
 Encoding: UTF-8
 Language: en-US
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.3.3
+RoxygenNote: 8.0.0
 Remotes:
     bnosac/audio.whisper

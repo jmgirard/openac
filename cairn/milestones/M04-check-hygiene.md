@@ -1,6 +1,6 @@
 # M04: R CMD check hygiene (docs, namespace, build, examples)
 
-- **Status:** in-progress   <!-- mirror; cairn/ROADMAP.md is the authority -->
+- **Status:** review   <!-- mirror; cairn/ROADMAP.md is the authority -->
 - **Priority:** high   <!-- high | normal | low -->
 - **Depends on:** —
 - **Branch/PR:** m04-check-hygiene   <!-- PR URL once opened -->
@@ -41,38 +41,42 @@ cleanly apart from the vignettes (which M05 handles).
 
 ## Acceptance criteria
 
-- [ ] `checking examples` → 0 errors (all tool-dependent examples `\dontrun`).
-- [ ] `checking for missing documentation entries` → clean (the 3 objects
+- [x] `checking examples` → 0 errors (all tool-dependent examples `\dontrun`).
+- [x] `checking for missing documentation entries` → clean (the 3 objects
       documented).
-- [ ] `checking Rd cross-references` → clean (no missing links / unknown
+- [x] `checking Rd cross-references` → clean (no missing links / unknown
       package xrefs, incl. `os_read.Rd`, `aw_*.Rd`).
-- [ ] `checking dependencies in R code` → clean (`purrr` declared, `pak`
+- [x] `checking dependencies in R code` → clean (`purrr` declared, `pak`
       removed; D-006 recorded).
-- [ ] `checking R code for possible problems` → no undefined-globals note
+- [x] `checking R code for possible problems` → no undefined-globals note
       (`utils`/`stats` importFroms present).
-- [ ] `checking for hidden files` and `checking package subdirectories` →
+- [x] `checking for hidden files` and `checking package subdirectories` →
       clean (`.claude` in `.Rbuildignore`; `NEWS.md` parses).
-- [ ] `devtools::document()` produces no diff (RoxygenNote 8.0.0); empty
+- [x] `devtools::document()` produces no diff (RoxygenNote 8.0.0); empty
       `test-openface.R` removed; `devtools::test()` green.
-- [ ] `devtools::check()` (with `audio.whisper` Suggests available) → 0
-      errors, 0 warnings **except** the vignette checks, which are named and
-      deferred to M05.
+- [x] `devtools::check()` → 0 errors, 0 warnings **except** the vignette
+      checks, which are named and deferred to M05. (Verified *without*
+      `audio.whisper` installed; the `\code{}` xref fix below makes its
+      presence irrelevant — see 2026-07-11 amendment.)
 
 ## Tasks
 
-- [ ] Audit the 11 `@examples`; wrap tool/binary-dependent ones in
-      `\dontrun{}`; `devtools::document()`.
-- [ ] Write roxygen for `install_opensmile_mac`, `install_opensmile_win`,
+- [x] Audit the 11 `@examples`; wrap tool/binary-dependent ones in
+      `\dontrun{}` (9 wrapped); `devtools::document()`.
+- [x] Write roxygen for `install_opensmile_mac`, `install_opensmile_win`,
       `os_check_config`.
-- [ ] Fix Rd xrefs in `os_read.Rd` (roxygen in `use_opensmile.R`) and
-      `aw_*` (roxygen in `use_whisper.R`).
-- [ ] DESCRIPTION: add `purrr`, remove `pak`; comment the `pwalk` site;
-      append D-006 to DECISIONS.md.
-- [ ] Add `utils`/`stats` importFroms (roxygen `@importFrom`).
-- [ ] `.Rbuildignore` `^\.claude$`; fix `NEWS.md` header so news parses.
-- [ ] Bump `RoxygenNote` to 8.0.0; `devtools::document()` (regenerate man/).
-- [ ] Remove empty `tests/testthat/test-openface.R`; `devtools::test()`.
-- [ ] `devtools::check()` (audio.whisper installed) — confirm criteria.
+- [x] Fix Rd xrefs in `os_read.Rd` (roxygen in `use_opensmile.R`) and
+      `aw_*` (roxygen in `use_whisper.R`). Also `aw_get_model` `@inheritParams`
+      /`@seealso` → `\code{}` text (discovered: 8.0.0 regen without
+      audio.whisper stripped its `\arguments{}`).
+- [x] DESCRIPTION: add `purrr`, remove `pak`; comment the `pwalk` site
+      (D-006 already in DECISIONS.md).
+- [x] Add `utils`/`stats` importFroms (new `R/openac-package.R` `@importFrom`).
+- [x] `.Rbuildignore` `^\.claude$`; fix `NEWS.md` header so news parses.
+- [x] Bump `RoxygenNote` to 8.0.0; `devtools::document()` (regenerate man/).
+- [x] Remove empty `tests/testthat/test-openface.R`; `devtools::test()`.
+- [x] `devtools::check()` (vignettes off) — confirm criteria: 0E / 0W / 0N
+      apart from the 2 deferred vignette warnings.
 
 ## Work log
 <!-- append-only; one line per entry; absolute dates -->
@@ -80,6 +84,16 @@ cleanly apart from the vignettes (which M05 handles).
 - 2026-07-11: created by /milestone-plan (promoted from the "green up R CMD
   check" candidate; split hygiene here, vignettes → M05).
 - 2026-07-11: started; branch m04-check-hygiene cut from main.
+- 2026-07-11: baseline `check()` (vignettes off) = 1E/5W/3N, matches plan.
+- 2026-07-11: amendment (gate) — dropped "with audio.whisper available" from
+  the final criterion. The `\link{whisper}`→`\code{}` fix makes check pass
+  regardless, and audio.whisper (Remotes, whisper.cpp compile) isn't
+  installed; verifying without it. User asked for a recommendation; took it.
+- 2026-07-11: amendment (minor) — reordered tasks so the RoxygenNote 8.0.0
+  bump + full man/ regen runs first, isolating version churn from the
+  content edits.
+- 2026-07-11: all tasks done. `test()` 67 pass; `check()` (vignettes off) =
+  0E/0W/0N except the 2 named vignette warnings (M05). Status → review.
 
 ## Decisions
 <!-- milestone-local; promote cross-cutting ones to cairn/DECISIONS.md -->

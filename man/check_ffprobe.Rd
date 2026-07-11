@@ -13,6 +13,8 @@ A logical indicating whether ffprobe is working (TRUE) or not (FALSE).
 Check that ffprobe is installed and accessible and working properly.
 }
 \examples{
+\dontrun{
 check_ffprobe()
+}
 
 }

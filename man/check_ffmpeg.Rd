@@ -13,6 +13,8 @@ A logical indicating whether ffmpeg is working (TRUE) or not (FALSE).
 Check that ffmpeg is installed and accessible and working properly.
 }
 \examples{
+\dontrun{
 check_ffmpeg()
+}
 
 }

@@ -46,16 +46,16 @@ render using any available handler.
 }}
 
 \item{...}{
-  Arguments passed on to \code{\link[=aw_transcribe]{aw_transcribe}}
+  Arguments passed on to \code{\link{aw_transcribe}}
   \describe{
-    \item{\code{model}}{A required model object produced by \code{\link{whisper}}.}
+    \item{\code{model}}{A required model object produced by \code{audio.whisper::whisper()}.}
     \item{\code{language}}{The language of the audio. Defaults to 'auto'. For a list of
 all languages the model can handle: see
-\code{\link[audio.whisper]{whisper_languages}}.}
+\code{audio.whisper::whisper_languages()}.}
     \item{\code{audio_args}}{A list of optional arguments to forward to
 \code{\link{aw_prep_audio}}.}
     \item{\code{whisper_args}}{A list of optional arguments to forward to
-\code{\link[audio.whisper]{predict.whisper}}.}
+\code{audio.whisper::predict.whisper()}.}
   }}
 }
 \value{

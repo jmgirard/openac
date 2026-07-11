@@ -11,7 +11,9 @@
 #' @aliases ffm
 #' @export
 #' @examples 
+#' \dontrun{
 #' ffmpeg('-version')
+#' }
 #' 
 ffmpeg <- function(arg) {
   # Validate input

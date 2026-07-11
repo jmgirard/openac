@@ -14,6 +14,8 @@ Return a list of all configuration (.config) files found in the openSMILE
 installation folder.
 }
 \examples{
+\dontrun{
 os_list_configs()
+}
 
 }

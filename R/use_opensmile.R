@@ -11,7 +11,9 @@
 #' @aliases os
 #' @export
 #' @examples
+#' \dontrun{
 #' opensmile('-h')
+#' }
 #'
 opensmile <- function(arg) {
   # Validate input
@@ -38,7 +40,9 @@ os <- opensmile
 #' @return A character vector containing the configuration files found.
 #' @export
 #' @examples
+#' \dontrun{
 #' os_list_configs()
+#' }
 #'
 os_list_configs <- function() {
   # Find opensmile install directory
@@ -57,6 +61,19 @@ os_list_configs <- function() {
 
 # os_check_config --------------------------------------------------------------
 
+#' Resolve an openSMILE config name to an absolute path
+#'
+#' Check that a named openSMILE configuration exists in the installed openSMILE
+#' `config/` directory and return its absolute path. Errors if the config is
+#' not found.
+#'
+#' @param config A required string naming an openSMILE config, with or without
+#'   the `.conf` extension (e.g. `"egemaps/v02/eGeMAPSv02"`).
+#' @return A string giving the absolute path to the matching `.conf` file.
+#' @examples
+#' \dontrun{
+#' os_check_config("egemaps/v02/eGeMAPSv02")
+#' }
 #' @export
 os_check_config <- function(config) {
   # Validate input
@@ -469,7 +486,7 @@ os_fix_csv <- function(infile) {
 #'
 #' The delimiter is detected automatically, so both the native
 #' semicolon-delimited output openSMILE writes and the comma-delimited form
-#' produced by [os_fix_csv()] are accepted. Feature names are preserved
+#' produced by `os_fix_csv()` are accepted. Feature names are preserved
 #' verbatim, including non-syntactic names such as `pcm_fftMag_mfcc[1]`.
 #'
 #' @param file (character) Path to an openSMILE output CSV, as written by
