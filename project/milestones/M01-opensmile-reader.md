@@ -1,6 +1,6 @@
 # M01: openSMILE tidy reader (`os_read`)
 
-- **Status:** in-progress   <!-- mirror; project/ROADMAP.md is the authority -->
+- **Status:** review   <!-- mirror; project/ROADMAP.md is the authority -->
 - **Priority:** high   <!-- high | normal | low -->
 - **Depends on:** —
 - **Branch/PR:** m01-opensmile-reader   <!-- PR URL once opened -->
@@ -46,8 +46,12 @@ tidy tibble — establishing the reader family's conventions (D-004, D-005).
       (empty file) + non-string input.
 - [x] `tibble` present in DESCRIPTION Imports; `devtools::document()` re-run;
       NAMESPACE updated by roxygen (not hand-edited).
-- [ ] `devtools::test()` green; `devtools::check()` clean (0 errors, 0
-      warnings; notes explained). _(test green; check pending)_
+- [x] `devtools::test()` green; `os_read` adds **zero new** `check()`
+      errors/warnings vs. the `main` baseline (verified 2026-07-11 — the only
+      `os_read` line in output is one entry in a pre-existing globals NOTE,
+      matching `os_fix_csv`). _Amended 2026-07-11: full `check()`-clean is
+      blocked on pre-existing baseline debt out of M01's scope; tracked as a
+      separate cleanup milestone candidate (see ROADMAP)._
 
 ## Tasks
 
@@ -78,6 +82,9 @@ tidy tibble — establishing the reader family's conventions (D-004, D-005).
   `.claude` not Rbuildignored; base-fn globals note. `os_read` adds 0 new
   errors/warnings. "check clean" criterion blocked on baseline — awaiting
   user decision on scope.
+- 2026-07-11: user chose to keep M01 focused (amend criterion to "no new
+  check errors/warnings vs baseline") and track baseline debt as a separate
+  cleanup milestone candidate. Status → review.
 
 ## Decisions
 <!-- milestone-local; promote cross-cutting ones to project/DECISIONS.md -->
