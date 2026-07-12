@@ -28,6 +28,12 @@ Platforms: all three (Windows/macOS/Linux) **where possible** — wrappers
 (find/check/run) should work everywhere; `install_*` helpers are
 best-effort per platform. Distribution is GitHub-only today with **CRAN as
 the eventual goal**, so code converges on CRAN standards as it goes.
+CRAN submission is gated by a **quality bar, not a date or the 1.0 freeze**:
+(1) a testing contract for the binary-dependent wrappers, and (2) a
+CRAN-legal resolution for `audio.whisper` (the `Remotes:` field cannot ship;
+Additional_repositories vs. wrapping whisper.cpp directly is deliberately
+deferred to submission time — see ROADMAP). Until that decision, deepening
+openac's reliance on `audio.whisper` internals is done with eyes open.
 
 ## Function Families
 
@@ -73,6 +79,12 @@ the eventual goal**, so code converges on CRAN standards as it goes.
   **time as numeric seconds** (`frameTime`, `timestamp`, `from`/`to`). Tool
   column names are kept **verbatim** (mechanical whitespace cleanup only);
   each reader states its row grain in its first roxygen sentence.
+- **Output-overwrite default is `TRUE`** across functions that write derived
+  files (`os_prep_audio`, `aw_prep_audio`, …): re-runs regenerate outputs;
+  a stale output silently poisoning an analysis is the failure mode to
+  avoid. IP2 protects *source* media — these are openac-generated
+  derivatives. (`overwrite = FALSE` remains available and doubles as
+  resume-a-crashed-batch semantics.)
 - Conditions: **new code uses `cli::cli_abort()`/`cli_warn()`; legacy
   `stopifnot()` + base `warning()` migrates opportunistically when touched**
   (no wholesale conversion milestone). Better messages matter for a
@@ -158,12 +170,24 @@ them without attaching the upstream packages.
   (recent fixes: stream counting, audio-less files, video-vs-audio checks).
 - 2026-07-11: **OpenFace availability** — effectively unmaintained upstream
   and hard to install (especially mac/Linux); a structural risk for the
-  `of_*` family.
+  `of_*` family. Posture: keep fully supported while it works (frozen
+  upstream ≈ zero drift risk); successor scouting is a ROADMAP candidate.
 - 2026-07-11: **Windows-biased testing** — most real use has been on
   Windows; mac/Linux paths are lightly exercised and may have quiet
   breakage.
-- 2026-07-11: Essentially no automated tests (one empty stub); recent bug
-  fixes shipped without regression tests.
+- 2026-07-11: The readers have fixture-backed tests (M01–M03), but the
+  binary-dependent wrappers (extract/prep/install — most of the package)
+  have none; recent bug fixes there shipped without regression tests.
+- 2026-07-11: **OneDrive model URLs** — `install_openface_win` downloads
+  model files from hard-coded OneDrive links with embedded authkeys
+  (`programs_install.R`); links of that shape die silently. A time bomb in
+  the install path.
+- 2026-07-11: **audio.whisper volatility** — the `aw_*` family rests on a
+  GitHub-only upstream package (≥ 0.4.1) whose API and maintenance cadence
+  openac does not control; upstream changes could break it without warning.
+- 2026-07-11: **Config is global-only** — `set_program` writes one
+  `rappdirs` config per tool per machine; no per-project override, so two
+  projects needing different tool builds fight over the same file.
 - 2026-07-11: GP5 unmet — high-level functions build their command strings
   internally with no way for users to inspect/report them; retrofit when
   touched.
