@@ -124,3 +124,25 @@ parity fix, and a ≥1 h timestamp test; DESIGN "Conventions"/"Function Families
 gain the readers and this contract. Future readers inherit it. `long=TRUE`,
 whisper `$tokens`, OpenFace block-subsetting, and a multi-file/`id`-column batch
 idiom stay ROADMAP candidates (additive; D-002).
+
+### D-009 (2026-07-11): Principles pass II — GP7–GP9 adopted; GP1 refined
+
+**Context:** Design-interview deepening pass (facts committed 246b5fa: CRAN
+quality bar, overwrite-`TRUE` convention, new warts). Candidate principles
+came from the interview's banked ledger, git-history mining (the media-fix
+streak: stream counting, audio-less files, video-vs-audio checks), and the
+domain (methods-section reporting).
+**Decision:** Adopt **GP7 — Two-layer testing** (mocked command-construction
+everywhere + gated real invocations locally), **GP8 — Report what ran**
+(broad framing: tool identity, version, and command recoverable at runtime;
+narrow version-capture-only framing rejected), and **GP9 — Probe before
+compute** (cheap media validation with a per-file message before the costly
+tool; folding it into GP6 rejected — batch survival and pre-flight
+diagnosis are separate testable claims). GP1 gains the earn-a-place clause
+for post-read helpers. IP1–3 re-probed against the new facts: unchanged.
+Rejected: IP-strength testing contract (unsatisfiable until the test
+infrastructure exists — an IP that can't be met invites violations).
+**Consequences:** DESIGN "Design Principles" reordered IP-block-first per
+tracking rules; GP7/GP9 bind opportunistically as code is touched; GP8's
+implementation is a ROADMAP candidate; future wrapper families inherit all
+three from birth.
