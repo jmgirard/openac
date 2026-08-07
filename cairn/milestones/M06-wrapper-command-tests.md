@@ -102,7 +102,7 @@ defers it to submission time). CRAN submission → user-declared release window.
 - [x] T3 Tests for `find_program()`/`set_program()` (PATH hit, config hit,
       stale config, absent) and `check_*()` returning `FALSE` when absent, with
       `rappdirs::user_config_dir()` mocked to a temp dir.
-- [ ] T4 Command tests: passthroughs + aliases, `ffp_count_streams`,
+- [x] T4 Command tests: passthroughs + aliases, `ffp_count_streams`,
       `os_check_audio`, `aw_check_audio` (each consumes two ffprobe results).
 - [ ] T5 Command tests: `os_prep_audio`, `aw_prep_audio` — multi-call
       (ffprobe then ffmpeg), every command-affecting parameter per AC3's rule.
@@ -130,6 +130,7 @@ defers it to submission time). CRAN submission → user-declared release window.
 - 2026-08-07: T3 minor — first draft of two tests asserted the bare tempdir path; `find_program()` returns `tools::file_path_as_absolute()`, which resolves the macOS `/var` → `/private/var` symlink, so the expectation was wrong, not the code. Helper now canonicalizes.
 - 2026-08-07: T3 discovered sub-task — `set_program()`'s roxygen promised "a logical indicating whether the program location was set properly" but it returns `writeLines()`'s invisible `NULL`; `@return` corrected to match behavior (doc-only, no behavior change).
 - 2026-08-07: verify slot clean after T3 — `devtools::test()` reports 149 pass, 0 fail, 0 skip.
+- 2026-08-07: T4 — `test-commands-probe.R` pins the four passthroughs and the four aliases to pass-through identity, their `is_string` guards, `ffp_count_streams`'s exact ffprobe query and all four stream combinations (AC5's `expect_equal`, since the counts are integers), and both `os_check_audio` and `aw_check_audio` across conforming/non-conforming inputs plus `aw_check_audio`'s under-three-fields guard. 31 expectations, clean on first run.
 
 ## Decisions
 
