@@ -1,11 +1,11 @@
 # M06: Wrapper testing contract — system2-boundary command tests
 
-- **Status:** planned
+- **Status:** in-progress
 - **Priority:** high
 - **Depends on:** —
 - **Driving RR:** —
 - **Principles touched:** GP7, IP1
-- **Branch/PR:** —
+- **Branch/PR:** m06-wrapper-command-tests
 
 ## Goal
 
@@ -92,11 +92,11 @@ defers it to submission time). CRAN submission → user-declared release window.
 
 ## Tasks
 
-- [ ] T1 Write `tests/testthat/helper-openac.R`: `system2` mock installed in
+- [x] T1 Write `tests/testthat/helper-openac.R`: `system2` mock installed in
       `parent.frame()`, ordered `(command, args)` + openac-frame recording,
       erroring fake queue, mocked `Sys.which()` resolution, fake openSMILE
       install tree. Prove alias/primary/internal interception.
-- [ ] T2 Fix `find_program()` (`R/programs_find.R:52`) — return `NULL` on the
+- [x] T2 Fix `find_program()` (`R/programs_find.R:52`) — return `NULL` on the
       two not-found paths instead of falling through to
       `tools::file_path_as_absolute(NULL)`; keep the warnings; update roxygen.
 - [ ] T3 Tests for `find_program()`/`set_program()` (PATH hit, config hit,
@@ -122,6 +122,10 @@ defers it to submission time). CRAN submission → user-declared release window.
 - 2026-08-07: plan gate chose a core-now/M07-remainder split over one all-covering milestone because `install_*` needs network+archive mocking and the `*_dir` wrappers need furrr/progressr harnesses, pushing one milestone past the split tripwires; falsified by the remainder proving small enough to land inside M06's task budget.
 - 2026-08-07: plan gate chose a hard-failing coverage gate over a computed domain minus a named deferral list, rejecting both an advisory-only gate and a hard gate over the whole closure, because D-009 rejected an IP-strength contract as "unsatisfiable until the test infrastructure exists" and a deferral list M07 empties keeps it satisfiable today; falsified by the deferral list failing to shrink across M07.
 - 2026-08-07: plan gate chose fixing `find_program()` inside M06 over routing it to `/hotfix` first because its regression test needs the config-mocking harness M06 builds anyway; falsified by the fix proving to need no harness.
+- 2026-08-07: implement gate chose `withr` in Suggests over hand-rolled temp cleanup (D-011), and migrating `find_program()`'s conditions to `cli` over leaving base `warning()`/`stopifnot()` (DESIGN Conventions prescribe migration for touched code; D-002 permits the condition-class change).
+- 2026-08-07: T1 — `tests/testthat/helper-openac.R` adds `local_fake_tools()` (mocks `base::system2` and `base::Sys.which` in the calling frame, records ordered tool/args/stack, errors on queue exhaustion) and `local_fake_config()`; `test-helper-boundary.R` verifies interception via primary name, alias `ffm`, and internal `openac:::opensmile`, plus outermost-frame attribution and deterministic resolution.
+- 2026-08-07: T2 — `find_program()` now returns `NULL` on both not-found paths instead of reaching `tools::file_path_as_absolute(NULL)`; conditions migrated to `cli_abort`/`cli_warn`; an empty config file now fails the same way as one naming a vanished binary; return unnamed. The pre-fix bug was reproduced by the T1 harness test, which errored with "'x' must be a character string" at `programs_find.R:52`.
+- 2026-08-07: verify slot clean after T1+T2 — `devtools::document()` rewrote `find_program.Rd`; `devtools::test()` reports 122 pass, 0 fail, 0 skip.
 
 ## Decisions
 

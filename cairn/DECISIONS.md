@@ -177,3 +177,21 @@ command test — the enforcement point for GP7 on new wrapper families. A
 call-head-only walk was rejected as the closure rule because `os_extract_dir`
 and `aw_transcribe_dir` reach their tools through `do.call(what = …)` and are
 invisible to it.
+
+### D-011 (2026-08-07): Add `withr` to Suggests (test-only)
+
+**Context:** M06's test harness needs per-test temporary directories and
+scoped mocks across roughly six test files. GP4 keeps dependencies lean and the
+guardrails require a question gate plus a decision for any dependency change,
+including a test-only one.
+**Decision:** Add `withr` to Suggests. It is already a hard dependency of
+`testthat` (Imports), so every machine that can run openac's tests already has
+it and the marginal install cost for users is zero; it is never loaded by
+package code, only by tests. Considered and rejected: hand-rolled
+`tempfile()` + `dir.create()` + `on.exit(unlink())` in each test — more code in
+every file, and cleanup that fails open when a test errors before its
+`on.exit()` is registered, which is how a test suite starts writing outside its
+temp dir and quietly violates IP1.
+**Consequences:** DESCRIPTION gains `withr` under Suggests (M06). Tests use
+`withr::local_tempdir()` and friends for all filesystem and option scoping;
+package code under `R/` still may not use it.
