@@ -104,7 +104,7 @@ defers it to submission time). CRAN submission → user-declared release window.
       `rappdirs::user_config_dir()` mocked to a temp dir.
 - [x] T4 Command tests: passthroughs + aliases, `ffp_count_streams`,
       `os_check_audio`, `aw_check_audio` (each consumes two ffprobe results).
-- [ ] T5 Command tests: `os_prep_audio`, `aw_prep_audio` — multi-call
+- [x] T5 Command tests: `os_prep_audio`, `aw_prep_audio` — multi-call
       (ffprobe then ffmpeg), every command-affecting parameter per AC3's rule.
 - [ ] T6 Command tests: `of_extract` (all 8 booleans), `os_extract`,
       `os_extract_wav` (needs the fake config tree and fake tool outputs).
@@ -131,6 +131,8 @@ defers it to submission time). CRAN submission → user-declared release window.
 - 2026-08-07: T3 discovered sub-task — `set_program()`'s roxygen promised "a logical indicating whether the program location was set properly" but it returns `writeLines()`'s invisible `NULL`; `@return` corrected to match behavior (doc-only, no behavior change).
 - 2026-08-07: verify slot clean after T3 — `devtools::test()` reports 149 pass, 0 fail, 0 skip.
 - 2026-08-07: T4 — `test-commands-probe.R` pins the four passthroughs and the four aliases to pass-through identity, their `is_string` guards, `ffp_count_streams`'s exact ffprobe query and all four stream combinations (AC5's `expect_equal`, since the counts are integers), and both `os_check_audio` and `aw_check_audio` across conforming/non-conforming inputs plus `aw_check_audio`'s under-three-fields guard. 31 expectations, clean on first run.
+- 2026-08-07: T5 — `test-commands-prep.R` pins `os_prep_audio` (one ffmpeg call) and `aw_prep_audio` (ffprobe then ffmpeg, both attributed to the outer function) with `stream`, `overwrite` and `afilters` each exercised in every command shape they produce, plus the argument guards and output-directory creation. The doubled space `os_prep_audio` emits after the input path (`'" '` followed by `' -map'`) is pinned deliberately, so a future cleanup surfaces as a test change rather than a silent one.
+- 2026-08-07: verify slot clean after T4+T5 — `devtools::test()` reports 207 pass, 0 fail, 0 skip.
 
 ## Decisions
 
