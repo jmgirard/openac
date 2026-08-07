@@ -1,18 +1,18 @@
 # Roadmap
 
 _The only authority on milestone status. Grouped by status, not ID._
-_Last hygiene check: 2026-07-11 (M05 merged — full check() green)_
+_Last hygiene check: 2026-08-07 (fixed ROADMAP path format + references INDEX/provenance; scaffold repaired — validate green)_
 _Released 0.1.0 (GitHub) 2026-07-11._
 
 ## Milestones
 
 | ID | Title | Status | Depends on | Priority | File/Archive |
 |---|---|---|---|---|---|
-| M01 | openSMILE tidy reader (`os_read`) | done | — | high | [archive](milestones/archive/M01-opensmile-reader.md) |
-| M02 | OpenFace tidy reader (`of_read`) | done | M01 | normal | [archive](milestones/archive/M02-openface-reader.md) |
-| M03 | whisper tidy reader (`aw_read`) | done | M01 | normal | [archive](milestones/archive/M03-whisper-reader.md) |
-| M04 | R CMD check hygiene (docs, namespace, build) | done | — | high | [archive](milestones/archive/M04-check-hygiene.md) |
-| M05 | Rewrite stale vignettes | done | M04 | normal | [archive](milestones/archive/M05-vignette-rewrite.md) |
+| M01 | openSMILE tidy reader (`os_read`) | done | — | high | milestones/archive/M01-opensmile-reader.md |
+| M02 | OpenFace tidy reader (`of_read`) | done | M01 | normal | milestones/archive/M02-openface-reader.md |
+| M03 | whisper tidy reader (`aw_read`) | done | M01 | normal | milestones/archive/M03-whisper-reader.md |
+| M04 | R CMD check hygiene (docs, namespace, build) | done | — | high | milestones/archive/M04-check-hygiene.md |
+| M05 | Rewrite stale vignettes | done | M04 | normal | milestones/archive/M05-vignette-rewrite.md |
 
 ## Candidates
 <!-- unnumbered ideas; one line each: idea — added YYYY-MM-DD — links -->

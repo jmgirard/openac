@@ -1,5 +1,14 @@
 # audio.whisper — transcription result structure
 
+**Provenance.** Ingested 2026-07-11 by M03 (`85507cf`) from bnosac/audio.whisper's
+source, retrieved at
+https://raw.githubusercontent.com/bnosac/audio.whisper/master/R/whisper.R —
+no shelf item backs it; no PDF, so nothing lives under `pdf/`.
+Extraction: read directly off `predict.whisper()` in `R/whisper.R` — the
+return-object elements, the `$data` columns, and the `format()` call that
+builds `from`/`to` — plus openac's own `R/use_whisper.R` for the writer side.
+Last checked against source 2026-07-11.
+
 **Source (primary):** bnosac/audio.whisper, `R/whisper.R` — `predict.whisper()`.
 https://raw.githubusercontent.com/bnosac/audio.whisper/master/R/whisper.R
 (verified 2026-07-11).
