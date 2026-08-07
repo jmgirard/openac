@@ -7,6 +7,15 @@
 # binary runs (D-010). So we mock `base::system2` and, for determinism,
 # `base::Sys.which`.
 
+# Suite-wide record of which openac function drove each boundary call.
+# Accumulates across test files within one run; the command-contract test reads
+# it to decide which members of the computed domain the suite actually covers,
+# so coverage is never a hand-maintained list of names (D-010).
+openac_registry <- new.env(parent = emptyenv())
+openac_registry$owners <- character()
+
+registered_owners <- function() sort(unique(openac_registry$owners))
+
 # Programs `find_program()` knows about; the fake resolver serves these.
 fake_programs <- function() c("ffmpeg", "ffprobe", "openface", "opensmile")
 
@@ -99,13 +108,18 @@ local_fake_tools <- function(results = list(),
   state$bindir <- bindir
 
   fake_system2 <- function(command, args = character(), ...) {
+    stack <- openac_stack()
     state$i <- state$i + 1L
     state$calls[[state$i]] <- list(
       tool = basename(as.character(command)[[1]]),
       command = as.character(command)[[1]],
       args = args,
-      stack = openac_stack()
+      stack = stack
     )
+    # Suite-wide coverage record, read by the command-contract test.
+    if (length(stack)) {
+      openac_registry$owners <- c(openac_registry$owners, stack[[1]])
+    }
     if (state$i > length(results)) {
       stop(
         sprintf(

@@ -108,9 +108,11 @@ defers it to submission time). CRAN submission → user-declared release window.
       (ffprobe then ffmpeg), every command-affecting parameter per AC3's rule.
 - [x] T6 Command tests: `of_extract` (all 8 booleans), `os_extract`,
       `os_extract_wav` (needs the fake config tree and fake tool outputs).
-- [ ] T7 Write `test-command-contract.R`: namespace symbol-occurrence closure
+- [x] T7 Write `test-command-contract.R`: namespace symbol-occurrence closure
       from `system2`, literal deferral list + staleness assertion,
       outermost-frame coverage attribution, failure message naming gaps.
+      (Shipped as `test-zzz-command-contract.R` so it runs after the files
+      whose calls it counts.)
 - [ ] T8 Run `document()`, `test()`, `check()`; record the NOTE baseline from
       `00check.log`; fix fallout.
 
@@ -136,6 +138,9 @@ defers it to submission time). CRAN submission → user-declared release window.
 - 2026-08-07: T6 — helper gained the fake openSMILE install tree the [O] audit called for (binaries under `bin/`, configs under `config/`, so `os_check_config()` resolves `dirname(find_opensmile())/../config/`) plus `write_fake_os_output()` for the outputs `os_fix_csv()` re-reads. `test-commands-extract.R` covers `of_extract` (default, all-on, all-off, and each of the 8 booleans toggled independently), `os_extract_wav` (no outputs, both outputs, non-default config, unknown-config and non-csv error branches), and `os_extract` down both branches — conforming input passed through untouched, non-conforming input prepared first.
 - 2026-08-07: T6 minor — one test initially failed because the mocked ffmpeg writes no file while `os_extract_wav()` guards on `file.exists()`; the test now pre-creates the output the tool would have produced. Test's fault, not the code's.
 - 2026-08-07: verify slot clean after T6 — `devtools::test()` reports 233 pass, 0 fail, 0 skip.
+- 2026-08-07: T7 — `test-zzz-command-contract.R` computes the `system2` closure over `asNamespace("openac")` by symbol occurrence: 27 members, matching the [O] audit's independently computed figure, and including `os_extract_dir`, which a call-head walk misses because it reaches its tool via `do.call(what = os_extract, …)`. Seven literal names are deferred to M07, leaving 20 enforced, all covered. Coverage comes from a suite-wide registry the boundary mock populates with the outermost openac frame, never from a hand list.
+- 2026-08-07: T7 — gate verified to fail for the right reason, not merely observed green: removing `os_extract_dir`'s deferral produced "no test asserts the command they build: os_extract_dir", and deferring `os_read` (which never reaches `system2`) produced "deferred but no longer reach system2 … os_read". Both reverted; suite back to 238 pass, 0 fail, 0 skip.
+- 2026-08-07: T7 minor — file named `test-zzz-*` because testthat runs files in sorted order and the gate counts calls the other files make; run in isolation it skips with a stated reason rather than failing spuriously, so a full `devtools::test()` still reports zero skips (AC6).
 
 ## Decisions
 
