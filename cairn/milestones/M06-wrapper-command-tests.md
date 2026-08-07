@@ -99,7 +99,7 @@ defers it to submission time). CRAN submission → user-declared release window.
 - [x] T2 Fix `find_program()` (`R/programs_find.R:52`) — return `NULL` on the
       two not-found paths instead of falling through to
       `tools::file_path_as_absolute(NULL)`; keep the warnings; update roxygen.
-- [ ] T3 Tests for `find_program()`/`set_program()` (PATH hit, config hit,
+- [x] T3 Tests for `find_program()`/`set_program()` (PATH hit, config hit,
       stale config, absent) and `check_*()` returning `FALSE` when absent, with
       `rappdirs::user_config_dir()` mocked to a temp dir.
 - [ ] T4 Command tests: passthroughs + aliases, `ffp_count_streams`,
@@ -126,6 +126,10 @@ defers it to submission time). CRAN submission → user-declared release window.
 - 2026-08-07: T1 — `tests/testthat/helper-openac.R` adds `local_fake_tools()` (mocks `base::system2` and `base::Sys.which` in the calling frame, records ordered tool/args/stack, errors on queue exhaustion) and `local_fake_config()`; `test-helper-boundary.R` verifies interception via primary name, alias `ffm`, and internal `openac:::opensmile`, plus outermost-frame attribution and deterministic resolution.
 - 2026-08-07: T2 — `find_program()` now returns `NULL` on both not-found paths instead of reaching `tools::file_path_as_absolute(NULL)`; conditions migrated to `cli_abort`/`cli_warn`; an empty config file now fails the same way as one naming a vanished binary; return unnamed. The pre-fix bug was reproduced by the T1 harness test, which errored with "'x' must be a character string" at `programs_find.R:52`.
 - 2026-08-07: verify slot clean after T1+T2 — `devtools::document()` rewrote `find_program.Rd`; `devtools::test()` reports 122 pass, 0 fail, 0 skip.
+- 2026-08-07: T3 — `test-programs-resolve.R` covers all four `find_program()` paths (PATH hit, config hit, stale config, absent) plus an empty config file and the `cli_abort` argument branches, the `set_program` → `find_program` round-trip, and all four `check_*()` in both the absent (`FALSE` + warning) and resolving (`TRUE`) states. Config I/O runs against a mocked `rappdirs::user_config_dir()`.
+- 2026-08-07: T3 minor — first draft of two tests asserted the bare tempdir path; `find_program()` returns `tools::file_path_as_absolute()`, which resolves the macOS `/var` → `/private/var` symlink, so the expectation was wrong, not the code. Helper now canonicalizes.
+- 2026-08-07: T3 discovered sub-task — `set_program()`'s roxygen promised "a logical indicating whether the program location was set properly" but it returns `writeLines()`'s invisible `NULL`; `@return` corrected to match behavior (doc-only, no behavior change).
+- 2026-08-07: verify slot clean after T3 — `devtools::test()` reports 149 pass, 0 fail, 0 skip.
 
 ## Decisions
 
