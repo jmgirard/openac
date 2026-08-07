@@ -25,7 +25,7 @@ set_opensmile(location)
 }
 \value{
 Invisibly, \code{NULL}. Called for its side effect: recording \code{location}
-in openac's user config directory, where \code{\link[=find_program]{find_program()}} reads it.
+in the user config directory, where \code{\link[=find_program]{find_program()}} reads it.
 }
 \description{
 Set the location of a dependency program

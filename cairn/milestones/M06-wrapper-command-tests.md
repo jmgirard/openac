@@ -1,6 +1,6 @@
 # M06: Wrapper testing contract — system2-boundary command tests
 
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** high
 - **Depends on:** —
 - **Driving RR:** —
@@ -113,7 +113,7 @@ defers it to submission time). CRAN submission → user-declared release window.
       outermost-frame coverage attribution, failure message naming gaps.
       (Shipped as `test-zzz-command-contract.R` so it runs after the files
       whose calls it counts.)
-- [ ] T8 Run `document()`, `test()`, `check()`; record the NOTE baseline from
+- [x] T8 Run `document()`, `test()`, `check()`; record the NOTE baseline from
       `00check.log`; fix fallout.
 
 ## Work log
@@ -141,6 +141,9 @@ defers it to submission time). CRAN submission → user-declared release window.
 - 2026-08-07: T7 — `test-zzz-command-contract.R` computes the `system2` closure over `asNamespace("openac")` by symbol occurrence: 27 members, matching the [O] audit's independently computed figure, and including `os_extract_dir`, which a call-head walk misses because it reaches its tool via `do.call(what = os_extract, …)`. Seven literal names are deferred to M07, leaving 20 enforced, all covered. Coverage comes from a suite-wide registry the boundary mock populates with the outermost openac frame, never from a hand list.
 - 2026-08-07: T7 — gate verified to fail for the right reason, not merely observed green: removing `os_extract_dir`'s deferral produced "no test asserts the command they build: os_extract_dir", and deferring `os_read` (which never reaches `system2`) produced "deferred but no longer reach system2 … os_read". Both reverted; suite back to 238 pass, 0 fail, 0 skip.
 - 2026-08-07: T7 minor — file named `test-zzz-*` because testthat runs files in sorted order and the gate counts calls the other files make; run in isolation it skips with a stated reason rather than failing spuriously, so a full `devtools::test()` still reports zero skips (AC6).
+- 2026-08-07: T8 — `devtools::document()` produces no diff; `devtools::test()` reports 238 pass, 0 fail, 0 skip; `devtools::check()` reports `Status: 1 NOTE` with 0 errors and 0 warnings. **NOTE baseline**, quoted from `00check.log`: `* checking tests ... NOTE / Running 'spelling.R' / Comparing 'spelling.Rout' to 'spelling.Rout.save' ...` — the pre-existing spelling-diff NOTE listing 56 potential misspellings (domain terms like `ffmpeg`, `OpenFace`, `LLDs`). It is the only NOTE and it predates this milestone.
+- 2026-08-07: T8 — baseline established by measurement, not assumption: `check()` was run against `main` in a worktree and the spelling word lists diffed. Both sides list exactly 56 words with an empty diff in both directions, so this branch adds no NOTE and no new word. The worktree run also reported a second NOTE (`checking for hidden files and directories … .git`); that is an artifact of checking inside a git worktree, where `.git` is a regular file, and not a property of `main`.
+- 2026-08-07: T8 fallout — the first draft of `set_program()`'s `@return` wrote "openac's user config directory", which added the token `openac's` to the spelling NOTE; reworded to drop the possessive, restoring the word list to the baseline exactly.
 
 ## Decisions
 

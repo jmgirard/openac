@@ -5,7 +5,7 @@
 #' @param program A string indicating which program to set the location for.
 #' @param location A string containing the location of the program.
 #' @return Invisibly, `NULL`. Called for its side effect: recording `location`
-#'   in openac's user config directory, where [find_program()] reads it.
+#'   in the user config directory, where [find_program()] reads it.
 #' @export
 #' 
 set_program <- function(program, location) {

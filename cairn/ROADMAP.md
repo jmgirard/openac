@@ -8,7 +8,7 @@ _Released 0.1.0 (GitHub) 2026-07-11._
 
 | ID | Title | Status | Depends on | Priority | File/Archive |
 |---|---|---|---|---|---|
-| M06 | Wrapper testing contract — system2-boundary command tests | in-progress | — | high | milestones/M06-wrapper-command-tests.md |
+| M06 | Wrapper testing contract — system2-boundary command tests | review | — | high | milestones/M06-wrapper-command-tests.md |
 | M07 | Wrapper testing contract — remainder and gated real invocations | planned | M06 | normal | milestones/M07-wrapper-tests-remainder.md |
 | M01 | openSMILE tidy reader (`os_read`) | done | — | high | milestones/archive/M01-opensmile-reader.md |
 | M02 | OpenFace tidy reader (`of_read`) | done | M01 | normal | milestones/archive/M02-openface-reader.md |
