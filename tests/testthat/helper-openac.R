@@ -10,6 +10,26 @@
 # Programs `find_program()` knows about; the fake resolver serves these.
 fake_programs <- function() c("ffmpeg", "ffprobe", "openface", "opensmile")
 
+# Config names the fake openSMILE install ships, relative to its config/ dir
+# and without the .conf extension.
+fake_configs <- function() c("misc/emo_large", "egemaps/v02/eGeMAPSv02")
+
+# Absolute path of a fake config, as os_check_config() would resolve it.
+fake_config_path <- function(state, config = "misc/emo_large") {
+  tools::file_path_as_absolute(
+    file.path(state$bindir, "..", "config", paste0(config, ".conf"))
+  )
+}
+
+# A semicolon-delimited stand-in for an openSMILE output CSV. The mocked tool
+# writes nothing, but os_extract_wav() hands its outputs to os_fix_csv(), which
+# reads them -- so any test exercising aggfile/lldfile must pre-create them.
+write_fake_os_output <- function(path) {
+  dir.create(dirname(path), recursive = TRUE, showWarnings = FALSE)
+  writeLines(c("name;frameTime;F0", "'x';0.00;120.5"), path)
+  path
+}
+
 # Names of the openac functions on the current call stack, outermost first.
 #
 # A frame belongs to openac when its environment's top-level environment is the
@@ -49,18 +69,34 @@ local_fake_tools <- function(results = list(),
                              .env = parent.frame()) {
   dir <- withr::local_tempdir(.local_envir = .env)
 
+  # A tool tree shaped like a real openSMILE install: the binary sits in bin/,
+  # so `os_check_config()` resolves `dirname(find_opensmile())/../config/` to
+  # the config/ sibling below.
+  bindir <- file.path(dir, "bin")
+  dir.create(bindir, recursive = TRUE)
+
   # Real, executable files: `find_program()` calls `tools::file_path_as_absolute()`
   # on what it resolves, which errors on a path that does not exist, and
   # `Sys.which()` reports "" for a file that exists but is not executable.
   for (p in resolve) {
-    bin <- file.path(dir, p)
+    bin <- file.path(bindir, p)
     file.create(bin)
     Sys.chmod(bin, "0755")
+  }
+
+  # Config files openSMILE would ship. os_check_config() only needs them to
+  # exist; the tool never reads them here.
+  for (conf in fake_configs()) {
+    path <- file.path(dir, "config", paste0(conf, ".conf"))
+    dir.create(dirname(path), recursive = TRUE, showWarnings = FALSE)
+    writeLines("// placeholder openSMILE config", path)
   }
 
   state <- new.env(parent = emptyenv())
   state$calls <- list()
   state$i <- 0L
+  state$dir <- dir
+  state$bindir <- bindir
 
   fake_system2 <- function(command, args = character(), ...) {
     state$i <- state$i + 1L
@@ -87,7 +123,7 @@ local_fake_tools <- function(results = list(),
       names,
       function(n) {
         if (n %in% resolve) {
-          file.path(dir, n)
+          file.path(bindir, n)
         } else if (nzchar(n) && file.exists(n) && file.access(n, 1L) == 0L) {
           n
         } else {
