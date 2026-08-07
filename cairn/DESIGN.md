@@ -98,53 +98,53 @@ _IP<n> = Inviolable (hard constraint; changing one requires an explicit
 decision in DECISIONS.md) · GP<n> = Guiding (tradeable with stated
 justification). IP block first, then GPs; numbers never reused._
 
-- **IP1 — No hard-coded paths, no surprise writes.** External-tool locations
+- IP1: **No hard-coded paths, no surprise writes.** External-tool locations
   are always discovered (`Sys.which`) or user-configured (`set_program`),
   never hard-coded; openac writes only to user-specified locations or its
   own `rappdirs` config/cache dirs.
-- **IP2 — Source media are sacrosanct.** No code path modifies or deletes a
+- IP2: **Source media are sacrosanct.** No code path modifies or deletes a
   user's original media files; transformations always write new outputs.
   (In-place edits of openac-*generated* intermediates — e.g., `os_fix_csv`
   rewriting an openSMILE output CSV — fall outside this rule but stay rare
   and explicit.)
-- **IP3 — No silent data egress.** Participant data never leaves the user's
+- IP3: **No silent data egress.** Participant data never leaves the user's
   machine without explicit, unmistakable opt-in; processing is local by
   default. Cloud-backed wrappers are permissible down the road *only*
   behind such opt-in (IRB/consent constraints). Network access otherwise
   fetches only tools/models, at user request.
-- **GP1 — Thin wrappers.** openac never re-derives the signals themselves
+- GP1: **Thin wrappers.** openac never re-derives the signals themselves
   (no face tracking, feature extraction, or transcription of its own — that
   is the tools' job), but parsing, cleaning, and aggregating tool *outputs*
   is squarely in scope. Post-read helpers (aggregation/derivation) each
   earn their place as a ROADMAP candidate; the tidy reader is the
   guaranteed surface (D-009).
-- **GP2 — Batch parity.** Every single-file operation has a batch
+- GP2: **Batch parity.** Every single-file operation has a batch
   counterpart with parallelism (`future`/`furrr`) and progress
   (`progressr`). The principle is the capability, not the API shape — the
   current `_dir(indir, inext)` idiom may evolve (e.g., toward vectorized
   path inputs) under D-002.
-- **GP3 — Cross-platform where possible.** Wrappers (find/check/run) work on
+- GP3: **Cross-platform where possible.** Wrappers (find/check/run) work on
   Windows/macOS/Linux; `install_*` helpers are best-effort per platform.
-- **GP4 — Lean dependencies.** The current Imports list is acceptable but
+- GP4: **Lean dependencies.** The current Imports list is acceptable but
   shrinks where easy; new Imports need real justification (and, per the
   guardrails, a question-gate + D-entry).
-- **GP5 — Transparent calls.** The exact external command a high-level
+- GP5: **Transparent calls.** The exact external command a high-level
   function constructs is discoverable/reportable by the user (methods
   sections, version-drift debugging). Retrofit opportunistically.
-- **GP6 — Resilient batches.** Batch operations skip-and-report per-file
+- GP6: **Resilient batches.** Batch operations skip-and-report per-file
   failures rather than aborting the run — a crash on file 412 of 500
   overnight is the failure mode to design against.
-- **GP7 — Two-layer testing.** Binary-dependent code is tested at two
+- GP7: **Two-layer testing.** Binary-dependent code is tested at two
   layers: command construction is verified everywhere by mocking the
   `system2` boundary (an inspectable command is a testable command — GP5),
   and real tool invocations run locally behind skip-if-binary-missing +
   `skip_on_cran` gates. Retrofit is opportunistic; scheduling is a ROADMAP
   matter.
-- **GP8 — Report what ran.** High-level functions make what actually ran
+- GP8: **Report what ran.** High-level functions make what actually ran
   recoverable — tool identity, version, and the constructed command — for
   methods-section reporting and version-drift debugging. The runtime
   counterpart to GP5. (Implementation is a ROADMAP candidate.)
-- **GP9 — Probe before compute.** High-level operations validate input
+- GP9: **Probe before compute.** High-level operations validate input
   media with a cheap probe (`ffprobe`-based stream/type checks) and fail or
   skip with a message naming the file and the defect, before the expensive
   tool runs. Complements GP6: GP6 makes batches survive bad files; GP9

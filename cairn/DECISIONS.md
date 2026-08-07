@@ -146,3 +146,34 @@ infrastructure exists — an IP that can't be met invites violations).
 tracking rules; GP7/GP9 bind opportunistically as code is touched; GP8's
 implementation is a ROADMAP candidate; future wrapper families inherit all
 three from birth.
+
+### D-010 (2026-08-07): GP7 layer 1 mocks `system2`; coverage is a computed gate
+
+**Context:** Planning M06/M07 (the wrapper testing contract). Two choices
+needed recording. (1) Which boundary layer-1 mocks: the four passthroughs
+(`ffmpeg`/`ffprobe`/`openface`/`opensmile`) or `system2` itself. (2) Whether
+"every tool-calling function has a command test" is enforced by a failing test
+or merely reported — a question D-009 already touched when it rejected an
+IP-strength testing contract, so an unrecorded hard gate would read as
+contradicting it.
+**Decision:** Layer 1 mocks **`base::system2`** via
+`local_mocked_bindings(.package = "base")`, not the passthroughs. Mocking the
+passthroughs was tried and rejected on evidence: the exported aliases `ffm`,
+`ffp`, `of` and `os` are separate bindings to the same closures, so rebinding
+`ffmpeg` does not intercept `ffm` — a probe confirmed `ffm("-x")` executing the
+real ffmpeg binary under a passthrough mock. It also leaves the passthroughs'
+own `system2` construction untested. Coverage is enforced by a **failing** test
+whose domain is *computed* — a symbol-occurrence transitive closure over
+`asNamespace("openac")` seeded at `system2` — minus a list of literal function
+names deferred to a named milestone, carrying a staleness assertion so the list
+cannot rot. Rejected: an advisory-only report (a gap that never fails is a gap
+that never closes) and a hard gate over the whole closure (unsatisfiable while
+M07's families are outstanding — the exact failure mode D-009 named).
+**Consequences:** This is not the IP-strength contract D-009 rejected: it is a
+GP7-level test, satisfiable the day it lands because the deferral list absorbs
+what is not yet covered, and M07's acceptance is that the list empties. Any
+future function that can reach an external tool fails the suite until it has a
+command test — the enforcement point for GP7 on new wrapper families. A
+call-head-only walk was rejected as the closure rule because `os_extract_dir`
+and `aw_transcribe_dir` reach their tools through `do.call(what = …)` and are
+invisible to it.
