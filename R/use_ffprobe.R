@@ -4,8 +4,13 @@
 #'
 #' Attempt to find and run ffprobe with the specified arguments.
 #'
-#' @param arg (string) A string of space-separated arguments to append to the
-#'   ffprobe command line call.
+#' @param arg (character) The arguments to append to the ffprobe
+#'   command line call, in either of two forms. Give a **character vector**
+#'   with one CLI token per element and each element is quoted for you at the
+#'   process boundary, so a file path may contain spaces, `$`, or any other
+#'   character the shell would otherwise act on. Give a **single string** and
+#'   it is passed through to the shell exactly as written, quoting and all,
+#'   which leaves any quoting up to you. Prefer the vector form.
 #' @return A character vector containing the output of ffprobe. Errors if
 #'   ffprobe cannot be found.
 #' @references https://ffmpeg.org/ffprobe.html
@@ -14,6 +19,7 @@
 #' @examples 
 #' \dontrun{
 #' ffprobe('-version')
+#' ffprobe(c("-show_entries", "stream=codec_type", "my video.mp4"))
 #' }
 #' 
 ffprobe <- function(arg) {

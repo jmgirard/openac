@@ -1,6 +1,6 @@
 # M13: Quote at the process boundary, not at the call site
 
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** high
 - **Depends on:** —
 - **Driving RR:** —
@@ -101,7 +101,7 @@ direct docs commit to the default branch, not a milestone.
 - [x] T7 Move the three `test-commands-*.R` files' assertions to
       `boundary_argv()`; drop `boundary_args()` from them.
 - [x] T8 Add the real-`ffprobe` case in `test-real-tools.R` for AC2's shell half.
-- [ ] T9 Update DESIGN's Architecture paragraph and the roxygen `@param`/
+- [x] T9 Update DESIGN's Architecture paragraph and the roxygen `@param`/
       `@examples`; `devtools::document()`, `devtools::check()`, `inst/WORDLIST`.
 
 ## Work log
@@ -125,6 +125,8 @@ direct docs commit to the default branch, not a milestone.
 - 2026-08-08: T7 done. Most of the conversion landed with T4-T6; T7 finished the two passthrough assertions that still read the collapsing accessor. They assert the legacy single-string form, where collapsing IS lossless — which is precisely why the collapsing accessor proves nothing there, so they moved too rather than being excepted. `grep -n 'boundary_args' tests/testthat/test-commands-*.R` now hits only the comment saying so.
 - 2026-08-08: T8 done, and it RAN rather than skipped (ffmpeg and ffprobe are installed here). Real ffmpeg writes to a path carrying a space and a `$`, real ffprobe reads the same one back. Also converted `real_wav()`/`real_video()` to the token form — they were the last hand-quoted assemblers in the repo, in the one file that had never mocked anything.
 - 2026-08-08: T8 mutation is the milestone's strongest evidence. Reverting `ffp_count_streams()` to the hand-quoted form makes real ffprobe exit status 1 and report 0 audio streams where 1 was expected: the shell expanded `$dollar` away, so the tool was asked for a file that does not exist. The failure identity is verified against the real tool, not inferred from a mock.
+- 2026-08-08: T9 done. Four `@param arg` blocks and their examples document both forms, DESIGN's "Calling the CLIs" paragraph rewritten around `run_tool()`, two NEWS entries (the `$` fix, and the new vector form), `CLI` added to `inst/WORDLIST`. `devtools::document()` leaves no diff; `R CMD check` is 0 errors / 0 warnings / 0 notes.
+- 2026-08-08: T9 found debris I committed myself at T5, and `R CMD check` is what caught it. The broken intermediate state at T5 had the old fakes running `sub('^.*"([^"]+)"$', ..., args)` against a token VECTOR; `sub()` and `file.create()` are both vectorized, so instead of erroring they created one zero-byte file per token in `tests/testthat/` — `'-y'`, `'0:a:0'`, `'-c:a'` and nine more. My `git add -A` then swept all twelve into bc7199f, which is exactly the stranger-sweeping the git model warns against. Removed in this commit; check now reports no non-portable file names, and a clean run creates none.
 - 2026-08-08: plan chose to arm the unquoted-whitespace invariant in the harness over asserting it per command test, because the harness already carries the sibling absolute-path invariant (helper-openac.R:605) and a per-test assertion is skipped by omission; falsified by a legitimate boundary call the invariant cannot express, requiring more opt-outs than the one test-helper-boundary.R needs.
 
 ## Decisions

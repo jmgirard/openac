@@ -4,8 +4,13 @@
 #'
 #' Attempt to find and run openface with the specified arguments.
 #'
-#' @param arg (string) Space-separated arguments to append to the
-#'   FaceLandmarkVidMulti.exe command line call.
+#' @param arg (character) The arguments to append to the FaceLandmarkVidMulti.exe
+#'   command line call, in either of two forms. Give a **character vector**
+#'   with one CLI token per element and each element is quoted for you at the
+#'   process boundary, so a file path may contain spaces, `$`, or any other
+#'   character the shell would otherwise act on. Give a **single string** and
+#'   it is passed through to the shell exactly as written, quoting and all,
+#'   which leaves any quoting up to you. Prefer the vector form.
 #' @return A character vector containing the output of openface. Errors if
 #'   openface cannot be found.
 #' @references https://github.com/TadasBaltrusaitis/OpenFace/wiki/Command-line-arguments
@@ -14,6 +19,7 @@
 #' @examples
 #' \dontrun{
 #' openface('-h')
+#' openface(c("-f", "my video.mp4", "-of", "out.csv"))
 #' }
 #' 
 openface <- function(arg) {

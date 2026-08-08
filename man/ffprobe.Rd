@@ -10,8 +10,13 @@ ffprobe(arg)
 ffp(arg)
 }
 \arguments{
-\item{arg}{(string) A string of space-separated arguments to append to the
-ffprobe command line call.}
+\item{arg}{(character) The arguments to append to the ffprobe
+command line call, in either of two forms. Give a \strong{character vector}
+with one CLI token per element and each element is quoted for you at the
+process boundary, so a file path may contain spaces, \code{$}, or any other
+character the shell would otherwise act on. Give a \strong{single string} and
+it is passed through to the shell exactly as written, quoting and all,
+which leaves any quoting up to you. Prefer the vector form.}
 }
 \value{
 A character vector containing the output of ffprobe. Errors if
@@ -23,6 +28,7 @@ Attempt to find and run ffprobe with the specified arguments.
 \examples{
 \dontrun{
 ffprobe('-version')
+ffprobe(c("-show_entries", "stream=codec_type", "my video.mp4"))
 }
 
 }
