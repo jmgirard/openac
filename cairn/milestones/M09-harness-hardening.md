@@ -1,11 +1,11 @@
 # M09: Test-harness hardening — fake fidelity and a non-vacuous coverage gate
 
-- **Status:** planned
+- **Status:** in-progress
 - **Priority:** normal
 - **Depends on:** —
 - **Driving RR:** —
 - **Principles touched:** GP7, IP1
-- **Branch/PR:** —
+- **Branch/PR:** `m09-harness-hardening`
 
 ## Goal
 

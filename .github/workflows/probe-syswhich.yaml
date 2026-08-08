@@ -1,0 +1,69 @@
+# TEMPORARY (M09 T2). Measures what R's `Sys.which()` actually resolves on
+# Windows, so the test harness's executability predicate models the real rule
+# rather than a guessed extension list. Deleted before this milestone's review.
+on:
+  push:
+    branches: [m09-harness-hardening]
+
+name: probe-syswhich.yaml
+
+permissions: read-all
+
+jobs:
+  probe:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    name: probe (${{ matrix.os }})
+    steps:
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: 'release'
+      - name: probe Sys.which
+        shell: Rscript {0}
+        run: |
+          dir <- tempfile("probe"); dir.create(dir)
+          exts <- c("", ".exe", ".bat", ".cmd", ".com", ".txt")
+          # One file per extension, all mode 0755, plus one that does not exist.
+          for (e in exts) {
+            p <- file.path(dir, paste0("tool", e))
+            file.create(p); Sys.chmod(p, "0755")
+          }
+          nonexec <- file.path(dir, "nonexec"); file.create(nonexec)
+          Sys.chmod(nonexec, "0644")
+
+          say <- function(label, value) {
+            cat(sprintf("%-42s -> %s\n", label,
+                        if (nzchar(value)) value else "<empty>"))
+          }
+          cat("## R", as.character(getRversion()), "on", Sys.info()[["sysname"]],
+              "| .Platform$OS.type =", .Platform$OS.type, "\n")
+          cat("\n## absolute path given to Sys.which()\n")
+          for (e in exts) {
+            p <- file.path(dir, paste0("tool", e))
+            say(paste0("abs 'tool", e, "' (0755, exists)"), Sys.which(p))
+          }
+          say("abs 'nonexec' (0644, exists)", Sys.which(nonexec))
+          say("abs 'missing' (does not exist)", Sys.which(file.path(dir, "missing")))
+          say("abs 'missing.exe' (does not exist)",
+              Sys.which(file.path(dir, "missing.exe")))
+
+          cat("\n## bare name, with the dir on PATH\n")
+          old <- Sys.getenv("PATH")
+          Sys.setenv(PATH = paste(dir, old, sep = .Platform$path.sep))
+          say("bare 'tool' (tool and tool.exe both exist)", Sys.which("tool"))
+          # A name whose only file on PATH carries a non-.exe extension.
+          only <- file.path(dir, "onlybat.bat"); file.create(only); Sys.chmod(only, "0755")
+          say("bare 'onlybat' (only onlybat.bat exists)", Sys.which("onlybat"))
+          say("bare 'onlybat.bat' (given with extension)", Sys.which("onlybat.bat"))
+          Sys.setenv(PATH = old)
+
+          cat("\n## file.access(path, 1L) for the same files\n")
+          for (e in exts) {
+            p <- file.path(dir, paste0("tool", e))
+            say(paste0("file.access 'tool", e, "' (0755)"),
+                as.character(file.access(p, 1L)))
+          }
+          say("file.access 'nonexec' (0644)", as.character(file.access(nonexec, 1L)))
