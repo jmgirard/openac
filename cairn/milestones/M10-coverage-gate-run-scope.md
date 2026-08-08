@@ -185,6 +185,7 @@ survives ingestion, so no projection-vs-outcome pair goes to the merge gate.
 - 2026-08-08: T10 note for review — the single-file mode must be invoked with the package loaded (`devtools::load_all(); testthat::test_file(...)`). openac is not installed in this environment, and a bare `testthat::test_file()` makes `packageDescription("openac")` return `NA`, so the ordering test errors on `$` and three tests skip as "{openac} is not installed". Pre-existing shape, unchanged by this milestone; the recorded counts are the loaded invocation.
 - 2026-08-08: review-return fixes complete (T7–T10); status → review.
 - 2026-08-08: the one-pass compression of the Deviations block dropped the BC ids `cairn_validate`'s `binding criteria` check reads, which FAILed on BC2, BC3, BC5, BC8 and BC9; the block now names every BC in the same 11 lines and validate exits 0.
+- 2026-08-08: review pass 2 gathered fresh evidence for all six criteria (all PASS as written), ran the consistency gate clean, and ran the three-lens fan-out; 33 candidates scored, 2 actioned. D20 (85, reproduced) carried to a ROADMAP candidate. D8 (80, verified) shows AC5's deletion clause asserting a deletion that never happened — a second amendment return naming AC5, so no further round is convened and the disposition goes to the user at the merge gate.
 
 ## Decisions
 
@@ -427,3 +428,77 @@ clean as recorded under AC6.
 
 None to record, unchanged from the first pass: RR02's only numeric projection
 was BC10's pass-count floor, dropped at ingestion as unmeasurable.
+
+#### Independent review (second pass)
+
+Three fresh-context lenses ran on the branch diff. The blame-history lens found
+nothing: every MEASURED probe comment in `helper-openac.R` is untouched, the
+hyphen and pattern corrections are in-branch self-corrections that contradict
+nothing on `main` or in an archived milestone, and no recorded decision is
+crossed. The prior-review lens reported three findings, all about T9's
+primary/fallback swap, and confirmed no GitHub inline review threads exist. The
+diff-bug lens reported 30 candidates. A separate scorer, holding the diff and
+this plan, scored all 33.
+
+**Actioned (>= 80), both reproduced by this session:**
+
+- D20 (85) — a test file with no EXECUTED `test_that()` is a hard CRAN failure,
+  and the idiom that triggers it is standard. A file whose top level begins with
+  `skip_on_cran()` / `skip_if_not_installed()` — the ordinary testthat idiom for
+  gating a whole file — never enters `ran`; under `R CMD check`
+  (`OPENAC_FULL_SUITE=true`) that is `fail_incomplete`, i.e. the package fails on
+  CRAN. Reproduced in `<scratch>/rv4` by adding a `test-aaa-toplevel-skip.R`
+  whose first line is `skip_if_not_installed("nonexistentpkg123")`:
+  `OPENAC_FULL_SUITE=true Rscript -e 'devtools::test()'` →
+  `[ FAIL 1 | WARN 0 | SKIP 3 | PASS 540 ]`, failing at
+  `test-zzz-command-contract.R:165:3` with "OPENAC_FULL_SUITE declared a complete
+  run, but these test files did not run: test-aaa-toplevel-skip.R".
+- D8 (80) — AC5's deletion grep never had discriminating power, and one of its
+  clauses describes a deletion that never happened. Verified: `git grep` for
+  `harness_runs|harness_test_files|harness_files|registry$(runs|files)` over
+  `tests/` finds nothing on `main` and nothing anywhere in the repository's
+  history, and `test-helper-boundary.R` is untouched by this branch. So AC5's
+  clause "`test-helper-boundary.R`'s `harness_files()` assertion is deleted"
+  asserts a historical fact that never held, and the grep exiting 1 is evidence
+  of nothing.
+
+**Triage.**
+
+- D20 → follow-up. Fixing it properly means recording the files testthat
+  SOURCES rather than only the files with an executed `test_that()`, which
+  changes the mechanism AC1 names and would need its own gated amendment. No
+  such file exists in the suite today and the failure is loud rather than
+  silent, so it is carried as a ROADMAP candidate rather than reopened here.
+- D8 → the criterion is wrong, not the code, so it routes to the gated
+  amendment protocol. But AC5 already took an amendment return this milestone
+  (the `start-first` field), and a second amendment return naming the same
+  criterion convenes no further round — the disposition goes to the user at the
+  merge gate. AC5's other clauses (the run modes, the behavioral
+  `local_fake_tools()` assertion, ordering, parallel, `start-first`) are real and
+  verified above; the deletion clause alone is inert.
+
+**Logged, below threshold (31).** D1 (40) nothing asserts `tests/testthat.R`
+still declares the full run; D2 (60) `OPENAC_FULL_SUITE=1` parses to `NA` and
+means undeclared; D3 (55) empty `domain` returns `enforce_pass`; D4 (45) empty
+`expected` makes completeness vacuous; D5 (58) `expect_null()` false-alarms on an
+explicit `Config/testthat/parallel: false`; D6 (32) divergent `TESTTHAT_PARALLEL`
+parsers; D7 (35) `shuffle = TRUE` is an unasserted reordering route; D9 (40) the
+`test_dir()` `expect_error()` names no condition; D10 (35) the ground-truth
+assertion restates the implementation; D11 (18) the content-invariance loop
+cannot fail by construction; D12 (30) the `local_fake_tools()` invariance
+assertion makes no boundary call; D13 (55) the bypass scan has five evasions and
+a `#`-in-string truncation; D14 (38) `sort()` collation is locale-dependent and
+T8 widened the surface; D15 (25) `grepl()` over non-ASCII test files; D16 (25)
+`list.files()` also matches directories; D17 (45) the frame walk depends on
+testthat internals by name; D18 (48) the srcref fallback is untested; D19 (45)
+`basename()` lets a same-named fixture satisfy `expected`; D21 (25) recording
+precedes the forward; D22 (28) the shadow pins the `(desc, code)` signature; D23
+(45) the fixture suite runs under edition 2; D24 (40) a `TMPDIR` inside the
+package would give the fixture the wrong DESCRIPTION; D25 (48) the decision
+function's boundary inputs are untested; D26 (30) the `Sys.setenv()` is
+process-global and unrestored; D27 (32) single-file mode needs `load_all()`
+first; D28 (45) the `start-first` mutation was gathered only under
+`devtools::test()`; D29 (12) `bypassing_forms()` is called twice; D30 (20) the
+decision function and its caller are coupled through a string; P1 (40) the
+`source_file()` dependency was promoted to primary; P2 (48) the untested route
+moved to the srcref fallback; P3 (55) the frame walk checks no namespace.
