@@ -139,6 +139,45 @@ opensmile, or whisper, which tidymedia's stated scope will never cover. openac
 therefore keeps a discovery and installation mechanism under every disposition;
 a dependency would add a second one beside it, not remove the first.
 
+## Paired-row differences
+
+The ten rows above that name a counterpart, each with the three facts a
+dependency decision turns on. "Config dir" is the `rappdirs` directory the
+function reads or writes; where a function reaches one only through a callee,
+the callee is named. "Failure signal" is what happens when the tool cannot be
+resolved. "Quoting" is how arguments reach the process boundary.
+
+| Row | Config dir (openac → tidymedia) | Failure signal (openac → tidymedia) | Quoting (openac → tidymedia) | Verdict |
+|---|---|---|---|---|
+| E1 `ffmpeg` | reads none directly; reaches `user_config_dir("openac","R")` via `require_program` → `find_program` (`R/programs_find.R:26`) → reaches `user_config_dir("tidymedia","R")` via `find_ffmpeg` (`R/program_management.R:29`) | `cli::cli_abort("Can't run …")` in `require_program` (`R/programs_find.R:71`) → `find_ffmpeg()` warns and returns `NULL`, `glue()` collapses to `character(0)`, and `system()` raises the base error "non-empty character argument expected" (`R/ffmpeg.R:28`; observed 2026-08-08) | one caller-assembled string to `system2()` with the resolved path as `command`, so the path is never shell-parsed (`R/use_ffmpeg.R:23`) → the path is interpolated **unquoted** into a `system()` string (`R/ffmpeg.R:28`), so an ffmpeg under a path containing a space fails (observed 2026-08-08) | openac's is safer on both axes |
+| E2 `ffm` | n/a — openac's is an alias of `ffmpeg`; tidymedia's is an alias of `ffm_files`, a pipeline constructor that touches no binary (`R/ffm.R:63`) | as E1 → n/a, constructs an object | as E1 → n/a | **name collision, incompatible meanings** |
+| E3 `ffprobe` | as E1 → as E1 (`R/program_management.R:29`) | `cli_abort` via `require_program` (`R/programs_find.R:71`) → base error as E1 (`R/ffprobe.R:21`) | one caller-assembled string to `system2()` (`R/use_ffprobe.R:23`) → path **is** quoted here (`R/ffprobe.R:21`), unlike `ffmpeg()` — an asymmetry internal to tidymedia | equivalent; tidymedia's quoting is inconsistent between its own two passthroughs |
+| E5 `ffp_count_streams` | none directly → none directly | `stopifnot(file.exists(infile))` (`R/use_ffprobe.R:48`), then the E3 signal → `probe_all()` returns an all-`NA` row and warns rather than aborting (`R/ffprobe.R:119-124`) | caller hand-quotes the path with literal `"` inside the arg string (`R/use_ffprobe.R:51-56`) → token vector through `run_program`'s `shQuote` (`R/program_management.R:119`) | tidymedia's is structurally better: typed tibble out, per-token quoting, resilient to bad files |
+| E7 `require_program` | via `find_program` (`R/programs_find.R:26`) → via the `location` argument its caller resolved (`R/program_management.R:108`) | `cli_abort` naming the tool (`R/programs_find.R:71`) → `cli_abort("Could not locate {program}.")` (`R/program_management.R:110-112`) | n/a — resolves, does not invoke → applies `shQuote` per token and calls `system2` (`R/program_management.R:119`) | same guard; tidymedia's also owns quoting, openac's does not |
+| E8 `find_ffmpeg` | `user_config_dir("openac","R")` (`R/programs_find.R:26`) → `user_config_dir("tidymedia","R")` (`R/program_management.R:29`) | `cli_warn` + `NULL`, twice — absent, and recorded-but-vanished (`R/programs_find.R:31,47`) → `cli_warn` + `NULL`, same two cases (`R/program_management.R:37,48`) | n/a — resolves, does not invoke → n/a | **different config directories**; openac additionally returns an absolutized, unnamed path (`R/programs_find.R:57`) where tidymedia returns `Sys.which()`'s named result or the raw config line |
+| E9 `find_ffprobe` | as E8 | as E8 | n/a | as E8 |
+| E12 `set_program` | writes `user_config_dir("openac","R")` (`R/programs_set.R:17`) → writes `user_config_dir("tidymedia","R")` (`R/program_management.R:152`) | base `stopifnot()` on all three arguments (`R/programs_set.R:13-15`) → `rlang::arg_match` + `check_string` + `cli_abort("Can't find an executable at …")` (`R/program_management.R:145-149`) | n/a → n/a | tidymedia's conditions are better (cli, per DESIGN Conventions); openac's `stopifnot` is the legacy style DESIGN marks for opportunistic migration |
+| E13 `set_ffmpeg` | as E12 | as E12 | n/a | as E12 |
+| E14 `set_ffprobe` | as E12 | as E12 | n/a | as E12 |
+| E29 `install_ffmpeg_win` | writes `user_data_dir("openac","R")/ffmpeg` (`R/programs_install.R:98`) → writes `user_data_dir("tidymedia","R")/ffmpeg` (`R/program_management.R:220`) | `require_os()` aborts with class `openac_wrong_os` **before any network call** (`R/programs_install.R:62-70`) → **no OS guard**: on macOS or Linux it downloads the Windows `.7z` and records `bin/ffmpeg.exe` paths (`R/program_management.R:213-248`) | n/a → n/a | openac's is strictly safer; this is the exact silent wrong-install openac's guard was added to stop |
+
+Two findings dominate this table.
+
+**The config directories differ** (E8, E9, E12–E14). A tool a user registered
+with `openac::set_ffmpeg()` is written to `user_config_dir("openac", "R")` and is
+invisible to tidymedia's finders, which read `user_config_dir("tidymedia", "R")`
+— and the reverse. Depending on tidymedia for discovery would therefore silently
+strand every existing openac user's configuration, unless openac also migrates
+the file or writes both. This is not a detail a dependency absorbs; it is
+user-visible breakage.
+
+**tidymedia's `find_program()` is not exported** (E6). It is defined at
+`R/program_management.R:18` with roxygen but no `@export`, and is absent from
+tidymedia's `NAMESPACE`. openac could not call it without `:::`, which is not a
+supported interface. The four exported `find_*` wrappers cover ffmpeg, ffprobe,
+ffplay, and mediainfo only, so there is no supported way to ask tidymedia to
+resolve openface or opensmile.
+
 ## Open questions
 
 - Whether the maintainer wants openac and tidymedia to share one config
