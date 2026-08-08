@@ -248,3 +248,34 @@ off by both routes (`Config/testthat/parallel` and `TESTTHAT_PARALLEL`). Because
 the recording mechanism is a `test_that` shadow installed from the test helper,
 this suite may only call `test_that()` bare: qualified `testthat::test_that()`,
 and `describe()`/`it()`, bypass the shadow and are forbidden here.
+
+### D-014 (2026-08-08): D-013's consequences describe machinery M10 lands, not M09 — annotating D-013
+
+**Context:** D-013 was recorded when RR02 was ingested during M09, and its
+Consequences paragraph is written in the present tense — a `test_that` shadow
+recorder, `OPENAC_FULL_SUITE` declared in `tests/testthat.R`, a canary in the
+contract file, `Config/testthat/parallel` asserted off by both routes, and a
+prohibition on qualified `testthat::test_that()` / `describe()` / `it()` in this
+suite. M09 was then re-cut: the coverage gate and everything RR02 binds moved to
+M10, and M09 reverted `test-zzz-command-contract.R` to the default branch's
+state. M09's review verified that none of that machinery exists in the merged
+tree — `tests/testthat.R` is the stock stub, `DESCRIPTION` carries no
+`Config/testthat/parallel`, and the contract file is byte-identical to the
+default branch. So D-013 ships describing a tree that does not yet exist.
+**Decision:** D-013 stands unedited and undisputed — the decision it records is
+correct and IP4 forbids editing history — and this entry annotates it: every
+present-tense claim in D-013's Consequences paragraph is a specification M10
+implements, not a description of the tree at the time D-013 merged. A reader who
+cannot find the recorder, the environment variable, the canary, or the parallel
+assertions has found M10 unfinished, never a broken invariant. Considered and
+rejected: holding D-013 out of M09 until M10 lands (a decision is recorded when
+it is made, and RR02's answer was reached during M09); rewording D-013 in place
+(IP4); and leaving it unannotated (M09's review reproduced the misreading it
+invites, which is the whole reason this entry exists).
+**Consequences:** D-013's operative content is unchanged and M10 remains its
+implementor. Until M10 is `done`, the command contract on the default branch is
+the pre-M09 one, whose skip-on-empty shape D-010 and D-013 both describe as
+vacuous — a known gap, guarded only by M10's ROADMAP row and its dependency on
+M09. This entry retires itself in effect once M10 merges: at that point D-013's
+Consequences describe the tree, and this annotation is history explaining a
+window that has closed.
