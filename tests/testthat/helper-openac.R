@@ -39,6 +39,52 @@ expected_test_files <- function(dir) {
   sort(list.files(dir, pattern = "^test-.*\\.[Rr]$"))
 }
 
+# Did the runner DECLARE this an unfiltered run of the whole suite?
+#
+# `tests/testthat.R` sets the variable and is the only thing that can honestly
+# know -- it is the entry point `R CMD check` and CI take, and it runs
+# `test_check()` unfiltered. A local `devtools::test()` never sources that file,
+# so an interactive run is undeclared and a partial one merely skips.
+declared_full_run <- function() {
+  isTRUE(as.logical(Sys.getenv("OPENAC_FULL_SUITE", "false")))
+}
+
+# The skip/fail/enforce decision, as a PURE function of the six facts the
+# contract test can observe. Pure so that every branch -- including the ones a
+# healthy suite must never take -- is reachable from a unit test with ordinary
+# arguments, rather than only by breaking the real suite (D-013).
+#
+# The five returns, in the order they are decided:
+#
+#   fail_incomplete          files are missing and the runner declared a full
+#                            run: the declaration and the observation disagree,
+#                            which is the case CI and `R CMD check` must fail on
+#   skip_partial             files are missing and nothing declared a full run:
+#                            an ordinary filtered local run, skipped with the
+#                            missing files named
+#   fail_broken_attribution  every file ran, yet no boundary call was attributed
+#                            to anything -- the coverage recorder is dead, and
+#                            an empty `covered` would otherwise read as "the
+#                            domain is uncovered" or, worse, pass vacuously
+#   enforce_fail             every file ran and some enforced function has no
+#                            command test
+#   enforce_pass             every file ran and every enforced function is
+#                            covered
+contract_decision <- function(expected, ran, covered, domain, deferred,
+                              declared_full) {
+  missing <- setdiff(expected, ran)
+  if (length(missing)) {
+    action <- if (isTRUE(declared_full)) "fail_incomplete" else "skip_partial"
+    return(list(action = action, files = missing))
+  }
+  if (!length(covered)) return(list(action = "fail_broken_attribution"))
+  uncovered <- setdiff(setdiff(domain, deferred), covered)
+  if (length(uncovered)) {
+    return(list(action = "enforce_fail", uncovered = uncovered))
+  }
+  list(action = "enforce_pass")
+}
+
 # The test file whose `test_that()` call is currently being set up, or NA.
 #
 # Read from the srcref testthat attaches when it parses a test file, which names

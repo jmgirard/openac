@@ -139,7 +139,7 @@ are no projection-vs-outcome pairs to carry to the merge gate.
 - [x] T2: compute `expected` from the test directory with no file read; add the
       runtime fixture-suite tests (content invariance, unparseable member,
       skip-still-records) on a separate registry.
-- [ ] T3: factor the skip/fail/enforce decision into a pure function; declare
+- [x] T3: factor the skip/fail/enforce decision into a pure function; declare
       full runs in `tests/testthat.R`; unit-test all five returns by name.
 - [ ] T4: add the canary and gather the mutation evidence in an isolated
       worktree — never the shared tree.
@@ -155,6 +155,7 @@ are no projection-vs-outcome pairs to carry to the merge gate.
 - 2026-08-08: implement gate chose the milestone work log as the home for the mutation evidence (one line per mutation, all four fields) and a scratchpad copy of the tree as the isolation mechanism, over a committed evidence page and a git worktree.
 - 2026-08-08: T1 — `test_that` shadow in `helper-openac.R` records each file at execution time into `openac_registry$ran`, forwarding the unevaluated call; `harness_caller_file()` reads the srcref testthat attaches (measured: `getSrcFilename()` returns the test file name) with a `source_file()` frame-walk fallback, both failing closed. Observed 13/13 files recorded on a full run; `devtools::test()` FAIL 0 | WARN 0 | SKIP 2 | PASS 502, and skip locations still report file:line so srcrefs survive the forward.
 - 2026-08-08: T2 — `expected_test_files(dir)` lists names only; `test-harness-recording.R` holds it to the behavioral guarantee over a runtime CONTENT fixture (identical to `sort(list.files())` under append/truncate/garbage mutation of every member, including an unparseable `test-garbage.R`), measures that `test_dir()` errors on that directory, demotes the call-head whitelist to hygiene, and runs an EXECUTABLE fixture suite on its own registry via a verbatim copy of `helper-openac.R` with only the registry binding overridden — skip-only and failing files both join `ran`, and the real registry is untouched. `devtools::test()` FAIL 0 | WARN 0 | SKIP 2 | PASS 511.
+- 2026-08-08: T3 — `contract_decision()` and `declared_full_run()` in `helper-openac.R`; `tests/testthat.R` sets `OPENAC_FULL_SUITE` with the "do not modify" boilerplate annotated; `test-contract-decision.R` covers all five returns by name plus the env-var reader; the contract test now decides by calling the function and carries only the `skip_partial` branch. Added a comment-stripped scan asserting no test file uses the qualified/`describe`/`it` forms — it first flagged the contract file's own prose, which is why comments are stripped. `devtools::test()` FAIL 0 | WARN 0 | SKIP 2 | PASS 530, contract enforcing (no contract skip).
 
 ## Decisions
 
