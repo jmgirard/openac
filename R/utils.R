@@ -20,13 +20,20 @@ regex_quote <- function(x) {
 # name merely ending in those letters.
 dir_inputs <- function(indir, inext, recursive = FALSE) {
   inext <- sub("^\\.", "", inext)
-  list.files(
+  found <- list.files(
     path = indir,
     pattern = paste0("\\.", regex_quote(inext), "$"),
     full.names = TRUE,
     recursive = recursive,
     ignore.case = TRUE
   )
+  # `list.files(recursive = FALSE)` returns directories alongside files, so a
+  # directory named `scenes.mp4` matches the pattern and would be handed to the
+  # tool as though it were a clip -- `file.exists()` is TRUE for a directory, so
+  # the wrappers' own input check does not catch it either. (`recursive = TRUE`
+  # already omits directories unless `include.dirs` asks for them, which is why
+  # this only ever bit the flat case.)
+  found[!dir.exists(found)]
 }
 
 # Output paths under `outdir` mirroring each input's position under `indir`,

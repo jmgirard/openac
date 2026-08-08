@@ -116,14 +116,19 @@ test_that("aw_transcribe_wav() writes the rds and csv outputs it is given", {
 })
 
 test_that("aw_transcribe_wav() writes nothing when no output path is given", {
-  infile <- local_wav()
-  outdir <- withr::local_tempdir()
+  # The input lives alone in its own directory, and the assertion is made on
+  # THAT directory: an unrequested `.rds` or `.csv` written beside the input is
+  # the IP1 "no surprise writes" violation this guards, and it can only be seen
+  # where the input actually is.
+  dir <- withr::local_tempdir()
+  infile <- file.path(dir, "clip.wav")
+  file.create(infile)
   local_fake_tools(results = conforming_wav())
   local_fake_whisper()
 
   openac:::aw_transcribe_wav(infile, model = fake_model())
 
-  expect_length(list.files(outdir), 0)
+  expect_identical(list.files(dir), "clip.wav")
 })
 
 test_that("aw_transcribe_wav() validates its arguments before running whisper", {

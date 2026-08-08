@@ -10,10 +10,17 @@
 #   clip.mp4             the ordinary one
 #   clip.mp4.backup.mp4  the extension occurring twice in one name
 #   notes.notmp4         a name merely *ending* in those letters
-#   mp4/nested.mp4       a DIRECTORY named like the extension
+#   mp4/nested.mp4       a DIRECTORY named like the extension, holding an input
+#   scenes.mp4/          a DIRECTORY whose own name MATCHES the pattern
+#
+# The last one is the case that actually bites: `list.files(recursive = FALSE)`
+# returns directories too, so `scenes.mp4` is enumerated as an input unless
+# something filters it out. A directory named plain `mp4` cannot show it,
+# because it does not match `\.mp4$` in the first place.
 local_input_tree <- function(.env = parent.frame()) {
   dir <- withr::local_tempdir(.local_envir = .env)
   dir.create(file.path(dir, "mp4"))
+  dir.create(file.path(dir, "scenes.mp4"))
   files <- c("clip.mp4", "clip.mp4.backup.mp4", "notes.notmp4", "mp4/nested.mp4")
   for (f in files) file.create(file.path(dir, f))
   dir
@@ -50,10 +57,28 @@ test_that("recursive = TRUE reaches subdirectories and FALSE does not", {
 
   expect_length(flat, 2)
   expect_length(deep, 3)
-  # The directory named `mp4` contributes a file, never itself: list.files()
-  # matches the pattern against names, so `<indir>/mp4` is not an input.
+  # A directory named like the extension contributes its files, never itself.
   expect_true(file.path(indir, "mp4", "nested.mp4") %in% deep)
   expect_false(file.path(indir, "mp4") %in% deep)
+})
+
+test_that("a directory whose own name matches the extension is not an input", {
+  indir <- local_input_tree()
+
+  # Asserted on the NON-recursive listing, which is the only one that returns
+  # directories at all -- the recursive form omits them for free, so an
+  # assertion made there cannot fail and proves nothing.
+  flat <- openac:::dir_inputs(indir, "mp4", recursive = FALSE)
+
+  expect_false(file.path(indir, "scenes.mp4") %in% flat)
+  expect_true(all(!dir.exists(flat)))
+  # And the batch wrapper never hands a directory to the tool: `file.exists()`
+  # is TRUE for a directory, so the wrapper's own input check would not catch it.
+  state <- local_fake_tools(results = list("ok", "ok"))
+  result <- of_extract_dir(indir, "mp4", file.path(withr::local_tempdir(), "out"))
+  expect_identical(nrow(result), 2L)
+  expect_length(boundary_tools(state), 2L)
+  expect_false(any(basename(result$infile) == "scenes.mp4"))
 })
 
 test_that("an extension carrying regex metacharacters is matched literally", {
