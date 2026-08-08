@@ -1,6 +1,6 @@
 # M10: Command-contract coverage gate — completeness observed, not inferred
 
-- **Status:** review
+- **Status:** in-progress
 - **Priority:** high
 - **Depends on:** M09
 - **Driving RR:** RR02
@@ -29,7 +29,7 @@ guard, `boundary_argv()`, alias lock) is M09's and is untouched here. The
 
 ## Acceptance criteria
 
-- [x] AC1 (BC1,BC2): completeness is OBSERVED, not inferred. `ran` is recorded at
+- [ ] AC1 (BC1,BC2): completeness is OBSERVED, not inferred. `ran` is recorded at
       `test_that` execution time by a shadow in `helper-openac.R` forwarding the
       unevaluated call to `testthat::test_that`. `expected` comes from one
       directory-parameterized function, which the contract file uses for the real
@@ -71,7 +71,7 @@ guard, `boundary_argv()`, alias lock) is M09's and is untouched here. The
       separately the shadow removed, each fail the canary with no enforce-pass and
       each FAIL rather than skip under `OPENAC_FULL_SUITE=true`; and skipping every
       test in one real harness file makes a full run FAIL naming uncovered functions.
-- [x] AC5 (BC5,BC7,BC10): run modes and deletions. Full `devtools::test()`: FAIL
+- [ ] AC5 (BC5,BC7,BC10): run modes and deletions. Full `devtools::test()`: FAIL
       0, contract ENFORCING, the only skips `test-real-tools.R`'s binary gates —
       the nested fixture runs report silently so they cannot leak into that count.
       Filtered `devtools::test(filter = "helper-boundary|zzz")`: exactly 1 contract
@@ -167,6 +167,8 @@ are no projection-vs-outcome pairs to carry to the merge gate.
 - 2026-08-08: T6 — `devtools::check()` 0 errors, 0 warnings, 1 NOTE (the standing spelling NOTE, already a ROADMAP candidate). Re-run with the check dir preserved to witness the declared-full path: `openac.Rcheck/tests/testthat.Rout` shows `[ FAIL 0 | WARN 0 | SKIP 2 | PASS 537 ]` with the two skips named as `test-real-tools.R:149` and `:168`, so 0 contract skips under `R CMD check` and the gate returned `enforce_pass`.
 - 2026-08-08: T6 — branch pushed and PR opened (https://github.com/jmgirard/openac/pull/11) because the CI workflow triggers on `pull_request`, so the five-platform run needs it; `gh pr checks 11` passed on all five: macos-latest/release, windows-latest/release, ubuntu-latest at devel, release and oldrel-1.
 - 2026-08-08: all tasks complete; status → review.
+- 2026-08-08: review gathered fresh evidence for all six criteria (all passed as written), ran the consistency gate clean (`cairn_validate` exit 0, `document()` no diff, check 0/0/1-NOTE, five CI platforms green), and ran the three-lens fan-out; blame-history and prior-review lenses found nothing, the diff-bug lens reported 31 candidates, three scored ≥ 80.
+- 2026-08-08: review FAILED and returned to `in-progress` on three reproduced findings. F1: the `Config/testthat/start_first` assertion is inert because testthat reads `start-first` (hyphen, confirmed in `testthat:::find_test_start_first`) — adding the real field disarms the local gate with nothing red; AC5 names the underscored field, so this is an amendment return on AC5. F3: `expected_test_files()` matches `^test-.*\.[Rr]$` while testthat discovers `^test.*\.[rR]$`, so a `test_foo.R` runs, sorts after the contract file, and is exempt from every check; AC1 embeds the narrow pattern, so this is an amendment return on AC1. F2: `harness_caller_file()`'s srcref route returns the file the test body was written in, not the executing file — reproduced with a `helper-*.R`-defined generator leaving `test-viahelper.R` absent from `ran` and `helper-openac.R` present — falsifying both the behavior and the comment at `helper-openac.R:90-95`; actioned as a defect. AC1 and AC5 un-ticked; AC2/AC3/AC4/AC6 keep their recorded evidence.
 
 ## Decisions
 
@@ -256,3 +258,67 @@ user-visible change; `devtools::check()` clean as recorded under AC6.
 None to record. RR02's only numeric projection was BC10's "pass count >= 504"
 floor, dropped at ingestion as unmeasurable, so no projection-vs-outcome pair
 exists to juxtapose.
+
+### Independent review
+
+Three fresh-context lenses ran on the branch diff. The blame-history lens found
+no undone prior work: M07/M09's measured probe comments in `helper-openac.R` are
+untouched, the diff is additive, and nothing edits D-013 or D-014. The
+prior-review lens probed `gh api .../pulls/comments` (empty — no inline review
+threads exist on this repo), read `RR02` and M09's archived review instead, and
+found no regressed lesson. The diff-bug lens reported 31 candidates; a separate
+scorer with the diff and this plan scored each.
+
+**Actioned (>= 80), all three independently reproduced by this session:**
+
+- F1 (93) — the `start_first` assertion cannot fail. `test-zzz-command-contract.R`
+  asserts `Config/testthat/start_first` (underscore); testthat reads
+  `Config/testthat/start-first` (hyphen), confirmed in
+  `testthat:::find_test_start_first`. Adding the real field disarms the local
+  gate while the assertion written to catch it passes. AC5 names the underscored
+  field, so the code satisfies the criterion and the criterion is wrong.
+- F3 (92) — `expected_test_files()` uses `^test-.*\.[Rr]$` while testthat
+  discovers `^test.*\.[rR]$`. A file named `test_foo.R` or `testX.R` runs, sorts
+  after the contract file, is never required to run, and is exempt from the
+  bypass scan. AC1 embeds the narrow pattern as the guarantee, so again the code
+  satisfies the criterion and the criterion is wrong.
+- F2 (85) — `harness_caller_file()`'s srcref route returns the file the test body
+  was WRITTEN in, not the file executing. Reproduced: a `helper-*.R`-defined test
+  generator leaves the calling test file absent from `ran` and puts
+  `helper-openac.R` in it. The comment at `helper-openac.R:90-95` claims the
+  opposite, so branch-added prose is false as well as the behavior being wrong.
+
+**Logged, below threshold (28).** F4 (55) empty `domain` returns `enforce_pass`;
+F5 (45) empty `expected` makes completeness vacuous; F6 (30) everything-deferred
+passes; F7 (45) the vacuity branches are untested; F8 (65) `OPENAC_FULL_SUITE=1`
+parses to `NA` and silently means undeclared; F9 (50) the `Sys.setenv()` is
+process-global and unrestored; F10 (30) nothing asserts the declaration line
+survives a `usethis` regeneration; F11 (40) whitespace before `(` defeats the
+bypass scan; F12 (35) aliasing defeats it; F13 (35) `#` inside a string literal
+truncates the scan line; F14 (35) `\bit\(` false-positives on `lst$it(`; F15 (40)
+the scan skips helper/setup files; F16 (30) the scan's documented bound is not
+implemented; F17 (40) a future fixture string could trip the scan; F18 (25)
+recording precedes any refusal to run the body; F19 (25) `desc` is evaluated
+after re-forwarding; F20 (55) the two attribution routes diverge and the fallback
+is untested; F21 (60) the fallback depends on testthat's unexported
+`source_file`; F22 (35) the frame walk does not check the matched call's
+namespace; F23 (45) the fixture suite runs under testthat edition 2, not 3; F24
+(40) a `TMPDIR` under the workspace would give the fixture the wrong DESCRIPTION;
+F25 (45) the fixture registry override is convention, not a guard; F26 (55) AC5's
+deletion grep could not fail because the machinery never existed on `main`; F27
+(25) sibling-test failures do not stop the gate returning `enforce_pass`; F28
+(40) `sort()` collation is locale-dependent and unpinned; F29 (58)
+`expect_null()` false-alarms on an explicit `Config/testthat/parallel: false`;
+F30 (35) divergent `TESTTHAT_PARALLEL` parsers; F31 (10) scope confirmation, not
+a defect.
+
+### Disposition
+
+Returned to `in-progress`. F1 and F3 are amendment returns: each shows an
+acceptance criterion naming the wrong thing, so the criterion is amended through
+the implement gate and the code fixed with it — AC5's `Config/testthat/start_first`
+and AC1's embedded `^test-.*\.[Rr]$`. F2 is actioned as a straight defect: the
+attribution must answer for the executing file, or the guarantee and its comment
+must narrow to what the code does. AC1 and AC5 are un-ticked pending
+re-verification; AC2, AC3, AC4 and AC6 keep their evidence above and are
+re-checked at re-review only if the fixes touch them.
