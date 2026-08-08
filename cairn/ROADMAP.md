@@ -1,7 +1,7 @@
 # Roadmap
 
 _The only authority on milestone status. Grouped by status, not ID._
-_Last hygiene check: 2026-08-08 (M09 merged and archived; M04 pruned under terminal-row retention; M10 is the only workable milestone and its dependency is now met)_
+_Last hygiene check: 2026-08-08 (M10 merged and archived; M05 pruned under terminal-row retention; no milestone is in flight and the candidate list is the only workable queue)_
 _Released 0.1.0 (GitHub) 2026-07-11._
 
 ## Milestones
@@ -9,11 +9,10 @@ _Released 0.1.0 (GitHub) 2026-07-11._
 | ID | Title | Status | Depends on | Priority | File/Archive |
 |---|---|---|---|---|---|
 | M09 | Test-harness hardening — fake fidelity at the tool boundary | done | — | normal | milestones/archive/M09-harness-hardening.md |
-| M10 | Command-contract coverage gate — completeness observed, not inferred | review | M09 | high | milestones/M10-coverage-gate-run-scope.md |
+| M10 | Command-contract coverage gate — completeness observed, not inferred | done | M09 | high | milestones/archive/M10-coverage-gate-run-scope.md |
 | M08 | GitHub Actions CI — R CMD check across platforms | done | — | high | milestones/archive/M08-github-actions-ci.md |
 | M06 | Wrapper testing contract — system2-boundary command tests | done | — | high | milestones/archive/M06-wrapper-command-tests.md |
 | M07 | Wrapper testing contract — remainder and gated real invocations | done | M06 | normal | milestones/archive/M07-wrapper-tests-remainder.md |
-| M05 | Rewrite stale vignettes | done | M04 | normal | milestones/archive/M05-vignette-rewrite.md |
 
 ## Candidates
 <!-- unnumbered ideas; one line each: idea — added YYYY-MM-DD — links -->
