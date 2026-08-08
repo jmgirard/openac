@@ -13,10 +13,10 @@ ffp(arg)
 \item{arg}{(character) The arguments to append to the ffprobe
 command line call, in either of two forms. Give a \strong{character vector}
 with one CLI token per element and each element is quoted for you at the
-process boundary, so a file path may contain spaces or a \code{$}. (One known
-gap: on Windows, \verb{\%} is not escaped, so a path containing a token such as
-\verb{\%TEMP\%} can still be expanded by the command interpreter.) Give a
-\strong{single string} and
+process boundary, so a file path may contain spaces or a \code{$} --- and, on
+Windows, a \verb{\%TEMP\%}-style token, an \code{&}, a \code{^} or a \code{!}, all of which were
+measured reaching the tool intact because \code{system2()} puts no command
+interpreter in the loop there. Give a \strong{single string} and
 it is passed through to the shell exactly as written, quoting and all,
 which leaves any quoting up to you. Prefer the vector form.}
 }

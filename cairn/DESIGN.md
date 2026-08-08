@@ -168,8 +168,15 @@ internal `run_tool()`, which is **the one place openac quotes for the shell**
 string the shell re-splits — so `run_tool()` decides by length: a **length-1**
 `arg` is the legacy raw string and is passed through untouched, while a
 **longer character vector** is one CLI token per element, each `shQuote()`d
-individually (no explicit `type`, so base picks sh- or cmd-style per platform).
-It then runs `system2(require_program(<tool>), args = …, stdout = TRUE,
+individually by the internal `quote_tokens()` under the style `quote_type()`
+names — `sh` on unix, `cmd` on Windows, base `shQuote()`'s own platform default
+made explicit so the Windows rule can be asserted from any host. `cmd` style
+quotes and escapes nothing further, leaving `%`, `^`, `&` and `!` bare; that is
+sufficient because **nothing interprets them** — MEASURED 2026-08-08 on Windows
+11 (build 26100, R 4.6.1), eight hostile filenames round-tripped through real
+ffmpeg and ffprobe intact, so `system2()` puts no `cmd.exe` between openac and
+the tool and `shQuote`'s `cmd2` escaping would guard against a shell that is not
+there (M15). It then runs `system2(require_program(<tool>), args = …, stdout = TRUE,
 stderr = TRUE)` and returns captured output as a character vector.
 `require_program()` aborts when the tool is absent, because `system2(NULL, …)`
 would otherwise run the argument string as a shell command (M06). Typed

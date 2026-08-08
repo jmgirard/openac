@@ -19,9 +19,23 @@
 #   length > 1 one CLI token per element, `shQuote()`d individually. This is the
 #              form every openac assembler emits.
 #
-# `shQuote()` is called with no `type`, which is deliberate: its default is
-# sh-style on unix and cmd-style on Windows, the same rule this needs, so naming
-# a type here would be a second copy of a decision base already makes.
+# The quoting STYLE is `sh` on unix and `cmd` on Windows -- base `shQuote()`'s
+# own platform default, now named explicitly (`quote_type()`) so the Windows
+# rule can be asserted from a macOS or Linux host rather than only from Windows.
+# Naming it changes no behavior: MEASURED 2026-08-08 on Windows 11 (build 26100,
+# R 4.6.1), `shQuote(x)` and `shQuote(x, type = "cmd")` are identical for every
+# entry of the hostile-name table.
+#
+# `cmd` style wraps in double quotes and escapes nothing else -- it leaves `%`,
+# `^`, `&` and `!` bare, all of which `cmd.exe` acts on -- and M13 recorded that
+# as an open Windows hole by analogy with the `$` bug it had just fixed. M15
+# MEASURED the analogy false: on that host all eight hostile names round-tripped
+# through real ffmpeg and ffprobe intact, `a %TEMP% token.wav` included. Nothing
+# expands them because nothing interprets them -- R's `system2()` does not put
+# `cmd.exe` in the loop on Windows, so the `cmd2` escaping style (`^%`, `^&`,
+# `^!`), which exists for command lines that DO reach the interpreter, would be
+# escaping against a shell that is not there. Hence `cmd` alone, on measurement
+# rather than on `shQuote`'s documented default.
 #
 # Resolution stays in `require_program()` rather than moving here, because that
 # guard is what stops `system2(NULL, args)` from executing `args` as a shell
@@ -34,6 +48,21 @@
 # `c()` -- so optional flags go through here rather than through `ifelse()`.
 opt_arg <- function(test, ...) {
   if (isTRUE(test)) c(...) else character()
+}
+
+# The quoting rule as a value, so a test can ask for the Windows one from any
+# host (M15, AC4). `run_tool()` is the only caller and passes the running
+# platform's; every other caller is a test naming a style deliberately.
+quote_type <- function() {
+  if (.Platform$OS.type == "windows") "cmd" else "sh"
+}
+
+# The length rule of D-017, applied under a named style. Kept separate from
+# `run_tool()` because that function cannot be called without a resolvable
+# program and a `system2()` boundary to catch, and the quoting is what needs
+# asserting character by character.
+quote_tokens <- function(arg, type) {
+  if (length(arg) > 1L) shQuote(arg, type = type) else arg
 }
 
 run_tool <- function(program, arg) {
@@ -55,6 +84,6 @@ run_tool <- function(program, arg) {
       call = rlang::caller_env()
     )
   }
-  args <- if (length(arg) > 1L) shQuote(arg) else arg
+  args <- quote_tokens(arg, type = quote_type())
   system2(require_program(program), args = args, stdout = TRUE, stderr = TRUE)
 }
