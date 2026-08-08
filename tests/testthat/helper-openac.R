@@ -129,7 +129,12 @@ local_fake_tools <- function(results = list(),
         call. = FALSE
       )
     }
-    results[[state$i]]
+    res <- results[[state$i]]
+    # A queued function stands in for a tool with a side effect: it is called
+    # with the recorded (command, args) and its value is the tool's output. The
+    # real tools write files their callers then read, and a plain value cannot
+    # express that.
+    if (is.function(res)) res(command, args) else res
   }
 
   fake_sys_which <- function(names) {

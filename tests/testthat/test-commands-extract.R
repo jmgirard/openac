@@ -186,6 +186,37 @@ test_that("os_extract() skips preparation when the input already conforms", {
   expect_match(boundary_args(state)[[5]], paste0(' -I "', infile, '"'), fixed = TRUE)
 })
 
+test_that("os_extract() uses and then discards a temp wav when wavfile is NULL", {
+  infile <- local_media(".mp4")
+
+  # The real ffmpeg writes the file os_extract_wav() then requires; the mock
+  # writes nothing, so this stand-in creates the output path it was handed.
+  written <- NULL
+  fake_ffmpeg <- function(command, args) {
+    written <<- sub('^.*"([^"]+)"$', "\\1", args)
+    file.create(written)
+    "ok"
+  }
+
+  state <- local_fake_tools(
+    results = c(
+      list("audio", c("mp3", "44100", "2")),  # os_extract's check: fails
+      list(fake_ffmpeg),                      # os_prep_audio writes the temp wav
+      conforming(),                           # os_extract_wav's check: passes
+      list("ok")                              # opensmile
+    )
+  )
+
+  os_extract(infile)
+
+  # The temp file was created by tempfile(), passed to openSMILE...
+  expect_true(startsWith(written, tempdir()))
+  expect_identical(tools::file_ext(written), "wav")
+  expect_match(boundary_args(state)[[6]], paste0(' -I "', written, '"'), fixed = TRUE)
+  # ...and unlinked once os_extract() returned.
+  expect_false(file.exists(written))
+})
+
 test_that("os_extract() prepares a non-conforming input first", {
   infile <- local_media(".mp4")
   wavfile <- file.path(withr::local_tempdir(), "prepped.wav")

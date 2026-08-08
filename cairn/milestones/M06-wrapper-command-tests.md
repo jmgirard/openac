@@ -126,9 +126,9 @@ defers it to submission time). CRAN submission → user-declared release window.
 - [x] T11 (review F7, AC3) Assert the `-version`/`-h` arguments the four
       `check_*` functions construct, so their registry entry reflects an
       assertion rather than a bare call.
-- [ ] T12 (review F8, AC3) Pin the whole `afilters = TRUE` command with
+- [x] T12 (review F8, AC3) Pin the whole `afilters = TRUE` command with
       `expect_identical`, covering `afftdn`, `compand` and `dynaudnorm`.
-- [ ] T13 (review F16, AC3) Cover `os_extract()`'s default `wavfile = NULL`
+- [x] T13 (review F16, AC3) Cover `os_extract()`'s default `wavfile = NULL`
       branch — temp file created, used, and unlinked.
 - [ ] T14 (review G1, toolchain gate) Add a `NEWS.md` development-version entry
       for the user-visible contract changes, with no milestone numbers in the
@@ -192,6 +192,17 @@ defers it to submission time). CRAN submission → user-declared release window.
 - 2026-08-07: verify slot clean after T9-T11 — `devtools::document()` rewrote
   the four passthrough `.Rd` files; `devtools::test()` reports 251 pass, 0 fail,
   0 skip.
+
+- 2026-08-07: T12 — the `afilters = TRUE` command is now pinned entire with
+  `expect_identical` against a chain constant, so `afftdn`, `compand` and
+  `dynaudnorm` are asserted rather than skipped between fragments.
+- 2026-08-07: T13 — helper extended: a queued result that is a function is
+  called with `(command, args)`, letting a test stand in for a tool that writes
+  a file its caller re-reads. `os_extract()`'s default `wavfile = NULL` branch
+  now asserts the temp wav is created under `tempdir()`, reaches openSMILE as
+  `-I`, and is gone after the call. Verified discriminating: replacing
+  `if (temp) unlink(wavfile)` with `if (FALSE)` fails that last expectation
+  alone.
 
 ## Decisions
 

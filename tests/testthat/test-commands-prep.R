@@ -22,6 +22,22 @@ os_prep_cmd <- function(infile, outfile, stream = 0) {
   )
 }
 
+# The whole filter chain aw_prep_audio(afilters = TRUE) inserts, in order.
+# Pinned entire rather than by fragment: a chain checked piecewise let
+# afftdn, compand and dynaudnorm go unasserted.
+aw_filter_chain <- paste0(
+  ' -af "',
+  'loudnorm=I=-24:LRA=7:tp=-2,',
+  'highpass=f=70,',
+  'lowpass=f=14000,',
+  'afftdn=nf=-20,',
+  'compand=attacks=0:points=-80/-80|-50/-50|-20/-5|-5/-3:soft-knee=6,',
+  'dynaudnorm=p=0.7,',
+  'areverse,',
+  'asubboost,',
+  'areverse"'
+)
+
 aw_prep_cmd <- function(infile, outfile, stream = 0, afilters = "") {
   paste0(
     '-y -i "', infile, '"',
@@ -135,13 +151,12 @@ test_that("aw_prep_audio(afilters = TRUE) inserts the filter chain", {
 
   aw_prep_audio(infile, outfile, afilters = TRUE)
 
-  args <- boundary_args(state)[[2]]
-  expect_match(args, ' -af "loudnorm=I=-24:LRA=7:tp=-2,', fixed = TRUE)
-  expect_match(args, "highpass=f=70,lowpass=f=14000,", fixed = TRUE)
-  expect_match(args, 'areverse,asubboost,areverse"', fixed = TRUE)
-  # The chain sits between the stream map and the output format flags.
-  expect_match(args, '-map 0:a:0 -af "', fixed = TRUE)
-  expect_match(args, 'areverse" -ar 16000', fixed = TRUE)
+  # The whole command, so every filter in the chain -- and its position between
+  # the stream map and the output format flags -- is asserted.
+  expect_identical(
+    boundary_args(state)[[2]],
+    aw_prep_cmd(infile, outfile, afilters = aw_filter_chain)
+  )
 })
 
 test_that("aw_prep_audio(afilters = FALSE) inserts no filter chain", {
