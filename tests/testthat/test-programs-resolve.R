@@ -109,11 +109,18 @@ test_that("check_*() return FALSE, not an error, when the tool is absent", {
 })
 
 test_that("check_*() return TRUE when the tool resolves and runs", {
-  local_fake_tools(results = list("v1", "v2", "v3", "v4"))
+  state <- local_fake_tools(results = list("v1", "v2", "v3", "v4"))
   local_fake_config()
 
   expect_true(check_ffmpeg())
   expect_true(check_ffprobe())
   expect_true(check_openface())
   expect_true(check_opensmile())
+
+  # Each check_* probes its own tool with the version/help flag that tool takes.
+  expect_identical(
+    boundary_tools(state),
+    c("ffmpeg", "ffprobe", "openface", "opensmile")
+  )
+  expect_identical(boundary_args(state), c("-version", "-version", "-h", "-h"))
 })

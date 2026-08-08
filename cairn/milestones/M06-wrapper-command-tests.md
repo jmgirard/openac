@@ -118,12 +118,12 @@ defers it to submission time). CRAN submission → user-declared release window.
 - [x] T9 (review F1, AC4) `find_program()` must use the resolved
       `Sys.which(lines[[1]])`, not the raw recorded string, so a config naming a
       bare program name returns a path instead of erroring. Test that path.
-- [ ] T10 (review H1) Decide and implement the tool-absent contract for the four
+- [x] T10 (review H1) Decide and implement the tool-absent contract for the four
       passthroughs: `system2(NULL, args)` executes `args` as a shell command, so
       `ffmpeg()` with ffmpeg absent runs the argument string. Needs a gate
       question — guard in each passthrough vs. abort in `find_program()`. Add
       tool-absent tests for all four.
-- [ ] T11 (review F7, AC3) Assert the `-version`/`-h` arguments the four
+- [x] T11 (review F7, AC3) Assert the `-version`/`-h` arguments the four
       `check_*` functions construct, so their registry entry reflects an
       assertion rather than a bare call.
 - [ ] T12 (review F8, AC3) Pin the whole `afilters = TRUE` command with
@@ -180,7 +180,36 @@ defers it to submission time). CRAN submission → user-declared release window.
   `tools::file_path_as_absolute()` — the failure the task names. Suite 240 pass,
   0 fail, 0 skip.
 
+- 2026-08-07: T10 — the four passthroughs now resolve through an internal
+  `require_program()`, which aborts when the tool is absent instead of letting
+  `system2(NULL, args)` run the argument string as a shell command; roxygen
+  `@return` updated on all four (and `opensmile`'s copy-paste "output of
+  openface" corrected). Tests assert all four error and that nothing reaches
+  the boundary. Rationale in the Decisions entry below.
+- 2026-08-07: T11 — the `check_*()` resolving test now pins the probe commands
+  as well as the return value: `-version`, `-version`, `-h`, `-h` against
+  ffmpeg, ffprobe, openface, opensmile.
+- 2026-08-07: verify slot clean after T9-T11 — `devtools::document()` rewrote
+  the four passthrough `.Rd` files; `devtools::test()` reports 251 pass, 0 fail,
+  0 skip.
+
 ## Decisions
+
+### 2026-08-07 — A missing tool aborts the low-level wrappers
+
+`find_program()` warns and returns `NULL` when a tool is absent, and
+`system2(NULL, args)` hands `args` to the shell — so `ffmpeg("-version")` with
+ffmpeg uninstalled executed `-version` as a shell command instead of failing.
+The four passthroughs now resolve through an internal `require_program()`,
+which aborts when `find_program()` returns `NULL`.
+
+Alternatives rejected: a copy of the guard inside each passthrough (four
+near-identical blocks and one message wording to keep in sync); making
+`find_program()` itself abort (AC4 requires it to warn and return `NULL`, and
+`check_*()` relies on that to answer `FALSE`).
+
+`find_program()`'s warning is deliberately kept ahead of the error, so the
+"use `set_program()`" hint survives. Pre-1.0, so no deprecation cycle (D-002).
 
 ## Review
 

@@ -14,7 +14,8 @@ os(arg)
 SMILEextract command line call.}
 }
 \value{
-A character vector containing the output of openface.
+A character vector containing the output of opensmile. Errors if
+opensmile cannot be found.
 }
 \description{
 Attempt to find and run opensmile with the specified arguments.

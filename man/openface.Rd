@@ -14,7 +14,8 @@ of(arg)
 FaceLandmarkVidMulti.exe command line call.}
 }
 \value{
-A character vector containing the output of openface.
+A character vector containing the output of openface. Errors if
+openface cannot be found.
 }
 \description{
 Attempt to find and run openface with the specified arguments.

@@ -40,6 +40,25 @@ test_that("each alias reaches the same tool as its primary name", {
   expect_identical(boundary_args(state), c("-version", "-h", "-help", "-L"))
 })
 
+test_that("each passthrough errors, and runs nothing, when its tool is absent", {
+  # system2(NULL, args) hands `args` to the shell, so an unguarded passthrough
+  # would EXECUTE its argument string when the tool is missing. The guard turns
+  # that into an error; find_program()'s warning still carries the set_program()
+  # hint.
+  state <- local_fake_tools(results = list(), resolve = character())
+  local_fake_config()
+
+  expect_warning(expect_error(ffmpeg("-version"), "Can't run"), "Failed to find")
+  expect_warning(expect_error(ffprobe("-h"), "Can't run"), "Failed to find")
+  expect_warning(expect_error(openface("-help"), "Can't run"), "Failed to find")
+  expect_warning(
+    expect_error(openac:::opensmile("-L"), "Can't run"), "Failed to find"
+  )
+
+  # Nothing reached the boundary: no shell command was run.
+  expect_length(boundary_calls(state), 0)
+})
+
 test_that("passthroughs reject a non-string argument", {
   local_fake_tools()
   expect_error(ffmpeg(1), "is_string")

@@ -58,6 +58,24 @@ find_program <- function(program) {
 }
 
 
+# require_program --------------------------------------------------------------
+
+# Resolve a program or stop. `find_program()` warns and returns NULL when a tool
+# is absent, and `system2(NULL, args)` runs `args` as a shell command -- so the
+# low-level wrappers resolve through here instead, turning a missing tool into
+# an error rather than an unintended shell invocation. The warning find_program()
+# already emitted carries the set_program() hint, so this only has to stop.
+require_program <- function(program) {
+  location <- find_program(program)
+  if (is.null(location)) {
+    cli::cli_abort(
+      "Can't run {.pkg {program}} because it could not be found."
+    )
+  }
+  location
+}
+
+
 # find_ffmpeg ------------------------------------------------------------------
 
 #' @rdname find_program

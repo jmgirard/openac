@@ -6,7 +6,8 @@
 #'
 #' @param arg (string) A string of space-separated arguments to append to the
 #'   ffprobe command line call.
-#' @return A character vector containing the output of ffprobe.
+#' @return A character vector containing the output of ffprobe. Errors if
+#'   ffprobe cannot be found.
 #' @references https://ffmpeg.org/ffprobe.html
 #' @aliases ffp
 #' @export
@@ -19,7 +20,7 @@ ffprobe <- function(arg) {
   # Validate input
   stopifnot(rlang::is_string(arg))
   # Run ffprobe
-  system2(find_ffprobe(), args = arg, stdout = TRUE, stderr = TRUE)
+  system2(require_program("ffprobe"), args = arg, stdout = TRUE, stderr = TRUE)
 }
 
 

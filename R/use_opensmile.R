@@ -6,7 +6,8 @@
 #'
 #' @param arg A string including space-separated arguments to append to the
 #'   SMILEextract command line call.
-#' @return A character vector containing the output of openface.
+#' @return A character vector containing the output of opensmile. Errors if
+#'   opensmile cannot be found.
 #' @references https://audeering.github.io/opensmile/
 #' @aliases os
 #' @export
@@ -19,7 +20,7 @@ opensmile <- function(arg) {
   # Validate input
   stopifnot(rlang::is_string(arg))
   # Run opensmile
-  system2(find_opensmile(), args = arg, stdout = TRUE, stderr = TRUE)
+  system2(require_program("opensmile"), args = arg, stdout = TRUE, stderr = TRUE)
 }
 
 
