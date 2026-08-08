@@ -102,17 +102,17 @@ guard, `boundary_argv()`, alias lock) is M09's and is untouched here. The
 
 ### Deviations from RR02
 
-BC1–BC10 are consolidated into AC1–AC5; no substance was dropped. The
-departures the criteria do not themselves show: BC4's "0 contract skips" was
-unsatisfiable — `devtools::test()` never runs `tests/testthat.R`, so BC6's own
-table routes broken recording to the `skip_partial` BC4 forbade — and the
-shadow-removal mutation and `OPENAC_FULL_SUITE=true` fail case replace it;
-BC7's third pattern alternative was measured to match nothing, so the deletion
-grep is rewritten; BC10's "pass count >= 504" floor was dropped as one
-machine's tool inventory and a gate class PROFILE forbids, its `check()` and
-five-platform clauses moving to AC6. The rest are audit trail, held by git and
-RR02. No numeric projection with a stated tolerance survives ingestion, so no
-projection-vs-outcome pair goes to the merge gate.
+BC1–BC10 are consolidated into AC1–AC5; no substance was dropped. BC4's "0
+contract skips" was unsatisfiable — `devtools::test()` never runs
+`tests/testthat.R`, so BC6's own table routes broken recording to the
+`skip_partial` BC4 forbade — replaced by the shadow-removal mutation and the
+`OPENAC_FULL_SUITE=true` fail case. BC7's third pattern alternative matched
+nothing, so the deletion grep is rewritten. BC10's "pass count >= 504" floor
+was dropped as one machine's tool inventory and a gate class PROFILE forbids,
+its `check()` and five-platform clauses moving to AC6. BC1, BC2, BC3, BC5,
+BC8 and BC9 departed only in wording the criteria themselves show; git and
+RR02 hold that audit trail. No numeric projection with a stated tolerance
+survives ingestion, so no projection-vs-outcome pair goes to the merge gate.
 
 ## Coverage
 
@@ -184,6 +184,7 @@ projection-vs-outcome pair goes to the merge gate.
 - 2026-08-08: T10 — run modes re-measured after the three fixes. Full `devtools::test()`: `[ FAIL 0 | WARN 0 | SKIP 2 | PASS 541 ]`, the only skips `test-real-tools.R:149` and `:168`. Filtered `devtools::test(filter = "helper-boundary|zzz")`: `[ FAIL 0 | WARN 0 | SKIP 1 | PASS 85 ]`, the one skip the contract, its reason naming all 13 non-run files. `testthat::test_file()` on the contract alone: `[ FAIL 0 | WARN 0 | SKIP 1 | PASS 10 ]`. Declared-full `OPENAC_FULL_SUITE=true`: `[ FAIL 0 | WARN 0 | SKIP 2 | PASS 541 ]`. Deletion grep still exits 1 with no output. `devtools::check()`: 0 errors, 0 warnings, `Status: 1 NOTE` (the standing spelling NOTE). `gh pr checks 11` after the push: pass on all five platforms.
 - 2026-08-08: T10 note for review — the single-file mode must be invoked with the package loaded (`devtools::load_all(); testthat::test_file(...)`). openac is not installed in this environment, and a bare `testthat::test_file()` makes `packageDescription("openac")` return `NA`, so the ordering test errors on `$` and three tests skip as "{openac} is not installed". Pre-existing shape, unchanged by this milestone; the recorded counts are the loaded invocation.
 - 2026-08-08: review-return fixes complete (T7–T10); status → review.
+- 2026-08-08: the one-pass compression of the Deviations block dropped the BC ids `cairn_validate`'s `binding criteria` check reads, which FAILed on BC2, BC3, BC5, BC8 and BC9; the block now names every BC in the same 11 lines and validate exits 0.
 
 ## Decisions
 
