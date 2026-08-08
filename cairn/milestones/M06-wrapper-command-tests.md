@@ -1,11 +1,11 @@
 # M06: Wrapper testing contract — system2-boundary command tests
 
-- **Status:** review
+- **Status:** in-progress
 - **Priority:** high
 - **Depends on:** —
 - **Driving RR:** —
 - **Principles touched:** GP7, IP1
-- **Branch/PR:** m06-wrapper-command-tests
+- **Branch/PR:** m06-wrapper-command-tests · https://github.com/jmgirard/openac/pull/6
 
 ## Goal
 
@@ -115,6 +115,24 @@ defers it to submission time). CRAN submission → user-declared release window.
       whose calls it counts.)
 - [x] T8 Run `document()`, `test()`, `check()`; record the NOTE baseline from
       `00check.log`; fix fallout.
+- [ ] T9 (review F1, AC4) `find_program()` must use the resolved
+      `Sys.which(lines[[1]])`, not the raw recorded string, so a config naming a
+      bare program name returns a path instead of erroring. Test that path.
+- [ ] T10 (review H1) Decide and implement the tool-absent contract for the four
+      passthroughs: `system2(NULL, args)` executes `args` as a shell command, so
+      `ffmpeg()` with ffmpeg absent runs the argument string. Needs a gate
+      question — guard in each passthrough vs. abort in `find_program()`. Add
+      tool-absent tests for all four.
+- [ ] T11 (review F7, AC3) Assert the `-version`/`-h` arguments the four
+      `check_*` functions construct, so their registry entry reflects an
+      assertion rather than a bare call.
+- [ ] T12 (review F8, AC3) Pin the whole `afilters = TRUE` command with
+      `expect_identical`, covering `afftdn`, `compand` and `dynaudnorm`.
+- [ ] T13 (review F16, AC3) Cover `os_extract()`'s default `wavfile = NULL`
+      branch — temp file created, used, and unlinked.
+- [ ] T14 (review G1, toolchain gate) Add a `NEWS.md` development-version entry
+      for the user-visible contract changes, with no milestone numbers in the
+      user-facing text.
 
 ## Work log
 
@@ -144,7 +162,71 @@ defers it to submission time). CRAN submission → user-declared release window.
 - 2026-08-07: T8 — `devtools::document()` produces no diff; `devtools::test()` reports 238 pass, 0 fail, 0 skip; `devtools::check()` reports `Status: 1 NOTE` with 0 errors and 0 warnings. **NOTE baseline**, quoted from `00check.log`: `* checking tests ... NOTE / Running 'spelling.R' / Comparing 'spelling.Rout' to 'spelling.Rout.save' ...` — the pre-existing spelling-diff NOTE listing 56 potential misspellings (domain terms like `ffmpeg`, `OpenFace`, `LLDs`). It is the only NOTE and it predates this milestone.
 - 2026-08-07: T8 — baseline established by measurement, not assumption: `check()` was run against `main` in a worktree and the spelling word lists diffed. Both sides list exactly 56 words with an empty diff in both directions, so this branch adds no NOTE and no new word. The worktree run also reported a second NOTE (`checking for hidden files and directories … .git`); that is an artifact of checking inside a git worktree, where `.git` is a regular file, and not a property of `main`.
 - 2026-08-07: T8 fallout — the first draft of `set_program()`'s `@return` wrote "openac's user config directory", which added the token `openac's` to the spelling NOTE; reworded to drop the possessive, restoring the word list to the baseline exactly.
+- 2026-08-07: review 1 returned M06 to `in-progress`. Failed: AC4 (a config file recording a bare program name still reaches `tools::file_path_as_absolute()` and errors, so `check_*()` propagates the very error class AC4 closes); AC3 (the four `check_*` members record a call but assert no command; the `afilters` chain omits `afftdn`/`compand`/`dynaudnorm`; `os_extract()`'s default `wavfile = NULL` branch is untested); AC2 (outermost-frame attribution is false for `do.call()`-dispatched frames, verified inside this suite); and the profile's consistency-gate changelog check (`NEWS.md` has no development-version entry). AC1, AC5, AC6 met; `cairn_validate` exit 0. Also found and verified: with the tool absent, `system2(NULL, args)` executes the argument string as a shell command, so this branch turned a hard error into silent shell execution. Tasks T9–T14 added; defect-return count 1.
 
 ## Decisions
 
 ## Review
+
+**2026-08-07 — review 1: RETURNED to `in-progress`.** Four criteria fail as
+written; PR #6 left as draft, not merged.
+
+Evidence per criterion (all run fresh on `m06-wrapper-command-tests`):
+
+- **AC1 — met.** `test-helper-boundary.R` passes: `system2` interception
+  verified through primary name, alias `ffm`, and internal `openac:::opensmile`;
+  queue exhaustion errors; resolution comes from the fake tree.
+- **AC2 — NOT met.** Domain computation verified (27-member closure, 7 literal
+  deferrals, 20 enforced; staleness arm and failure-naming arm both verified to
+  fire). But the clause "coverage is attributed to the outermost openac frame"
+  is false for `do.call()`-dispatched frames: `openac_stack()` drops a frame
+  whose call head is a function value, so `do.call(of_extract, …)` records
+  `openface` as owner. Demonstrated inside this suite
+  (`test-commands-extract.R` flag loop). Dormant for coverage today, but it
+  falsely marks an inner passthrough covered — the exact failure the rule exists
+  to prevent — and M07's deferred `*_dir` functions all dispatch this way.
+- **AC3 — NOT met.** Fails for three named cases: the four `check_*` members
+  record a boundary call but no test asserts their `-version`/`-h` arguments;
+  the `afilters = TRUE` chain is pinned by fragments that omit `afftdn`,
+  `compand` and `dynaudnorm`; and `os_extract()`'s default `wavfile = NULL`
+  temp-file branch is never exercised.
+- **AC4 — NOT met.** A config file recording a bare program name (which
+  `set_program()` permits, its guard also being `Sys.which() != ""`) passes the
+  resolve check but reaches `tools::file_path_as_absolute("ls")`, which throws.
+  `check_*()` propagates it, so the very error class AC4 closes is still open on
+  that path. Reproduced.
+- **AC5 — met.** `test-commands-probe.R` passes: all four stream combinations
+  via `expect_equal`, both `*_check_audio` across conforming and non-conforming
+  inputs, and `aw_check_audio`'s under-three-fields guard.
+- **AC6 — met.** `document()` no diff; `test()` 238 pass, 0 fail, 0 skip;
+  `check()` `Status: 1 NOTE`, 0 errors, 0 warnings, word list identical to
+  `main`.
+
+Consistency gate: `cairn_validate` exit 0, all checks pass. No DESIGN principle
+changed, so no impact report. Toolchain slot: `document()` no-diff clean, no
+`_pkgdown.yml`, README untouched — but the **changelog check fails**, `NEWS.md`
+has no development-version entry for this milestone's user-visible contract
+changes.
+
+Independent review: three lenses (diff [O], blame-history [S], prior-PR [S])
+plus a fresh scorer. The prior-PR lens found no prior-review evidence on the
+touched files and contributed zero findings. 18 findings scored; 5 actioned at
+≥80.
+
+Actioned (≥80): F1 (92, AC4), H1 (90), F7 (85, AC3), F8 (85, AC3),
+F16 (80, AC3) — all triaged **fix now**, carried as tasks T9–T13.
+
+Logged below 80, not actioned (13): F6 78 — `do.call` frame attribution (still
+recorded against AC2 above, since the criterion's own wording covers it);
+G1 78 — missing `NEWS.md` entry (actioned anyway as T14, since the profile's
+consistency-gate slot independently requires it); F5 72 — a helper test reads
+the real `rappdirs` config dir; F15 68 — PATH-hit test checks only `basename()`;
+F2 68 — stale-config warning names the config file rather than the recorded
+location; F12 55 — DESIGN Known-issues wart now half-stale; F3 55 — gate hard-fails
+on a filtered run instead of skipping; F11 40 — closure sees only symbolic
+`system2` references; F4 40 — gate is fail-open if the registry breaks;
+F13 35 — `withr` Suggests-only with no `skip_if_not_installed()`; F9 30 —
+`stdout`/`stderr` never recorded; F14 20 — extra config lines ignored; F10 15 —
+alias name collisions widen the domain (the intended over-approximation).
+
+Defect-return count for M06: 1.
