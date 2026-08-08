@@ -66,11 +66,15 @@ percentages remain a diagnostic, never a gate (PROFILE `test-doctrine`).
       returns something other than its real value inside scope — so a future
       call site to a third `rappdirs` dir fails the test rather than leaking.
 - [ ] AC5: `fake_system2()` fails the calling test when the `command` it
-      receives is not absolute, tested as
-      `identical(path, normalizePath(path, "/", mustWork = FALSE))` so it holds
-      for `C:\...` too. The check runs on every boundary call routed through
-      `local_fake_tools()`, not a chosen sample. A test asserts it fires for a
-      relative command.
+      receives is not absolute, decided by an explicit `is_absolute_path()`
+      matching the three absolute forms — POSIX `/x`, UNC `\\server\share`, and
+      a Windows drive `C:/x` or `C:\x`. Not
+      `identical(path, normalizePath(path, "/", mustWork = FALSE))`, which was
+      tried and is silently wrong: `normalizePath()` returns a path it cannot
+      resolve unchanged, so every relative path that does not exist compared
+      equal and passed — exactly the regression the check guards against. The
+      check runs on every boundary call routed through `local_fake_tools()`, not
+      a chosen sample. A test asserts it fires for a relative command.
 - [ ] AC6: a `boundary_argv(state)` accessor returns each call's `args` exactly
       as `system2()` received it, and `boundary_args()` is defined in terms of
       it. A test asserts `boundary_argv()` distinguishes a call made with
@@ -143,6 +147,9 @@ percentages remain a diagnostic, never a gate (PROFILE `test-doctrine`).
 - 2026-08-07: T5 found AC5's named mechanism silently wrong — `normalizePath(p, mustWork = FALSE)` returns an unresolvable path unchanged, so `identical(p, normalizePath(p))` was TRUE for every relative path that does not exist, i.e. exactly the regression it guards against. Replaced with `is_absolute_path()` matching the three absolute forms (POSIX, UNC, Windows drive); AC5's wording still to amend.
 - 2026-08-07: T5-T8 done — absolute-command check inside the recorder (no existing call site tripped it), `boundary_argv()` preserving argument boundaries, computed alias-class lock over `openac_name_of()`, and a `runs` counter separating "the harness ran" from "the harness attributed".
 - 2026-08-07: AC8 evidence. Full suite with attribution disabled and the harness still recording installs: FAIL 2, `test-zzz-command-contract.R:89` — "Expected owners recorded across 22 harness installs > 0". Same file alone under `testthat::test_file()`: SKIP 1, `test-zzz-command-contract.R:84` — "command contract needs the full test suite". Helper restored and suite re-run clean afterwards.
+- 2026-08-07: AC5 amended at the implementation gate — `is_absolute_path()` matching POSIX/UNC/Windows-drive forms replaces the planned `normalizePath()` identity test, which did not detect a non-existent relative path; the rejected mechanism is recorded in the criterion so it is not re-proposed.
+- 2026-08-07: LESSONS — retired the M06/M08 executability lesson (`test-helper-boundary.R` now fails on the mistake it warned about, D-051) and replaced it with the measured `Sys.which()` rule; added the `normalizePath()` absoluteness trap.
+- 2026-08-07: local `devtools::check()` clean — 0 errors, 0 warnings, 1 NOTE, the standing spelling NOTE that already carries its own candidate row.
 - 2026-08-07: 9 acceptance criteria exceeds the 7 tripwire deliberately — one per independent review finding plus the profile's verify slot, each separately fenceable at review; merging them would blur which finding a piece of evidence closes.
 
 ## Decisions
