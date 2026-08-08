@@ -141,6 +141,52 @@ test_that("no test file reaches past the recording shadow", {
   expect_identical(bypassing_forms(test_path(".")), character())
 })
 
+test_that("the runner still declares a full run", {
+  # The gate FAILS on an incompleteness only because `tests/testthat.R` declares
+  # the run complete. Without that declaration every incompleteness becomes a
+  # skip, and nothing anywhere notices -- which is why this is asserted rather
+  # than trusted to a comment in the runner.
+  runner <- test_path("..", "testthat.R")
+  expect_true(file.exists(runner))
+  expect_true(declaration_present(runner))
+
+  # And the belt to that braces: under `R CMD check` the declaration must
+  # actually have taken effect. Secondary on purpose -- `_R_CHECK_PACKAGE_NAME_`
+  # is an undocumented internal (measured: `R CMD check` sets it to the package
+  # name for the test process), so if a future R stops setting it this half goes
+  # quiet while the static check above carries on.
+  if (nzchar(Sys.getenv("_R_CHECK_PACKAGE_NAME_"))) {
+    expect_true(declared_full_run())
+  }
+})
+
+test_that("no test file skips before its tests run", {
+  # The recorder records a file when one of its tests RUNS, so a file whose top
+  # level skips is recorded by nothing and a declared-full run reports it as a
+  # file that never ran -- the gate's one blind spot (M10 review D20). The fix
+  # is placement, not a wider observation: a skip inside `test_that()` ends that
+  # test and leaves the file recorded, which is also where GP7 asks for it.
+  #
+  # Enforced rather than documented, for the same reason the shadow rule above
+  # is. `top_level_skips()` reports a skip call anywhere in a top-level
+  # expression except inside a `test_that()` body or an UNAPPLIED function
+  # definition -- so `if (cond) skip()`, `local({ skip() })`,
+  # `suppressWarnings(skip_on_cran())`, `(function() skip())()` and
+  # `do.call(skip, ...)` are caught, while `gate <- function() skip()` is not.
+  # Its disclosed holes all mirror that exclusion and all need a value a static
+  # scan cannot resolve: a call to a locally defined wrapper that skips, a skip
+  # inside a lambda handed to an applier, and a `do.call()` with a computed
+  # callee. D-015 records them.
+  expect_identical(
+    top_level_skips(test_path(".")), character(),
+    info = paste0(
+      "These test files skip before any test_that() runs, so the recorder ",
+      "never sees them and a full run reports them as never run. Move the ",
+      "skip inside the test_that() it guards."
+    )
+  )
+})
+
 test_that("every tool-calling function has a command test", {
   # The decision is made by CALLING the pure function -- this test carries no
   # skip or failure path of its own for completeness, so there is nowhere for a

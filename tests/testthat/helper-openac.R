@@ -46,6 +46,100 @@ expected_test_files <- function(dir) {
   sort(list.files(dir, pattern = "^test.*\\.[rR]$"))
 }
 
+# Does this expression skip, in a position that aborts the file it sits in?
+#
+# TRUE for a call to anything named `skip*` -- `skip()`, `skip_on_cran()`,
+# `skip_if_not_installed()`, qualified or bare -- occurring anywhere in the
+# expression, EXCEPT inside the two subtrees where a skip cannot abort a file:
+#
+#   test_that(...)   a skip there ends that one test, which is the whole point
+#                    of a skip and the placement GP7 asks for.
+#   function(...)    defining a skip is not performing one; the body runs only
+#                    if something calls it.
+#
+# Matching the call ANYWHERE rather than at the top-level call head is
+# deliberate: `if (cond) skip()`, `local({ skip() })` and
+# `suppressWarnings(skip_on_cran())` each abort a file exactly as a bare
+# `skip()` does, and a head-only match reports none of them. The residual hole
+# is the mirror of the `function` exclusion -- a top-level call to a locally
+# defined wrapper that itself skips -- and is disclosed rather than closed,
+# because closing it means resolving values, which a static scan cannot do.
+skip_call_present <- function(x) {
+  if (!is.call(x)) return(FALSE)
+  head <- x[[1L]]
+  head_is <- function(h, what) {
+    is.call(h) && as.character(h[[1L]])[[1L]] %in% what
+  }
+  name <- if (is.symbol(head)) {
+    as.character(head)
+  } else if (head_is(head, c("::", ":::"))) {
+    as.character(head[[3L]])
+  } else {
+    ""
+  }
+  if (name %in% c("test_that", "function")) return(FALSE)
+  # `skip` and `skip_*`, never every name merely BEGINNING "skip": a bare
+  # `^skip` prefix reports a call to `skipper()` or `skips_expected()` and tells
+  # its author to move a skip that is not there (review F4). testthat's whole
+  # skip surface -- `skip`, `skip_if`, `skip_if_not`, `skip_if_not_installed`,
+  # `skip_on_cran`, `skip_on_os`, `skip_on_ci`, ... -- matches this.
+  if (grepl("^skip($|_)", name)) return(TRUE)
+  # `do.call(skip, ...)` and `do.call("skip", ...)` hold the callee as a SYMBOL
+  # or a string, so no call to it exists in the tree and the walk below cannot
+  # see it (review F3). `language_symbols()` in `test-zzz-command-contract.R`
+  # exists for this same defeat (D-010); this is its narrow instance.
+  if (identical(name, "do.call")) {
+    what <- as.list(x)[-1L]
+    what <- if (!is.null(what[["what"]])) what[["what"]] else what[[1L]]
+    if ((is.symbol(what) || is.character(what)) &&
+        grepl("^skip($|_)", as.character(what))) {
+      return(TRUE)
+    }
+  }
+  # An immediately-invoked function expression RUNS its body right here, so the
+  # `function` exclusion above must not reach it (review F1). The exclusion is
+  # meant for a definition -- `gate <- function() skip()` describes a skip and
+  # performs none -- and the discriminator is application, which is visible:
+  # the definition sits in the CALL HEAD rather than in an argument.
+  # The parentheses an IIFE needs survive in the AST as a `(` call wrapping the
+  # definition, so the head is `(function() ...)` rather than `function() ...`
+  # -- measured, after the first cut of this branch reported neither IIFE form.
+  applied <- head
+  while (head_is(applied, "(")) applied <- applied[[2L]]
+  if (head_is(applied, "function") &&
+      any(vapply(as.list(applied)[-1L], skip_call_present, logical(1)))) {
+    return(TRUE)
+  }
+  any(vapply(as.list(x)[-1L], skip_call_present, logical(1)))
+}
+
+# The test files that skip before their tests can run.
+#
+# A file whose top level skips executes no `test_that()`, so the execution-time
+# recorder never sees it and a declared-full run reports it as a file that never
+# ran -- the coverage gate's one blind spot (M10 review D20). Rather than widen
+# what counts as "ran", M11 forbids the shape: `test-zzz-command-contract.R`
+# fails while this returns anything.
+#
+# The domain is `expected_test_files()`, not a narrower name pattern -- the same
+# set testthat itself discovers, for the reason recorded above it. A member that
+# does not parse is NOT reported: it cannot hide a top-level skip from a suite
+# that executes, because a parse error aborts the whole run first (measured in
+# `test-harness-recording.R`), and reporting it here would blame this rule for a
+# different defect.
+top_level_skips <- function(dir) {
+  files <- expected_test_files(dir)
+  hits <- vapply(files, function(f) {
+    exprs <- tryCatch(
+      parse(file.path(dir, f), keep.source = FALSE),
+      error = function(e) NULL
+    )
+    if (is.null(exprs)) return(FALSE)
+    any(vapply(as.list(exprs), skip_call_present, logical(1)))
+  }, logical(1))
+  unname(files[hits])
+}
+
 # Did the runner DECLARE this an unfiltered run of the whole suite?
 #
 # `tests/testthat.R` sets the variable and is the only thing that can honestly
@@ -54,6 +148,67 @@ expected_test_files <- function(dir) {
 # so an interactive run is undeclared and a partial one merely skips.
 declared_full_run <- function() {
   isTRUE(as.logical(Sys.getenv("OPENAC_FULL_SUITE", "false")))
+}
+
+# Does the runner file at `path` still DECLARE a full run?
+#
+# `declared_full_run()` above reads an environment variable, and exactly one
+# line in the package sets it: `Sys.setenv(OPENAC_FULL_SUITE = "true")` in
+# `tests/testthat.R`. Delete that line and every incompleteness downgrades from
+# a failure to a skip -- silently, because the suite then PASSES: the files that
+# would have been missing are missing only under conditions the declaration is
+# what makes fatal.
+#
+# Checked by parsing the runner rather than by reading the environment, because
+# an environment check can only ask "are we under R CMD check?", and every
+# answer to that is an undocumented internal that fails OPEN when it changes
+# (the failure mode D-013 rejected internals for). The file either contains the
+# declaration or it does not, in every run mode, with nothing to go stale.
+declaration_present <- function(path) {
+  exprs <- tryCatch(parse(path, keep.source = FALSE), error = function(e) NULL)
+  if (is.null(exprs)) return(FALSE)
+
+  call_name <- function(x) {
+    if (!is.call(x)) return("")
+    head <- x[[1L]]
+    if (is.symbol(head)) {
+      as.character(head)
+    } else if (is.call(head) &&
+               as.character(head[[1L]])[[1L]] %in% c("::", ":::")) {
+      as.character(head[[3L]])
+    } else {
+      ""
+    }
+  }
+
+  # Walk top level IN ORDER and keep the state the run actually starts with,
+  # rather than asking whether a declaration appears anywhere. `any()` was the
+  # first cut and it read TRUE for three runners that do not declare a full run
+  # (review F11/F12): a `Sys.setenv()` placed AFTER `test_check()`, a later
+  # `Sys.unsetenv()`, and a later re-set to "false". The last write before the
+  # run is the only one that matters, so that is what this reads.
+  declared <- FALSE
+  for (x in as.list(exprs)) {
+    name <- call_name(x)
+    if (identical(name, "test_check")) break
+    if (identical(name, "Sys.setenv")) {
+      value <- as.list(x)[-1L][["OPENAC_FULL_SUITE"]]
+      # A non-literal (`Sys.setenv(OPENAC_FULL_SUITE = flag)`) cannot be read
+      # statically; it errored out of `as.logical()` before review F14. Unknown
+      # is not declared -- fail closed and let the check say so.
+      if (!is.null(value)) {
+        declared <- (is.character(value) || is.logical(value)) &&
+          isTRUE(as.logical(value))
+      }
+    } else if (identical(name, "Sys.unsetenv")) {
+      if (any(vapply(as.list(x)[-1L],
+                     function(a) identical(as.character(a), "OPENAC_FULL_SUITE"),
+                     logical(1)))) {
+        declared <- FALSE
+      }
+    }
+  }
+  declared
 }
 
 # The skip/fail/enforce decision, as a PURE function of the six facts the
