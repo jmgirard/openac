@@ -58,12 +58,34 @@ test_that("each passthrough errors, and runs nothing, when its tool is absent", 
   expect_length(boundary_calls(state), 0)
 })
 
-test_that("passthroughs reject a non-string argument", {
+test_that("passthroughs reject an argument that is not a character vector", {
+  # `ffprobe(c("-a", "-b"))` was asserted here as an ERROR until M13; under
+  # D-017 a vector is the token form and is valid, so the multi-element case
+  # moved to the positive assertion below rather than being dropped.
   local_fake_tools()
-  expect_error(ffmpeg(1), "is_string")
-  expect_error(ffprobe(c("-a", "-b")), "is_string")
-  expect_error(openface(NULL), "is_string")
-  expect_error(openac:::opensmile(list()), "is_string")
+  expect_error(ffmpeg(1), "character vector")
+  expect_error(ffprobe(NULL), "character vector")
+  expect_error(openface(list()), "character vector")
+  expect_error(openac:::opensmile(character()), "at least one")
+})
+
+test_that("each passthrough takes the token form and quotes it per element", {
+  state <- local_fake_tools(results = list("a", "b", "c", "d"))
+
+  ffmpeg(c("-i", "a b.mp4"))
+  ffprobe(c("-show_entries", "stream=codec_type"))
+  openface(c("-f", "a b.mp4"))
+  openac:::opensmile(c("-C", "a b.conf"))
+
+  expect_identical(
+    boundary_argv(state),
+    list(
+      shQuote(c("-i", "a b.mp4")),
+      shQuote(c("-show_entries", "stream=codec_type")),
+      shQuote(c("-f", "a b.mp4")),
+      shQuote(c("-C", "a b.conf"))
+    )
+  )
 })
 
 # --- ffp_count_streams -------------------------------------------------------

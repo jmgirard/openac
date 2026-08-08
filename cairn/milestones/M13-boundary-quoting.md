@@ -81,7 +81,7 @@ direct docs commit to the default branch, not a milestone.
 - [x] T1 Add the internal boundary runner (new `R/run_tool.R`): resolve via
       `require_program()`, `shQuote()` each element when `length(arg) > 1`, else
       pass through; direct tests for the two forms and the platform `type`.
-- [ ] T2 Route the four passthroughs (`R/use_ffmpeg.R:23`, `R/use_ffprobe.R:23`,
+- [x] T2 Route the four passthroughs (`R/use_ffmpeg.R:23`, `R/use_ffprobe.R:23`,
       `R/use_openface.R:23`, `R/use_opensmile.R:23`) through it; the existing
       passthrough and alias tests in `test-commands-probe.R:13-40` must stay
       green unedited — that is the no-break check.
@@ -111,6 +111,7 @@ direct docs commit to the default branch, not a milestone.
 - 2026-08-08: plan gate chose to leave GP5's command-display surface out over shipping it with the quoting change, because M13 already spans 4 exported functions, 7 assemblers and 5 test files; falsified by the display surface turning out to require a different token representation than the one M13 lands.
 - 2026-08-08: T1 done. MEASURED before writing anything: `system2()` does not quote `args` (a bare token vector reaches the tool split on spaces), and openac's current hand-quoted `paste0('-i "', path, '"')` loses a `$` in a path — `/tmp/a $b.mp4` was delivered as `/tmp/a .mp4`, a live bug M13 closes. `shQuote()` per token is correct on both axes and its default type is already platform-appropriate.
 - 2026-08-08: T1's shell-oracle test runs the real `system2()` against a script echoing its own argv, mocking only discovery — the only test in the file that observes what the tool RECEIVES rather than what `system2()` was handed; mutation-verified (removing the quoting reds 5 assertions, the oracle among them).
+- 2026-08-08: T2 done. The no-break check held as planned: `test-commands-probe.R:13-40`'s forwarding and alias tests pass unedited. One test outside that range did have to change — `passthroughs reject a non-string argument` asserted `ffprobe(c("-a","-b"))` errors, which D-017 makes valid; its multi-element case moved to a new positive assertion rather than being dropped.
 - 2026-08-08: plan chose to arm the unquoted-whitespace invariant in the harness over asserting it per command test, because the harness already carries the sibling absolute-path invariant (helper-openac.R:605) and a per-test assertion is skipped by omission; falsified by a legitimate boundary call the invariant cannot express, requiring more opt-outs than the one test-helper-boundary.R needs.
 
 ## Decisions

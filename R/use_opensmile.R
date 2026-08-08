@@ -17,10 +17,7 @@
 #' }
 #'
 opensmile <- function(arg) {
-  # Validate input
-  stopifnot(rlang::is_string(arg))
-  # Run opensmile
-  system2(require_program("opensmile"), args = arg, stdout = TRUE, stderr = TRUE)
+  run_tool("opensmile", arg)
 }
 
 

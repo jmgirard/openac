@@ -17,10 +17,7 @@
 #' }
 #' 
 openface <- function(arg) {
-  # Validate input
-  stopifnot(rlang::is_string(arg))
-  # Run openface
-  system2(require_program("openface"), args = arg, stdout = TRUE, stderr = TRUE)
+  run_tool("openface", arg)
 }
 
 

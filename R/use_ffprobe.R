@@ -17,10 +17,7 @@
 #' }
 #' 
 ffprobe <- function(arg) {
-  # Validate input
-  stopifnot(rlang::is_string(arg))
-  # Run ffprobe
-  system2(require_program("ffprobe"), args = arg, stdout = TRUE, stderr = TRUE)
+  run_tool("ffprobe", arg)
 }
 
 

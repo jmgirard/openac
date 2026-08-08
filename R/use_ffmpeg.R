@@ -17,10 +17,7 @@
 #' }
 #' 
 ffmpeg <- function(arg) {
-  # Validate input
-  stopifnot(rlang::is_string(arg))
-  # Run ffmpeg
-  system2(require_program("ffmpeg"), args = arg, stdout = TRUE, stderr = TRUE)
+  run_tool("ffmpeg", arg)
 }
 
 
