@@ -143,7 +143,7 @@ are no projection-vs-outcome pairs to carry to the merge gate.
       full runs in `tests/testthat.R`; unit-test all five returns by name.
 - [x] T4: add the canary and gather the mutation evidence in an isolated
       worktree — never the shared tree.
-- [ ] T5: delete the retired machinery; assert parallel-off by both routes and
+- [x] T5: delete the retired machinery; assert parallel-off by both routes and
       last-execution; record the three run modes.
 - [ ] T6: `devtools::test()`, `devtools::check()`, and the five-platform CI run.
 
@@ -162,6 +162,8 @@ are no projection-vs-outcome pairs to carry to the merge gate.
 - 2026-08-08: mutation M2 (the `test_that` shadow deleted from `helper-openac.R`) — `cd <scratch>/mut2 && Rscript -e 'devtools::test()'` → `[ FAIL 2 | WARN 0 | SKIP 3 | PASS 528 ]`; same canary FAILED, contract SKIPPED, no enforce-pass.
 - 2026-08-08: mutation M2, declared full — `cd <scratch>/mut2 && OPENAC_FULL_SUITE=true Rscript -e 'devtools::test()'` → `[ FAIL 3 | WARN 0 | SKIP 2 | PASS 528 ]`; "every tool-calling function has a command test" FAILED with `decision$action` = `"fail_incomplete"`.
 - 2026-08-08: mutation M3 (`skip("MUTATION")` inserted into all 12 `test_that` bodies of `test-commands-extract.R`) — `cd <scratch>/mut3 && Rscript -e 'devtools::test()'` → `[ FAIL 1 | WARN 0 | SKIP 14 | PASS 500 ]`; "every tool-calling function has a command test" FAILED with `decision$action` = `"enforce_fail"` naming `os_extract, os_extract_wav`. Undeclared run, so the file still joined `ran` despite every test skipping — completeness held and the gate enforced.
+- 2026-08-08: T5 — deletion grep `harness_runs|harness_test_files|harness_files|registry\$(runs|files)` over `tests/testthat/` gives no output (exit 1), and `test-helper-boundary.R` carries no `harness_files()` assertion; paired with a behavioral assertion that `local_fake_tools()` and `local_fake_downloads()` leave `ran` unchanged, so a rename cannot smuggle install-site recording back. Added a standing assertion that the contract file sorts last and that `Config/testthat/start_first`, `Config/testthat/parallel` and `TESTTHAT_PARALLEL` are all off.
+- 2026-08-08: T5 run modes — full `devtools::test()`: `[ FAIL 0 | WARN 0 | SKIP 2 | PASS 537 ]`, contract enforcing, the only skips `test-real-tools.R:149` and `:168` (the binary gates), so the nested fixture runs did not leak. Filtered `devtools::test(filter = "helper-boundary|zzz")`: `[ FAIL 0 | WARN 0 | SKIP 1 | PASS 85 ]`, the single skip being the contract, its reason naming all 13 non-run files. `testthat::test_file()` on the contract alone: `[ FAIL 0 | WARN 0 | SKIP 1 | PASS 10 ]`, comparison skipped, canary passed. Declared-full `OPENAC_FULL_SUITE=true devtools::test()`: `[ FAIL 0 | WARN 0 | SKIP 2 | PASS 537 ]`, 0 contract skips, decision `enforce_pass`.
 
 ## Decisions
 

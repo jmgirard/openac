@@ -116,3 +116,16 @@ test_that("a file whose only test skips still joins the recorded set", {
   # And the nested run left the real registry alone.
   expect_identical(openac_registry$ran, before)
 })
+
+test_that("installing the tool fakes records nothing about which files ran", {
+  # The recording this replaces happened at the harness INSTALL site: a file was
+  # counted because it called `local_fake_tools()`, which made the expected set
+  # a proxy for a coding habit rather than a fact about execution (D-013). The
+  # names it used are gone, but a rename would smuggle the same shape back in --
+  # so this asserts the BEHAVIOR: installing the fakes must not touch `ran`.
+  before <- openac_registry$ran
+  local_fake_tools()
+  expect_identical(openac_registry$ran, before)
+  local_fake_downloads()
+  expect_identical(openac_registry$ran, before)
+})

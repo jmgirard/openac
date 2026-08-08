@@ -111,6 +111,24 @@ bypassing_forms <- function(dir) {
   files[hits]
 }
 
+test_that("the suite runs this file last, serially, in one process", {
+  # Three ways the gate could be handed an incomplete `ran` through no fault of
+  # the recorder, each asserted rather than assumed.
+  expected <- expected_test_files(test_path("."))
+  # Sorting last is what makes every other file's record already present.
+  expect_identical(expected[[length(expected)]], "test-zzz-command-contract.R")
+  # ...but sorting last is not EXECUTING last: testthat honours start_first
+  # independently, and a file promoted there would run before the ones this
+  # counts.
+  expect_null(packageDescription("openac")$"Config/testthat/start_first")
+  # Parallel testthat gives each worker its own registry, so no worker ever sees
+  # the whole suite. Asserted by BOTH routes that can turn it on, so a future
+  # maintainer adding either gets a failure rather than a silently vacuous gate
+  # (D-013).
+  expect_null(packageDescription("openac")$"Config/testthat/parallel")
+  expect_false(isTRUE(as.logical(Sys.getenv("TESTTHAT_PARALLEL", "false"))))
+})
+
 test_that("no test file reaches past the recording shadow", {
   # `test_that()` is shadowed from the helper, so a qualified call, `describe()`
   # or `it()` runs the test without recording its file -- which would make the
