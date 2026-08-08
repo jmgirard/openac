@@ -8,7 +8,7 @@ _Released 0.1.0 (GitHub) 2026-07-11._
 
 | ID | Title | Status | Depends on | Priority | File/Archive |
 |---|---|---|---|---|---|
-| M08 | GitHub Actions CI — R CMD check across platforms | planned | — | high | milestones/M08-github-actions-ci.md |
+| M08 | GitHub Actions CI — R CMD check across platforms | in-progress | — | high | milestones/M08-github-actions-ci.md |
 | M06 | Wrapper testing contract — system2-boundary command tests | done | — | high | milestones/archive/M06-wrapper-command-tests.md |
 | M07 | Wrapper testing contract — remainder and gated real invocations | planned | M06 | normal | milestones/M07-wrapper-tests-remainder.md |
 | M02 | OpenFace tidy reader (`of_read`) | done | M01 | normal | milestones/archive/M02-openface-reader.md |

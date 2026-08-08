@@ -1,12 +1,12 @@
 # M08: GitHub Actions CI — R CMD check across platforms
 
-- **Status:** planned
+- **Status:** in-progress
 - **Priority:** high
 - **Depends on:** —
 - **Driving RR:** —
 - **Principles touched:** GP3, GP7
 
-- **Branch/PR:** —
+- **Branch/PR:** `m08-github-actions-ci`
 
 ## Goal
 
@@ -74,14 +74,15 @@ Platform breakage needing design work → its own follow-on milestone, per AC2.
 
 ## Tasks
 
-- [ ] T1 Run `usethis::use_github_action("check-standard")`; confirm the
-      `^\.github$` entry landed in `.Rbuildignore` and add it if not.
-- [ ] T2 Configure the workflow to skip `Remotes:`-backed Suggests: request
+- [x] T1 Run `usethis::use_github_action("check-standard")`; confirm the
+      `^\.github$` entry landed in `.Rbuildignore` and add it if not. Also
+      re-knit `README.Rmd` — usethis adds a badge (discovered T1).
+- [x] T2 Configure the workflow to skip `Remotes:`-backed Suggests: request
       hard dependencies plus `rcmdcheck`, `testthat`, `withr`, `knitr`,
       `rmarkdown`, `spelling` as extras, and set `_R_CHECK_FORCE_SUGGESTS_:
       false` on the check step. Verify the `on:` block and the effective
       `error-on` per AC1.
-- [ ] T3 Run `document()`, `test()`, `check()` locally on the branch; record
+- [x] T3 Run `document()`, `test()`, `check()` locally on the branch; record
       the local NOTE set and confirm no `.github` top-level NOTE.
 - [ ] T4 Push the branch, open the PR, and watch the first full run with
       `gh pr checks <PR> --watch`; record the run URL and per-job outcome.
@@ -99,6 +100,12 @@ Platform breakage needing design work → its own follow-on milestone, per AC2.
 - 2026-08-07: plan gate chose skipping `audio.whisper` on CI over installing it on every job (and over installing it on one Linux job) because nothing in the check surface reaches it — no test loads it, every `@examples` block is `\dontrun{}`, both vignettes set `eval = FALSE`, and `man/` carries no `\link[audio.whisper]{}` — while installing it compiles whisper.cpp from an unpinned GitHub source on every runner; falsified by a check failure that only appears when the package is present.
 - 2026-08-07: plan gate chose deferring the `test-coverage` workflow over shipping it now or shipping it non-blocking, because Codecov requires a repository secret only the maintainer can add and an unauthenticated job goes red under a rule that blocks every later merge; falsified by the token existing before this milestone's PR is opened.
 - 2026-08-07: plan gate chose bounded fallout repair over fixing every platform here or merging red under a waiver, because macOS and Linux have never been exercised and the repair size is unknown at plan time; falsified by the first full run coming back green or with only mechanical failures.
+
+- 2026-08-07: T1 — `use_github_action("check-standard")` wrote `.github/workflows/R-CMD-check.yaml`, added `^\.github$` to `.Rbuildignore`, and added an R-CMD-check badge to `README.Rmd`; re-knitted with `build_readme()`, a sub-task the plan did not anticipate (minor amendment, T1 wording extended).
+- 2026-08-07: T2 — pinned `dependencies: '"hard"'` plus named test-only extras and set `_R_CHECK_FORCE_SUGGESTS_: false` at job level; added a "Confirm audio.whisper is absent" step that fails the job on `requireNamespace()` succeeding and prints the installed-package listing AC4 cites.
+- 2026-08-07: T2 — read `r-lib/actions/check-r-package@v2`'s `action.yaml`: `error-on` defaults to `'"warning"'` (AC1 satisfied by the default, no explicit line written), and the action already sets `_R_CHECK_FORCE_SUGGESTS_=false` when unset — the explicit job-level setting is redundant with that behavior and kept to make the intent legible rather than implicit.
+- 2026-08-07: T3 — on the branch: `document()` no diff, `test()` 252 pass / 0 fail, `check()` 0 errors 0 warnings 1 NOTE. `checking top-level files ... OK` confirms no `.github` NOTE (AC3). The single NOTE is `checking tests` — the pre-existing `spelling.R` output diff, not introduced here.
+- 2026-08-07: T3 — the README badge added one new spelling hit (`CMD`, `README.md:8`), found by grepping the captured check output rather than by eye per M06's lesson; added `CMD` to `inst/WORDLIST`.
 
 ## Decisions
 
