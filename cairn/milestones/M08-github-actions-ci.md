@@ -84,7 +84,7 @@ Platform breakage needing design work → its own follow-on milestone, per AC2.
       `error-on` per AC1.
 - [x] T3 Run `document()`, `test()`, `check()` locally on the branch; record
       the local NOTE set and confirm no `.github` top-level NOTE.
-- [ ] T4 Push the branch, open the PR, and watch the first full run with
+- [x] T4 Push the branch, open the PR, and watch the first full run with
       `gh pr checks <PR> --watch`; record the run URL and per-job outcome.
 - [ ] T5 Triage failures. Fix what is solvable inside this milestone; for
       anything needing design work, drop that matrix entry, add a ROADMAP
@@ -106,6 +106,11 @@ Platform breakage needing design work → its own follow-on milestone, per AC2.
 - 2026-08-07: T2 — read `r-lib/actions/check-r-package@v2`'s `action.yaml`: `error-on` defaults to `'"warning"'` (AC1 satisfied by the default, no explicit line written), and the action already sets `_R_CHECK_FORCE_SUGGESTS_=false` when unset — the explicit job-level setting is redundant with that behavior and kept to make the intent legible rather than implicit.
 - 2026-08-07: T3 — on the branch: `document()` no diff, `test()` 252 pass / 0 fail, `check()` 0 errors 0 warnings 1 NOTE. `checking top-level files ... OK` confirms no `.github` NOTE (AC3). The single NOTE is `checking tests` — the pre-existing `spelling.R` output diff, not introduced here.
 - 2026-08-07: T3 — the README badge added one new spelling hit (`CMD`, `README.md:8`), found by grepping the captured check output rather than by eye per M06's lesson; added `CMD` to `inst/WORDLIST`.
+
+- 2026-08-07: T4 — PR #7, run 31232602357. macOS release, Ubuntu devel/release/oldrel-1 all pass; windows-latest (release) fails with `Status: 1 ERROR`, `[ FAIL 2 | WARN 1 | SKIP 0 | PASS 250 ]`. The reverse of DESIGN's Windows-biased-testing expectation: it is Windows that breaks, and the two Ubuntu/macOS-only platforms are clean.
+- 2026-08-07: T5 — both Windows failures are one harness defect, not package code. `fake_sys_which` gated its fallback on `file.access(n, 1L) == 0L`; Windows returns -1 there for the extensionless `Sys.chmod("0755")` fixture binaries, so `find_program()` returned NULL (test-programs-resolve.R:35) and `set_program()`'s `stopifnot(Sys.which(location) != "")` aborted at programs_set.R:15 (test-programs-resolve.R:60). Failure identity confirmed from the job log's named assertions and backtraces, not from the bare red job.
+- 2026-08-07: T5 — extracted `fake_is_executable()` in `helper-openac.R`, degrading executability to existence on Windows and keeping `file.access` on Unix. Verified no test depends on an existing-but-non-executable file failing to resolve — the stale-config test uses a nonexistent path, so it still fails `file.exists()`. Local `test()` after the fix: 252 pass, 0 fail.
+- 2026-08-07: corrected the M06 `Sys.which()` lesson in `LESSONS.md` in place and marked it `(M06, corrected M08)` — it was true on Unix and silently wrong on Windows, which is what cost this milestone a CI round. AC5's `R/` domain stays empty: the defect was in `tests/`, and no package code changed.
 
 ## Decisions
 

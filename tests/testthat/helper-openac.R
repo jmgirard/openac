@@ -94,6 +94,22 @@ openac_stack <- function() {
 #
 # `resolve` names the programs that appear installed; anything else resolves to
 # "" so the not-found paths of `find_program()` are reachable.
+# Would a real `Sys.which()` resolve this path? It reports "" for a file that
+# exists but is not executable, which on Unix is `file.access(mode = 1)`.
+# Windows has no execute bit: executability there comes from the extension
+# (.exe/.bat/.cmd), and `file.access(mode = 1)` is documented as not really
+# meaningful, returning -1 for an extensionless file whatever `Sys.chmod()`
+# did. So the fixture binaries this harness creates -- extensionless, chmod
+# 0755 -- resolve on Unix and never on Windows unless executability degrades
+# to existence there (M08: two CI failures in test-programs-resolve.R).
+fake_is_executable <- function(path) {
+  if (.Platform$OS.type == "windows") {
+    file.exists(path)
+  } else {
+    file.access(path, 1L) == 0L
+  }
+}
+
 local_fake_tools <- function(results = list(),
                              resolve = fake_programs(),
                              .env = parent.frame()) {
@@ -164,7 +180,7 @@ local_fake_tools <- function(results = list(),
       function(n) {
         if (n %in% resolve) {
           file.path(bindir, n)
-        } else if (nzchar(n) && file.exists(n) && file.access(n, 1L) == 0L) {
+        } else if (nzchar(n) && file.exists(n) && fake_is_executable(n)) {
           n
         } else {
           ""
