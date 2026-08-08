@@ -165,7 +165,10 @@ aw_prep_audio <- function(
 #'     render using any available handler.
 #'   - `"off"`: Suppresses progress signals via `progressr::without_progress()`.
 #' @inheritDotParams aw_prep_audio stream overwrite afilters
-#' @return `NULL`
+#' @return (Invisibly) a data frame with one row per input file, giving the
+#'   `infile` and `outfile` it was called with, whether it `success`ed, and the
+#'   `error` message if it did not. A file that fails is skipped with a warning
+#'   rather than aborting the batch.
 #' @export
 #'
 aw_prep_audio_dir <- function(
@@ -182,49 +185,20 @@ aw_prep_audio_dir <- function(
   stopifnot(rlang::is_string(outdir))
   stopifnot(rlang::is_bool(recursive))
   progress <- match.arg(progress)
-  # Drop leading extension dot if present
-  inext <- gsub("^\\.", "", inext)
-  # Find input filenames
-  infiles <- list.files(
-    path = indir,
-    pattern = paste0("\\.", inext, "$"),
-    full.names = TRUE,
-    recursive = recursive,
-    ignore.case = TRUE
+  # Find input filenames and derive matching output paths
+  infiles <- dir_inputs(indir, inext, recursive)
+  df <- data.frame(
+    infile = as.character(fs::path_abs(infiles)),
+    outfile = dir_outputs(infiles, indir, outdir, "wav"),
+    stringsAsFactors = FALSE
   )
-  if (length(infiles) == 0L) {
-    return(invisible(character()))
-  }
-  # Construct output filenames
-  indir_abs   <- fs::path_abs(indir)
-  infiles_abs <- fs::path_abs(infiles)
-  outdir_abs  <- fs::path_abs(outdir)
-  rel <- fs::path_rel(infiles_abs, start = indir_abs)
-  if (any(startsWith(rel, ".."))) {
-    cli::cli_abort("All input files must be located under 'indir'.")
-  }
-  outfiles <- fs::path(outdir_abs, rel)
-  outfiles <- fs::path_ext_set(outfiles, "wav")
-  fs::dir_create(fs::path_dir(outfiles))
-  # Iterate os_prep_audio() over infiles
+  # Iterate aw_prep_audio() over infiles, surviving per-file failures
   run <- function() {
-    p <- progressr::progressor(steps = length(infiles_abs))
-    furrr::future_pwalk(
-      .l = list(infile = infiles_abs, outfile = outfiles),
-      .f = function(infile, outfile) {
-        aw_prep_audio(infile, outfile, ...)
-        p(message = basename(infile))
-      }
-    )
+    dir_walk(df, function(infile, outfile) {
+      aw_prep_audio(infile, outfile, ...)
+    })
   }
-  if (progress == "on") {
-    progressr::with_progress(run())
-  } else if (progress == "off") {
-    progressr::without_progress(run())
-  } else {
-    run()
-  }
-  invisible(outfiles)
+  invisible(with_progress_mode(run, progress))
 }
 
 
@@ -418,7 +392,10 @@ aw_transcribe_wav <- function(
 #'     render using any available handler.
 #'   - `"off"`: Suppresses progress signals via `progressr::without_progress()`.
 #' @inheritDotParams aw_transcribe model language audio_args whisper_args
-#' @return (Invisibly) the character vector of input files processed.
+#' @return (Invisibly) a data frame with one row per input file, giving the
+#'   paths it was called with, whether it `success`ed, and the `error` message
+#'   if it did not. A file that fails is skipped with a warning rather than
+#'   aborting the batch.
 #' @export
 #'
 aw_transcribe_dir <- function(
@@ -441,71 +418,32 @@ aw_transcribe_dir <- function(
   progress <- match.arg(progress)
   extra_args <- list(...)
   # Find input filepaths
-  inext <- sub("^\\.", "", inext)
-  infiles <- list.files(
-    path = indir,
-    pattern = paste0("\\.", inext, "$"),
-    full.names = TRUE,
-    recursive = recursive,
-    ignore.case = TRUE
-  )
-  if (length(infiles) == 0L) return(invisible(character()))
-  # Normalize paths
-  indir_abs <- fs::path_abs(indir)
-  infiles_abs <- fs::path_abs(infiles)
-  rel <- fs::path_rel(infiles_abs, start = indir_abs)
-  if (any(startsWith(rel, ".."))) {
-    stop("All input files must be located under 'indir'.")
-  }
+  infiles <- dir_inputs(indir, inext, recursive)
   # Build iteration data frame
-  df <- data.frame(infile = infiles_abs, stringsAsFactors = FALSE)
-  # WAV outputs
+  df <- data.frame(
+    infile = as.character(fs::path_abs(infiles)),
+    stringsAsFactors = FALSE
+  )
   if (!is.null(wavdir)) {
-    wavdir_abs <- fs::path_abs(wavdir)
-    wavfiles <- fs::path(wavdir_abs, rel)
-    wavfiles <- fs::path_ext_set(wavfiles, "wav")
-    fs::dir_create(fs::path_dir(wavfiles))
-    df$wavfile <- wavfiles
+    df$wavfile <- dir_outputs(infiles, indir, wavdir, "wav")
   }
-  # RDS outputs
   if (!is.null(rdsdir)) {
-    rdsdir_abs <- fs::path_abs(rdsdir)
-    rdsfiles <- fs::path(rdsdir_abs, rel)
-    rdsfiles <- fs::path_ext_set(rdsfiles, "rds")
-    fs::dir_create(fs::path_dir(rdsfiles))
-    df$rdsfile <- rdsfiles
+    df$rdsfile <- dir_outputs(infiles, indir, rdsdir, "rds")
   }
-  # CSV outputs
   if (!is.null(csvdir)) {
-    csvdir_abs <- fs::path_abs(csvdir)
-    csvfiles <- fs::path(csvdir_abs, rel)
-    csvfiles <- fs::path_ext_set(csvfiles, "csv")
-    fs::dir_create(fs::path_dir(csvfiles))
-    df$csvfile <- csvfiles
+    df$csvfile <- dir_outputs(infiles, indir, csvdir, "csv")
   }
-  # Work runner
+  # Work runner. Sequential by design (D-006): whisper.cpp (via audio.whisper)
+  # is already internally multi-threaded, so parallelizing across files would
+  # oversubscribe the CPU / thrash a single GPU -- hence parallel = FALSE.
   run <- function() {
-    p <- progressr::progressor(steps = nrow(df))
-    # Sequential by design (D-006): whisper.cpp (via audio.whisper) is already
-    # internally multi-threaded, so parallelizing across files would
-    # oversubscribe the CPU / thrash a single GPU. purrr::pwalk, not
-    # furrr::future_pwalk, encodes that intent.
-    purrr::pwalk(
-      .l = df,
-      .f = function(...) {
-        do.call(what = aw_transcribe, args = c(list(...), extra_args))
-        p(message = basename(list(...)$infile))
-      }
+    dir_walk(
+      df,
+      function(...) do.call(what = aw_transcribe, args = c(list(...), extra_args)),
+      parallel = FALSE
     )
   }
-  if (progress == "on") {
-    progressr::with_progress(run())
-  } else if (progress == "off") {
-    progressr::without_progress(run())
-  } else {
-    run()
-  }
-  invisible(infiles_abs)
+  invisible(with_progress_mode(run, progress))
 }
 
 

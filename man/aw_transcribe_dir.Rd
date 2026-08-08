@@ -59,7 +59,10 @@ all languages the model can handle: see
   }}
 }
 \value{
-(Invisibly) the character vector of input files processed.
+(Invisibly) a data frame with one row per input file, giving the
+paths it was called with, whether it \code{success}ed, and the \code{error} message
+if it did not. A file that fails is skipped with a warning rather than
+aborting the batch.
 }
 \description{
 Find all files in a specified directory with a specified extension and then

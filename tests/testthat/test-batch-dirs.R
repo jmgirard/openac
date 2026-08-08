@@ -1,0 +1,239 @@
+# AC4 -- the `*_dir()` batch wrappers: which files they enumerate, where they
+# derive outputs to, and what they do when one file of several fails.
+#
+# The enumeration and derivation tests are regression tests: before M07 the
+# wrappers matched `paste0(inext, "$")` and derived outputs with
+# `gsub(indir, outdir, .)`, so each case below produced a wrong path or a wrong
+# match. See `dir_inputs()`/`dir_outputs()` in R/utils.R.
+
+# An input tree holding every case extension matching gets wrong:
+#   clip.mp4             the ordinary one
+#   clip.mp4.backup.mp4  the extension occurring twice in one name
+#   notes.notmp4         a name merely *ending* in those letters
+#   mp4/nested.mp4       a DIRECTORY named like the extension
+local_input_tree <- function(.env = parent.frame()) {
+  dir <- withr::local_tempdir(.local_envir = .env)
+  dir.create(file.path(dir, "mp4"))
+  files <- c("clip.mp4", "clip.mp4.backup.mp4", "notes.notmp4", "mp4/nested.mp4")
+  for (f in files) file.create(file.path(dir, f))
+  dir
+}
+
+# The top-level `.mp4` inputs, sorted as list.files() returns them.
+top_level_mp4 <- function(dir) {
+  sort(file.path(dir, c("clip.mp4", "clip.mp4.backup.mp4")))
+}
+
+# --- enumeration -------------------------------------------------------------
+
+test_that("extension matching is anchored on the dot and the end of the name", {
+  indir <- local_input_tree()
+
+  expect_identical(
+    sort(openac:::dir_inputs(indir, "mp4")),
+    top_level_mp4(indir)
+  )
+  # `notes.notmp4` ends in "mp4" but its extension is not mp4.
+  expect_false(any(grepl("notmp4", openac:::dir_inputs(indir, "mp4"))))
+  # A leading dot on `inext` is accepted and means the same thing.
+  expect_identical(
+    sort(openac:::dir_inputs(indir, ".mp4")),
+    top_level_mp4(indir)
+  )
+})
+
+test_that("recursive = TRUE reaches subdirectories and FALSE does not", {
+  indir <- local_input_tree()
+
+  flat <- openac:::dir_inputs(indir, "mp4", recursive = FALSE)
+  deep <- openac:::dir_inputs(indir, "mp4", recursive = TRUE)
+
+  expect_length(flat, 2)
+  expect_length(deep, 3)
+  # The directory named `mp4` contributes a file, never itself: list.files()
+  # matches the pattern against names, so `<indir>/mp4` is not an input.
+  expect_true(file.path(indir, "mp4", "nested.mp4") %in% deep)
+  expect_false(file.path(indir, "mp4") %in% deep)
+})
+
+test_that("an extension carrying regex metacharacters is matched literally", {
+  dir <- withr::local_tempdir()
+  file.create(file.path(dir, c("a.c++", "axcyy")))
+
+  expect_identical(
+    openac:::dir_inputs(dir, "c++"),
+    file.path(dir, "a.c++")
+  )
+})
+
+# --- output-path derivation --------------------------------------------------
+
+test_that("output paths mirror the input tree without treating indir as a regex", {
+  root <- withr::local_tempdir()
+  # Every character the old gsub(indir, outdir, .) would have read as a regex.
+  indir <- file.path(root, "study(1)+raw.data")
+  outdir <- file.path(root, "out")
+  dir.create(file.path(indir, "sub"), recursive = TRUE)
+  file.create(file.path(indir, c("a.mp4", "b.mp4.backup.mp4")))
+  file.create(file.path(indir, "sub", "c.mp4"))
+
+  infiles <- openac:::dir_inputs(indir, "mp4", recursive = TRUE)
+  outfiles <- openac:::dir_outputs(infiles, indir, outdir, "wav")
+
+  expect_identical(
+    sort(basename(outfiles)),
+    c("a.wav", "b.mp4.backup.wav", "c.wav")
+  )
+  # Only the trailing extension changes: the doubled `.mp4` inside the stem
+  # survives, where the old unanchored gsub rewrote every occurrence.
+  expect_true(any(endsWith(outfiles, file.path("out", "b.mp4.backup.wav"))))
+  # The subdirectory is mirrored under outdir, and every path lands there.
+  expect_true(any(endsWith(outfiles, file.path("out", "sub", "c.wav"))))
+  expect_true(all(startsWith(outfiles, as.character(fs::path_abs(outdir)))))
+  # Nothing was derived back into the input tree.
+  expect_false(any(grepl("study(1)+raw.data", outfiles, fixed = TRUE)))
+})
+
+test_that("an input outside indir is refused rather than derived wrongly", {
+  root <- withr::local_tempdir()
+  indir <- file.path(root, "in")
+  dir.create(indir)
+  stray <- file.path(root, "stray.mp4")
+  file.create(stray)
+
+  expect_error(
+    openac:::dir_outputs(stray, indir, file.path(root, "out"), "wav"),
+    "under"
+  )
+})
+
+# --- the wrappers end to end -------------------------------------------------
+
+test_that("of_extract_dir() runs one openface call per matched file", {
+  indir <- local_input_tree()
+  outdir <- file.path(withr::local_tempdir(), "faces")
+  state <- local_fake_tools(results = list("ok", "ok"))
+
+  result <- of_extract_dir(indir, "mp4", outdir)
+
+  expect_identical(boundary_tools(state), c("openface", "openface"))
+  # Two calls, not three: `notes.notmp4` is not an input.
+  expect_identical(nrow(result), 2L)
+  expect_true(all(result$success))
+  expect_identical(
+    sort(basename(result$outfile)),
+    c("clip.csv", "clip.mp4.backup.csv")
+  )
+  # Each command names the input and its derived output.
+  expect_true(all(file.exists(dirname(result$outfile))))
+})
+
+test_that("os_prep_audio_dir() derives .wav outputs under outdir", {
+  indir <- local_input_tree()
+  outdir <- file.path(withr::local_tempdir(), "wavs")
+  local_fake_tools(results = list("ok", "ok"))
+
+  result <- os_prep_audio_dir(indir, "mp4", outdir)
+
+  expect_identical(
+    sort(basename(result$outfile)),
+    c("clip.mp4.backup.wav", "clip.wav")
+  )
+  expect_true(all(startsWith(result$outfile, as.character(fs::path_abs(outdir)))))
+})
+
+test_that("aw_prep_audio_dir() mirrors subdirectories under outdir", {
+  indir <- local_input_tree()
+  outdir <- file.path(withr::local_tempdir(), "wavs")
+  # aw_prep_audio counts streams before converting: two calls per file.
+  local_fake_tools(results = rep(list("audio", "ok"), 3))
+
+  result <- aw_prep_audio_dir(indir, "mp4", outdir, recursive = TRUE)
+
+  expect_identical(nrow(result), 3L)
+  expect_true(all(result$success))
+  expect_true(any(endsWith(result$outfile, file.path("wavs", "mp4", "nested.wav"))))
+})
+
+test_that("os_extract_dir() derives a path per requested output kind", {
+  indir <- local_input_tree()
+  root <- withr::local_tempdir()
+  aggdir <- file.path(root, "agg")
+  llddir <- file.path(root, "lld")
+  # os_extract on a conforming input: two os_check_audio rounds then openSMILE.
+  conforming <- list("audio", c("pcm_s16le", "44100", "1"))
+  writer <- function(command, args) {
+    for (path in regmatches(args, gregexpr('(?<=csvoutput ")[^"]+', args, perl = TRUE))[[1]]) {
+      write_fake_os_output(path)
+    }
+    "ok"
+  }
+  local_fake_tools(
+    results = rep(c(conforming, conforming, list(writer)), 2)
+  )
+
+  result <- os_extract_dir(indir, "mp4", aggdir = aggdir, llddir = llddir)
+
+  expect_identical(nrow(result), 2L)
+  expect_true(all(result$success))
+  expect_identical(sort(basename(result$aggfile)), c("clip.csv", "clip.mp4.backup.csv"))
+  expect_identical(sort(basename(result$lldfile)), c("clip.csv", "clip.mp4.backup.csv"))
+  expect_true(all(startsWith(result$aggfile, as.character(fs::path_abs(aggdir)))))
+  expect_true(all(startsWith(result$lldfile, as.character(fs::path_abs(llddir)))))
+})
+
+test_that("a directory with no matching files yields an empty result", {
+  indir <- local_input_tree()
+  local_fake_tools(results = list())
+
+  result <- of_extract_dir(indir, "avi", file.path(withr::local_tempdir(), "out"))
+
+  expect_identical(nrow(result), 0L)
+  expect_identical(names(result), c("infile", "outfile", "success", "error"))
+})
+
+# --- GP6: skip and report ----------------------------------------------------
+
+test_that("of_extract_dir() survives one failing file and reports it", {
+  indir <- local_input_tree()
+  outdir <- file.path(withr::local_tempdir(), "faces")
+  # list.files() returns sorted names, so `clip.mp4` runs before
+  # `clip.mp4.backup.mp4`; the first call is the one made to fail.
+  boom <- function(command, args) stop("openface exploded")
+  state <- local_fake_tools(results = list(boom, "ok"))
+
+  expect_warning(
+    result <- of_extract_dir(indir, "mp4", outdir),
+    "openface exploded"
+  )
+
+  # The batch ran to the end: the second file was still attempted.
+  expect_identical(boundary_tools(state), c("openface", "openface"))
+  expect_identical(result$success, c(FALSE, TRUE))
+  expect_match(result$error[[1]], "openface exploded")
+  expect_true(is.na(result$error[[2]]))
+  # The report names the file, so a caller can re-run exactly the failures.
+  expect_identical(basename(result$infile[!result$success]), "clip.mp4")
+})
+
+test_that("the failure warning names the file that was skipped", {
+  indir <- local_input_tree()
+  outdir <- file.path(withr::local_tempdir(), "wavs")
+  boom <- function(command, args) stop("ffmpeg exploded")
+  local_fake_tools(results = list(boom, "ok"))
+
+  expect_warning(os_prep_audio_dir(indir, "mp4", outdir), "clip\\.mp4")
+})
+
+test_that("every file failing still returns a full report rather than erroring", {
+  indir <- local_input_tree()
+  outdir <- file.path(withr::local_tempdir(), "faces")
+  boom <- function(command, args) stop("openface exploded")
+  local_fake_tools(results = list(boom, boom))
+
+  suppressWarnings(result <- of_extract_dir(indir, "mp4", outdir))
+
+  expect_identical(nrow(result), 2L)
+  expect_false(any(result$success))
+  expect_false(any(is.na(result$error)))
+})

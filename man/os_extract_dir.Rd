@@ -47,7 +47,10 @@ be skipped otherwise. Defaults to TRUE.}
   }}
 }
 \value{
-\code{NULL}
+(Invisibly) a data frame with one row per input file, giving the
+paths it was called with, whether it \code{success}ed, and the \code{error} message
+if it did not. A file that fails is skipped with a warning rather than
+aborting the batch.
 }
 \description{
 Find all .wav files in a specified directory and then extract opensmile

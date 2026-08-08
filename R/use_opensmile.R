@@ -205,7 +205,10 @@ os_prep_audio <- function(infile, outfile, stream = 0, overwrite = TRUE) {
 #' @param recursive (logical, default=FALSE) Should files in subdirectories
 #'  within `indir` be included?
 #' @inheritDotParams os_prep_audio stream overwrite
-#' @return `NULL`
+#' @return (Invisibly) a data frame with one row per input file, giving the
+#'   `infile` and `outfile` it was called with, whether it `success`ed, and the
+#'   `error` message if it did not. A file that fails is skipped with a warning
+#'   rather than aborting the batch.
 #' @export
 #'
 os_prep_audio_dir <- function(
@@ -220,29 +223,17 @@ os_prep_audio_dir <- function(
   stopifnot(rlang::is_string(inext))
   stopifnot(rlang::is_string(outdir))
   stopifnot(rlang::is_bool(recursive))
-  inext <- gsub("\\.", "", inext)
-  # Find input filenames
-  infiles <- list.files(
-    path = indir,
-    pattern = paste0(inext, "$"),
-    full.names = TRUE,
-    recursive = recursive
+  # Find input filenames and derive matching output paths
+  infiles <- dir_inputs(indir, inext, recursive)
+  df <- data.frame(
+    infile = as.character(fs::path_abs(infiles)),
+    outfile = dir_outputs(infiles, indir, outdir, "wav"),
+    stringsAsFactors = FALSE
   )
-  # Construct output filenames
-  outfiles <- gsub(indir, outdir, infiles)
-  outfiles <- gsub(inext, "wav", outfiles)
-  # Iterate os_prep_audio() over infiles
-  p <- progressr::progressor(along = infiles)
-  furrr::future_pwalk(
-    .l = data.frame(
-      infile = infiles,
-      outfile = outfiles
-    ),
-    .f = function(infile, outfile) {
-      os_prep_audio(infile, outfile, ...)
-      p() # update progress
-    }
-  )
+  # Iterate os_prep_audio() over infiles, surviving per-file failures
+  invisible(dir_walk(df, function(infile, outfile) {
+    os_prep_audio(infile, outfile, ...)
+  }))
 }
 
 
@@ -393,7 +384,10 @@ os_extract_wav <- function(
 #'  within `indir` be included?
 #' @inheritDotParams os_extract config
 #' @inheritDotParams os_prep_audio stream overwrite
-#' @return `NULL`
+#' @return (Invisibly) a data frame with one row per input file, giving the
+#'   paths it was called with, whether it `success`ed, and the `error` message
+#'   if it did not. A file that fails is skipped with a warning rather than
+#'   aborting the batch.
 #' @export
 #'
 os_extract_dir <- function(
@@ -415,50 +409,28 @@ os_extract_dir <- function(
   stopifnot(rlang::is_bool(recursive))
   extra_args <- list(...)
   # Find input filepaths
-  infiles <- list.files(
-    path = indir,
-    pattern = paste0(inext, "$"),
-    full.names = TRUE,
-    recursive = recursive
-  )
+  infiles <- dir_inputs(indir, inext, recursive)
   # Construct iteration data frame
-  df <- data.frame(infile = infiles)
+  df <- data.frame(
+    infile = as.character(fs::path_abs(infiles)),
+    stringsAsFactors = FALSE
+  )
   # If saving prepared WAV files...
   if (!is.null(wavdir)) {
-    # Construct WAV output filepaths
-    wavfiles <- gsub(indir, wavdir, infiles)
-    wavfiles <- gsub(inext, "wav", wavfiles)
-    # Add to iteration data frame
-    df <- cbind(df, wavfile = wavfiles)
+    df$wavfile <- dir_outputs(infiles, indir, wavdir, "wav")
   }
   # If exporting AGG output...
   if (!is.null(aggdir)) {
-    # Construct AGG output filepaths
-    aggfiles <- gsub(indir, aggdir, infiles)
-    aggfiles <- gsub(inext, "csv", aggfiles)
-    # Add to iteration data frame
-    df <- cbind(df, aggfile = aggfiles)
+    df$aggfile <- dir_outputs(infiles, indir, aggdir, "csv")
   }
   # If exporting LLD output...
   if (!is.null(llddir)) {
-    # Construct LLD output filepaths
-    lldfiles <- gsub(indir, llddir, infiles)
-    lldfiles <- gsub(inext, "csv", lldfiles)
-    # Add to iteration data frame
-    df <- cbind(df, lldfile = lldfiles)
+    df$lldfile <- dir_outputs(infiles, indir, llddir, "csv")
   }
-  # Iterate os_extract() over infiles
-  p <- progressr::progressor(along = infiles)
-  furrr::future_pwalk(
-    .l = df,
-    .f = function(...) {
-      do.call(
-        what = os_extract,
-        args = c(list(...), extra_args)
-      )
-      p() # update progress
-    }
-  )
+  # Iterate os_extract() over infiles, surviving per-file failures
+  invisible(dir_walk(df, function(...) {
+    do.call(what = os_extract, args = c(list(...), extra_args))
+  }))
 }
 
 
