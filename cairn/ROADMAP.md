@@ -1,16 +1,15 @@
 # Roadmap
 
 _The only authority on milestone status. Grouped by status, not ID._
-_Last hygiene check: 2026-08-07 (fixed ROADMAP path format + references INDEX/provenance; scaffold repaired — validate green)_
+_Last hygiene check: 2026-08-07 (M06 merged and archived; two candidates added; M01 row pruned under terminal-row retention)_
 _Released 0.1.0 (GitHub) 2026-07-11._
 
 ## Milestones
 
 | ID | Title | Status | Depends on | Priority | File/Archive |
 |---|---|---|---|---|---|
-| M06 | Wrapper testing contract — system2-boundary command tests | review | — | high | milestones/M06-wrapper-command-tests.md |
+| M06 | Wrapper testing contract — system2-boundary command tests | done | — | high | milestones/archive/M06-wrapper-command-tests.md |
 | M07 | Wrapper testing contract — remainder and gated real invocations | planned | M06 | normal | milestones/M07-wrapper-tests-remainder.md |
-| M01 | openSMILE tidy reader (`os_read`) | done | — | high | milestones/archive/M01-opensmile-reader.md |
 | M02 | OpenFace tidy reader (`of_read`) | done | M01 | normal | milestones/archive/M02-openface-reader.md |
 | M03 | whisper tidy reader (`aw_read`) | done | M01 | normal | milestones/archive/M03-whisper-reader.md |
 | M04 | R CMD check hygiene (docs, namespace, build) | done | — | high | milestones/archive/M04-check-hygiene.md |
@@ -29,3 +28,5 @@ _Released 0.1.0 (GitHub) 2026-07-11._
 - Replace the hard-coded OneDrive model URLs with embedded authkeys in `install_openface_win` — added 2026-08-07 — DESIGN Known issues; M07
 - Scout OpenFace successors (LibreFace / py-feat / OpenFace 3.0) against the add-tool bar — added 2026-07-11 — design interview
 - Run-time tool-version capture (surface tool versions in outputs/attributes for methods reporting and drift debugging) — added 2026-07-11 — design interview
+- Add GitHub Actions CI (usethis `check-standard` + `test-coverage`); the repo has no workflows, so review's never-merge-red-CI rule has nothing to read — added 2026-08-07 — M06 review 2
+- Harden the system2 test harness: redirect config in every test, assert absolute command paths, keep `args` unflattened, alias-safe `do.call` attribution, fail rather than skip when the coverage registry is empty — added 2026-08-07 — M06 review 2 (R2, R13, R12, R3, R5)
