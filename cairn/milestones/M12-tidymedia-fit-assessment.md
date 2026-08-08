@@ -108,7 +108,7 @@ ROADMAP rows for whatever the assessment surfaces and this milestone does not do
       characterization (openac: typed function → passthrough → `system2` with
       one caller-quoted string; tidymedia: `ffm_*` builder → `ffm_args` →
       `run_program` with per-token `shQuote`, plus `system()` escape hatches).
-- [ ] T5. Assemble `cairn/references/tidymedia-fit.md` from the synthesis-note
+- [x] T5. Assemble `cairn/references/tidymedia-fit.md` from the synthesis-note
       template with the Provenance block, the snapshot `Extraction:` status, and
       its `INDEX.md` line; run `cairn_validate`.
 - [ ] T6. Question gate: present the assessment, record the chosen disposition as
@@ -127,6 +127,7 @@ ROADMAP rows for whatever the assessment surfaces and this milestone does not do
 - 2026-08-08: T2 observed rather than inferred — `glue("{NULL} -version")` is `character(0)` and `system()` on it errors "non-empty character argument expected", so tidymedia's `ffmpeg()` fails on a missing binary without shell-injecting; and an unquoted space-bearing path fails under `system()`, which `R/ffmpeg.R:28` (unquoted) risks and `R/ffprobe.R:21` (quoted) does not.
 - 2026-08-08: T3 done — tidymedia has no CRAN release and no git tags, so a hard dep needs `Remotes: jmgirard/tidymedia`. Framed honestly: openac's CRAN gate is ALREADY closed by `audio.whisper` (`DESCRIPTION:35-36`), so this adds a second independent blocker rather than closing an open gate; the added cost is tidymedia's no-shim clean-break rename policy pre-0.2.0.
 - 2026-08-08: T4 done — 6 of the 8 shared exports disagree outright; `ffm` disagrees most sharply (openac: alias of the passthrough; tidymedia: alias of the `ffm_files` job constructor). Invocation-layer verdict: tidymedia quotes once at the boundary (`run_program` + `shQuote`), openac quotes by hand at every call site — the one axis where tidymedia is clearly ahead, and it transfers as an idea without a dependency.
+- 2026-08-08: T5 done — note assembled with Disposition and INDEX line; `cairn_validate` all-green (references staleness read the snapshot Extraction form rather than exempting the page); `devtools::test()` 0 fail / 557 pass / 2 skip, unchanged since no code was touched.
 - 2026-08-08: plan chose a committed `references/` synthesis note over keeping the analysis in this milestone file because the CRAN-distribution question and the queued install/discovery candidates will re-read it after this milestone archives; falsified by the decision closing the question with no later reader.
 
 ## Decisions

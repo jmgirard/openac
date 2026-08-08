@@ -270,6 +270,43 @@ follow-up milestone. openac depending on it pre-0.2.0 buys a dependency whose
 function and argument names may change without a deprecation window, in a
 package whose maintainer has deliberately reserved the right to do so.
 
+## Disposition
+
+Where every row above lands. The dependency decision itself is not this page's
+to make — it is recorded in `DECISIONS.md` by the milestone that commissioned
+this page.
+
+**Rows tagged `Reject` (28 of 33), with their reason.** E10, E11, E15–E20,
+E30–E33 concern openface, opensmile, or whisper, which tidymedia's stated scope
+excludes — a dependency cannot serve them and openac keeps its own machinery.
+E21–E28 are internal helpers of openac's installer guard with no tidymedia
+analogue; E28 (`require_os`) is rejected in the strong sense that tidymedia's
+`install_on_win` has no OS guard at all and adopting it would be a regression.
+E1, E2, E6, E8, E9, E13, E14, E29 are rejected because the config-directory
+divergence and the unexported `find_program` make them non-substitutable without
+user-visible breakage.
+
+**Rows tagged `Adapt` (3): E5, E7, E12.** These are ideas worth having, none of
+which requires the dependency. They route to the ROADMAP:
+
+- E7 and the invocation-layer finding → a new candidate row, verbatim:
+  `- Quote at the process boundary, not at the call site — adopt a token-vector + shQuote contract in the passthroughs (the pattern tidymedia centralizes in run_program) so a forgotten literal quote at one call site cannot ship a broken command; today every caller hand-quotes paths (R/use_ffprobe.R:51-56) — added 2026-08-08 — M12 (cairn/references/tidymedia-fit.md, E7)`
+- E12 → absorbed into the existing DESIGN-recorded convention rather than a new
+  row: `cairn/DESIGN.md` Conventions already states that legacy `stopifnot()` +
+  base `warning()` "migrates opportunistically when touched", which covers
+  `set_program`'s validation style. No new row; no separate tracking needed.
+- E5 → a new candidate row, verbatim:
+  `- Make ffp_count_streams resilient rather than fatal — it aborts on an unreadable file (R/use_ffprobe.R:48) where a batch would rather get NA and a warning, as tidymedia's probe_all does (R/ffprobe.R:119-124); relates to GP6/GP9 — added 2026-08-08 — M12 (cairn/references/tidymedia-fit.md, E5)`
+
+**Collision ledger C1–C8 → a new candidate row**, verbatim:
+`- Document that openac and tidymedia share 8 exported names of which 6 disagree (ffm most sharply: passthrough alias vs. job constructor), so attaching both masks silently — a README/vignette note, or a rename at the 1.0 API freeze — added 2026-08-08 — M12 (cairn/references/tidymedia-fit.md, C1-C8)`
+
+**The config-directory divergence** is deliberately not routed to a row here: it
+is a consequence of the dependency decision, not an independent idea, and M12's
+scope routes it only if the decision makes it live.
+
+This page produced no rule, so it names no test file.
+
 ## Open questions
 
 - Whether the maintainer wants openac and tidymedia to share one config
