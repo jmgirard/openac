@@ -6,7 +6,8 @@
 #'
 #' @param arg (string) A string of space-separated arguments to append to the
 #'   ffmpeg command line call.
-#' @return A character vector containing the output of ffmpeg.
+#' @return A character vector containing the output of ffmpeg. Errors if
+#'   ffmpeg cannot be found.
 #' @references https://ffmpeg.org/ffmpeg.html
 #' @aliases ffm
 #' @export
@@ -19,7 +20,7 @@ ffmpeg <- function(arg) {
   # Validate input
   stopifnot(rlang::is_string(arg))
   # Run ffmpeg
-  system2(find_ffmpeg(), args = arg, stdout = TRUE, stderr = TRUE)
+  system2(require_program("ffmpeg"), args = arg, stdout = TRUE, stderr = TRUE)
 }
 
 

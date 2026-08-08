@@ -24,7 +24,8 @@ set_opensmile(location)
 \item{location}{A string containing the location of the program.}
 }
 \value{
-A logical indicating whether the program location was set properly.
+Invisibly, \code{NULL}. Called for its side effect: recording \code{location}
+in the user config directory, where \code{\link[=find_program]{find_program()}} reads it.
 }
 \description{
 Set the location of a dependency program

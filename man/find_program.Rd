@@ -23,8 +23,8 @@ find_opensmile()
 "ffprobe", "openface", or "opensmile"}
 }
 \value{
-Either a string indicating whether the requested program was found or
-\code{NULL} if the program could not be found.
+An absolute path to the program as a string, or \code{NULL} (with a
+warning) if the program could not be found.
 }
 \description{
 Returns the location of the requested program as a string.

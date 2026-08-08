@@ -177,3 +177,41 @@ command test — the enforcement point for GP7 on new wrapper families. A
 call-head-only walk was rejected as the closure rule because `os_extract_dir`
 and `aw_transcribe_dir` reach their tools through `do.call(what = …)` and are
 invisible to it.
+
+### D-011 (2026-08-07): Add `withr` to Suggests (test-only)
+
+**Context:** M06's test harness needs per-test temporary directories and
+scoped mocks across roughly six test files. GP4 keeps dependencies lean and the
+guardrails require a question gate plus a decision for any dependency change,
+including a test-only one.
+**Decision:** Add `withr` to Suggests. It is already a hard dependency of
+`testthat` (Imports), so every machine that can run openac's tests already has
+it and the marginal install cost for users is zero; it is never loaded by
+package code, only by tests. Considered and rejected: hand-rolled
+`tempfile()` + `dir.create()` + `on.exit(unlink())` in each test — more code in
+every file, and cleanup that fails open when a test errors before its
+`on.exit()` is registered, which is how a test suite starts writing outside its
+temp dir and quietly violates IP1.
+**Consequences:** DESCRIPTION gains `withr` under Suggests (M06). Tests use
+`withr::local_tempdir()` and friends for all filesystem and option scoping;
+package code under `R/` still may not use it.
+
+### D-012 (2026-08-07): Raise the testthat floor to 3.2.0
+
+**Context:** M06's boundary harness calls
+`testthat::local_mocked_bindings(.package = "base")`, and the suite also uses
+`expect_no_match()`. DESCRIPTION declared `testthat (>= 3.0.0)`, which predates
+both: `local_mocked_bindings()` arrived in 3.1.7 as an experimental function.
+A check farm or user on an older testthat would fail every test file with
+`could not find function "local_mocked_bindings"` — an R CMD check ERROR the
+local run cannot reproduce. Surfaced as review-2 finding R7 (scored 75, below
+the action threshold) and raised by the user at the merge gate.
+**Decision:** Re-pin `testthat` in Suggests to `>= 3.2.0` — the release where
+`local_mocked_bindings()` and `with_mocked_bindings()` became stable rather
+than experimental (testthat 3.2.0 NEWS). testthat's NEWS never records when the
+`.package` argument arrived, so the floor is set at the stability boundary,
+which is at or above the true requirement. Considered and rejected: `>= 3.1.7`,
+the release that introduced the function — that would declare a dependency on
+an experimental API whose signature changed without a NEWS entry.
+**Consequences:** DESCRIPTION Suggests carries the bound; testthat 3.2.0 is a
+2023 release, so no practical burden. M07's tests inherit the same floor.

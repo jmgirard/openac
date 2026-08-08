@@ -14,7 +14,8 @@ ffm(arg)
 ffmpeg command line call.}
 }
 \value{
-A character vector containing the output of ffmpeg.
+A character vector containing the output of ffmpeg. Errors if
+ffmpeg cannot be found.
 }
 \description{
 Attempt to find and run ffmpeg with the specified arguments.

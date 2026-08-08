@@ -155,16 +155,20 @@ justification). IP block first, then GPs; numbers never reused._
 **Program discovery & configuration.** `find_program(program)` resolves an
 external tool by (1) `Sys.which()` on `PATH`, then (2) a per-program config
 file `<program>_location.txt` under `rappdirs::user_config_dir("openac",
-"R")`. `set_program()` writes that file. Resolution returns an absolute path
-(`tools::file_path_as_absolute`) or `NULL` with a `warning()`. `check_*`
+"R")`. `set_program()` writes that file, and a recorded bare program name is
+resolved through `Sys.which()` like any other. Resolution returns an absolute
+path (`tools::file_path_as_absolute`) or `NULL` with a `cli` warning. `check_*`
 report installed/working status; `install_*_{win,mac}` fetch and place
 binaries.
 
 **Calling the CLIs.** Each tool has a low-level passthrough (`ffmpeg()`,
 `ffprobe()`, `openface()`, `opensmile()`) that takes a single
 space-separated argument string and runs
-`system2(find_<tool>(), args = arg, stdout = TRUE, stderr = TRUE)`,
-returning captured output as a character vector. Typed high-level functions
+`system2(require_program(<tool>), args = arg, stdout = TRUE, stderr = TRUE)`,
+returning captured output as a character vector. The internal
+`require_program()` aborts when the tool is absent, because `system2(NULL, …)`
+would otherwise run the argument string as a shell command (M06). Typed
+high-level functions
 (`of_extract()`, `os_extract()`, `aw_transcribe()`, …) validate named
 parameters and assemble the argument string, then delegate to the
 passthrough.
@@ -193,9 +197,10 @@ them without attaching the upstream packages.
 - 2026-07-11: **Windows-biased testing** — most real use has been on
   Windows; mac/Linux paths are lightly exercised and may have quiet
   breakage.
-- 2026-07-11: The readers have fixture-backed tests (M01–M03), but the
-  binary-dependent wrappers (extract/prep/install — most of the package)
-  have none; recent bug fixes there shipped without regression tests.
+- 2026-07-11 (corrected M06): The readers have fixture-backed tests
+  (M01–M03). The prep/extract wrappers and program discovery now have
+  command-construction tests at the mocked `system2` boundary; the `install_*`
+  family, the `*_dir` batch wrappers and `aw_transcribe*` still have none.
 - 2026-07-11: **OneDrive model URLs** — `install_openface_win` downloads
   model files from hard-coded OneDrive links with embedded authkeys
   (`programs_install.R`); links of that shape die silently. A time bomb in

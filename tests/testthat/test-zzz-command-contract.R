@@ -1,0 +1,98 @@
+# AC2 -- the coverage gate (D-010).
+#
+# Every openac function that can reach an external tool must have a command
+# test. The domain is COMPUTED from the call graph rather than listed by hand,
+# so a new wrapper cannot be added without either a test or an explicit
+# deferral. Named test-zzz-* so it runs after the files whose calls it counts.
+
+# Symbols occurring anywhere in a language object. Deliberately an
+# over-approximation over call heads: os_extract_dir() and aw_transcribe_dir()
+# reach their tools through do.call(what = os_extract, ...), where the function
+# is a value, and a call-head walk cannot see them (D-010).
+language_symbols <- function(x) {
+  if (is.symbol(x)) return(as.character(x))
+  if (is.call(x) || is.pairlist(x) || is.expression(x) || is.list(x)) {
+    return(unlist(lapply(as.list(x), language_symbols), use.names = FALSE))
+  }
+  character()
+}
+
+# Every openac function from which base::system2 is transitively reachable.
+system2_closure <- function() {
+  ns <- asNamespace("openac")
+  fns <- Filter(
+    function(n) is.function(get(n, envir = ns)),
+    ls(ns, all.names = TRUE)
+  )
+  deps <- lapply(fns, function(n) {
+    f <- get(n, envir = ns)
+    unique(c(language_symbols(body(f)), language_symbols(as.list(formals(f)))))
+  })
+  names(deps) <- fns
+
+  reach <- names(deps)[vapply(deps, function(d) "system2" %in% d, logical(1))]
+  repeat {
+    grown <- names(deps)[vapply(deps, function(d) any(d %in% reach), logical(1))]
+    fresh <- setdiff(grown, reach)
+    if (!length(fresh)) break
+    reach <- c(reach, fresh)
+  }
+  sort(reach)
+}
+
+# Literal function names, never globs: a pattern like "*_dir" would be a
+# permanent escape hatch that any future batch wrapper slips through.
+# Each is annotated with the milestone that will cover it; M07's acceptance is
+# that this list becomes empty.
+deferred <- c(
+  aw_prep_audio_dir = "M07",
+  aw_transcribe     = "M07",
+  aw_transcribe_dir = "M07",
+  aw_transcribe_wav = "M07",
+  of_extract_dir    = "M07",
+  os_extract_dir    = "M07",
+  os_prep_audio_dir = "M07"
+)
+
+test_that("the computed domain is non-empty and includes the passthroughs", {
+  domain <- system2_closure()
+  expect_gt(length(domain), 0)
+  # A sanity anchor: if the graph walk silently broke, these would vanish.
+  expect_true(all(c("ffmpeg", "ffprobe", "openface", "opensmile") %in% domain))
+  # And the indirect case the over-approximation exists to catch.
+  expect_true("os_extract_dir" %in% domain)
+})
+
+test_that("no deferral has gone stale", {
+  domain <- system2_closure()
+  stale <- setdiff(names(deferred), domain)
+  expect_identical(
+    stale, character(),
+    info = paste0(
+      "These names are deferred but no longer reach system2, so the deferral ",
+      "is dead and should be removed: ", paste(stale, collapse = ", ")
+    )
+  )
+})
+
+test_that("every tool-calling function has a command test", {
+  covered <- registered_owners()
+
+  # Running this file alone leaves nothing for it to count; the invariant is
+  # about the whole suite. A full devtools::test() never takes this branch.
+  skip_if(length(covered) == 0, "command contract needs the full test suite")
+
+  domain <- system2_closure()
+  enforced <- setdiff(domain, names(deferred))
+  uncovered <- setdiff(enforced, covered)
+
+  expect_identical(
+    uncovered, character(),
+    info = paste0(
+      "These functions can reach an external tool but no test asserts the ",
+      "command they build: ", paste(uncovered, collapse = ", "),
+      ". Add a command test, or defer them explicitly with the milestone that ",
+      "will cover them."
+    )
+  )
+})

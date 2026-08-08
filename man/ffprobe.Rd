@@ -14,7 +14,8 @@ ffp(arg)
 ffprobe command line call.}
 }
 \value{
-A character vector containing the output of ffprobe.
+A character vector containing the output of ffprobe. Errors if
+ffprobe cannot be found.
 }
 \description{
 Attempt to find and run ffprobe with the specified arguments.
