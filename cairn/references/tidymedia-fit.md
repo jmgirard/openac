@@ -178,6 +178,63 @@ supported interface. The four exported `find_*` wrappers cover ffmpeg, ffprobe,
 ffplay, and mediainfo only, so there is no supported way to ask tidymedia to
 resolve openface or opensmile.
 
+## Name-collision ledger — set C
+
+The eight symbols both packages export, from the `NAMESPACE` intersection under
+"Procedure". This matters because a user who attaches both packages gets one of
+each name, decided by attach order, with no warning beyond R's masking message.
+
+| # | Symbol | openac meaning | tidymedia meaning | Agree? |
+|---|---|---|---|---|
+| C1 | `ffm` | alias of `ffmpeg`, the CLI passthrough (`R/use_ffmpeg.R:32`) | alias of `ffm_files`, a pipeline **constructor** returning an object (`R/ffm.R:63`) | **No — incompatible.** `ffm("-version")` returns tool output under openac and constructs a job object under tidymedia |
+| C2 | `ffmpeg` | passthrough; one arg string; `system2` with resolved path (`R/use_ffmpeg.R:19-24`) | passthrough; one arg string; `system()` with unquoted interpolated path (`R/ffmpeg.R:20-28`) | Partly — same role and calling shape, different boundary mechanism and quoting safety |
+| C3 | `ffprobe` | passthrough (`R/use_ffprobe.R:19-24`) | passthrough; path quoted (`R/ffprobe.R:19-21`) | Partly — as C2, but tidymedia quotes here |
+| C4 | `find_ffmpeg` | resolves via `user_config_dir("openac","R")`; returns absolutized unnamed path (`R/programs_find.R:84`, `:26`, `:57`) | resolves via `user_config_dir("tidymedia","R")`; returns `Sys.which()`'s named result or the raw config line (`R/program_management.R:70`, `:29`) | **No — different config directory and different return shape** |
+| C5 | `find_ffprobe` | as C4 (`R/programs_find.R:94`) | as C4 (`R/program_management.R:78`) | **No — as C4** |
+| C6 | `set_ffmpeg` | writes `user_config_dir("openac","R")` (`R/programs_set.R:33`, `:17`) | writes `user_config_dir("tidymedia","R")` (`R/program_management.R:174`, `:152`) | **No — writes a different file** |
+| C7 | `set_ffprobe` | as C6 (`R/programs_set.R:43`) | as C6 (`R/program_management.R:180`) | **No — as C6** |
+| C8 | `set_program` | `program` domain is ffmpeg/ffprobe/openface/opensmile; base `stopifnot` validation (`R/programs_set.R:11-15`) | `program` domain is ffmpeg/ffprobe/ffplay/mediainfo; `arg_match` + `cli_abort` (`R/program_management.R:141-149`) | **No — different accepted values and different config file** |
+
+Six of the eight disagree outright, and `ffm` (C1) disagrees most sharply: same
+name, same package prefix convention, entirely different semantics and return
+type. Nothing in either package warns about this today.
+
+## Invocation layers compared
+
+Both packages assemble an ffmpeg command and hand it to a process, but they
+split the work at different seams.
+
+**openac.** A typed high-level function (`os_prep_audio()`, `aw_prep_audio()`)
+validates its named parameters and assembles a **single space-separated string**,
+hand-quoting any file path with literal `"` characters (the pattern is visible at
+`R/use_ffprobe.R:51-56`). That string goes to the passthrough `ffmpeg()`
+(`R/use_ffmpeg.R:19`), which resolves the binary through `require_program()`
+(`R/programs_find.R:68`) and calls `system2(<resolved path>, args = arg)`
+(`R/use_ffmpeg.R:23`). The argument assembler and the boundary are the same
+function; there is no separate representation of the command, which is why
+DESIGN records GP5 ("Transparent calls") as unmet.
+
+**tidymedia.** An `ffm_*` builder accumulates a job object; `ffm_args()`
+(`R/ffm.R:1164`) renders it to an **unquoted token vector**, one element per CLI
+argument, and `ffm_compile()` (`R/ffm.R:1152`) renders the same structure to the
+human-readable command string — so what is displayed and what is executed derive
+from one source and cannot drift. `ffm_run()` (`R/ffm.R:1381`) passes the token
+vector to `run_program()` (`R/program_management.R:108`), which `shQuote()`s
+every token with a platform-appropriate type (`R/program_management.R:119`) and
+aborts if the binary is missing (`:110-112`).
+
+The seam difference is the substantive one. openac quotes at the *caller*, once
+per call site, by hand; tidymedia quotes at the *boundary*, once, mechanically.
+openac's approach puts a quoting bug one forgotten `"` away at every call site;
+tidymedia's centralizes it — and tidymedia's own two Layer-0 escape hatches
+(`R/ffmpeg.R:28` unquoted, `R/ffprobe.R:21` quoted) demonstrate the failure mode
+by bypassing their own boundary and disagreeing with each other.
+
+This is the one place where tidymedia's design is clearly ahead of openac's, and
+it is available as an idea without a dependency: the token-vector +
+`shQuote`-at-the-boundary contract is roughly forty lines and rests on nothing
+tidymedia-specific.
+
 ## Distribution consequence
 
 All figures read at commit `b99f7e8` — observed 2026-08-08.
