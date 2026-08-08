@@ -152,7 +152,9 @@ aw_prep_audio <- function(
 #'
 #' @param indir (string) What directory contains the input files?
 #' @param inext (string) What file extension should be looked for in `indir`
-#'   (e.g., "mp4" or "mp3")?
+#'   (e.g., "mp4" or "mp3")? Matched regardless of case, so "mp4" also takes
+#'   `.MP4` files; if that leaves two inputs deriving the same output file, the
+#'   batch is refused rather than one silently overwriting the other.
 #' @param outdir (string) What directory should the audio files be output to?
 #' @param recursive (logical, default = FALSE) Should files in subdirectories
 #'  within `indir` be included?
@@ -373,7 +375,9 @@ aw_transcribe_wav <- function(
 #'
 #' @param indir (character) What directory contains the input files?
 #' @param inext (character) What file extension should be looked for in `indir`
-#'   (e.g., "mp4" or "mp3")?
+#'   (e.g., "mp4" or "mp3")? Matched regardless of case, so "mp4" also takes
+#'   `.MP4` files; if that leaves two inputs deriving the same output file, the
+#'   batch is refused rather than one silently overwriting the other.
 #' @param wavdir (character, default=NULL) What directory should the prepared
 #'   WAV files be saved to? If `NULL`, temporary WAV files will be created and
 #'   later discarded.

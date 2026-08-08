@@ -10,7 +10,9 @@ of_extract_dir(indir, inext, outdir, recursive = FALSE, ...)
 \item{indir}{(character) What directory are the input files in?}
 
 \item{inext}{(character) What file extension should be looked for in \code{indir}
-(e.g., "mp4" or "avi")?}
+(e.g., "mp4" or "avi")? Matched regardless of case, so "mp4" also takes
+\code{.MP4} files; if that leaves two inputs deriving the same output file, the
+batch is refused rather than one silently overwriting the other.}
 
 \item{outdir}{(character) What directory should the output files be created
 in?}

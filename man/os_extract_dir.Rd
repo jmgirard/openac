@@ -17,7 +17,10 @@ os_extract_dir(
 \arguments{
 \item{indir}{(character) What directory contains the input .wav files?}
 
-\item{inext}{(character) What file extension to look for in \code{indir}?}
+\item{inext}{(character) What file extension to look for in \code{indir}? Matched
+regardless of case, so "mp4" also takes \code{.MP4} files; if that leaves two
+inputs deriving the same output file, the batch is refused rather than one
+silently overwriting the other.}
 
 \item{wavdir}{(character, default=NULL) What directory should the prepared
 WAV audio files be saved to? If \code{NULL}, temporary WAV files will be created

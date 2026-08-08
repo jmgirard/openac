@@ -109,8 +109,10 @@ of_extract <- function(
 #' `handlers("cli"); handlers(global = TRUE)`.
 #' 
 #' @param indir (character) What directory are the input files in?
-#' @param inext (character) What file extension should be looked for in `indir` 
-#'   (e.g., "mp4" or "avi")?
+#' @param inext (character) What file extension should be looked for in `indir`
+#'   (e.g., "mp4" or "avi")? Matched regardless of case, so "mp4" also takes
+#'   `.MP4` files; if that leaves two inputs deriving the same output file, the
+#'   batch is refused rather than one silently overwriting the other.
 #' @param outdir (character) What directory should the output files be created
 #'   in?
 #' @param recursive (logical, default=FALSE) Should files in subdirectories

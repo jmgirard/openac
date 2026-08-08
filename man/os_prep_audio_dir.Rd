@@ -10,7 +10,9 @@ os_prep_audio_dir(indir, inext, outdir, recursive = FALSE, ...)
 \item{indir}{(string) What directory contains the input files?}
 
 \item{inext}{(string) What file extension should be looked for in \code{indir}
-(e.g., "mp4" or "mp3")?}
+(e.g., "mp4" or "mp3")? Matched regardless of case, so "mp4" also takes
+\code{.MP4} files; if that leaves two inputs deriving the same output file, the
+batch is refused rather than one silently overwriting the other.}
 
 \item{outdir}{(string) What directory should the audio files be output to?}
 

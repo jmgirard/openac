@@ -1,5 +1,12 @@
 # openac (development version)
 
+* The batch functions match `inext` regardless of case, so `inext = "mp4"` also
+  takes `.MP4` files. This is now documented, and it can no longer cost you a
+  result: where two inputs differing only in extension case would have derived
+  the same output file, the batch previously wrote that file twice and reported
+  success for both. It now stops before any tool runs, naming the files
+  involved.
+
 * The batch functions `os_prep_audio_dir()`, `os_extract_dir()`,
   `of_extract_dir()`, `aw_prep_audio_dir()` and `aw_transcribe_dir()` no longer
   abort the whole run when one file fails. The failing file is skipped with a
