@@ -1,11 +1,11 @@
 # M10: Command-contract coverage gate — completeness observed, not inferred
 
-- **Status:** planned
+- **Status:** in-progress
 - **Priority:** high
 - **Depends on:** M09
 - **Driving RR:** RR02
 - **Principles touched:** GP7
-- **Branch/PR:** —
+- **Branch/PR:** `m10-coverage-gate`
 
 ## Goal
 
