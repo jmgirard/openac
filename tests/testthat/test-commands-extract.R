@@ -193,7 +193,7 @@ test_that("os_extract() uses and then discards a temp wav when wavfile is NULL",
   # writes nothing, so this stand-in creates the output path it was handed.
   written <- NULL
   fake_ffmpeg <- function(command, args) {
-    written <<- sub('^.*"([^"]+)"$', "\\1", args)
+    written <<- boundary_outfile(args)
     file.create(written)
     "ok"
   }

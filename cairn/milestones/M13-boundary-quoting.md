@@ -92,7 +92,7 @@ direct docs commit to the default branch, not a milestone.
 - [x] T4 Convert `ffp_count_streams()` (`R/use_ffprobe.R:51`) and
       `os_check_audio()` (`R/use_opensmile.R:114`) to token vectors; add the
       space-and-`$` regression test that fails against the old assembly.
-- [ ] T5 Convert `os_prep_audio()` (`R/use_opensmile.R:174`), `aw_check_audio()`
+- [x] T5 Convert `os_prep_audio()` (`R/use_opensmile.R:174`), `aw_check_audio()`
       (`R/use_whisper.R:20`) and `aw_prep_audio()` including its `-af` filter
       branch (`R/use_whisper.R:109,129`).
 - [ ] T6 Convert `of_extract()` (`R/use_openface.R:80`) and `os_extract()`
@@ -116,6 +116,9 @@ direct docs commit to the default branch, not a milestone.
 - 2026-08-08: T3's quote character is derived from `shQuote("x")` rather than written out, so the check stays strict per platform: a permissive both-quote-characters test would accept a hand-written `"..."` on unix, which is the form that still expands `$` — the measured bug itself, not a variant.
 - 2026-08-08: T4 done. `ffp_count_streams()` and `os_check_audio()` now emit token vectors. AC2's regression uses a path carrying BOTH a space and a `$`: measured against the old form, a space alone still passed, so a space-only fixture would have pinned nothing — the `$` is the discriminating character.
 - 2026-08-08: T4 mutation, both clauses. Restoring `ffp_count_streams()`'s concatenated assembly reds 5 assertions (via the command tests; the harness guard stays quiet there, because a length-1 glued string is the exempt legacy form). Breaking `run_tool()`'s quoting instead reds 7 and DOES trip the guard on real assemblers, naming the offending path. So the guard's live scope is a call site that reaches `system2()` without going through `run_tool()` — narrower than a reader of AC3 alone might assume, and worth saying plainly.
+- 2026-08-08: T5 done. `os_prep_audio()`, `aw_check_audio()` and `aw_prep_audio()` converted; the `-af` chain is now two tokens (flag, whole chain as one value) and the `ifelse` that built it went away for a `character()` that vanishes inside `c()`.
+- 2026-08-08: T5 uncovered a real coupling the plan missed: three tests used side-effecting fakes that recovered the output path from the glued args with `sub('^.*"([^"]+)"$', ...)`. Tokenisation silently defeated that regex, which then returned the shQuoted last element and made `file.create()` write a quote-named file — surfacing as a wrapper bug. Replaced by a `boundary_outfile()` helper that reads the last token and strips one layer of quoting.
+- 2026-08-08: T5 mutation sharpens T4's note on the guard's scope. Gluing a flag to its value (`"-map 0:a:0"` as one token) reds 6 command tests but does NOT trip the harness guard, because `run_tool()` quotes that token before the fake sees it. So the guard cannot observe mis-tokenisation that goes through `run_tool()` at all; it observes only a call site reaching `system2()` without it. AC3 is satisfied as written, but its value should not be read wider than this.
 - 2026-08-08: plan chose to arm the unquoted-whitespace invariant in the harness over asserting it per command test, because the harness already carries the sibling absolute-path invariant (helper-openac.R:605) and a per-test assertion is skipped by omission; falsified by a legitimate boundary call the invariant cannot express, requiring more opt-outs than the one test-helper-boundary.R needs.
 
 ## Decisions

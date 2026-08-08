@@ -227,12 +227,14 @@ test_that("aw_check_audio() issues both ffprobe queries in order", {
 
   expect_identical(boundary_tools(state), c("ffprobe", "ffprobe"))
   expect_identical(
-    boundary_args(state)[[2]],
-    paste0(
-      '-v error -select_streams a',
-      ' -show_entries stream=codec_name,sample_rate,channels',
-      ' -of default=noprint_wrappers=1:nokey=1 "', infile, '"'
-    )
+    boundary_argv(state)[[2]],
+    shQuote(c(
+      "-v", "error",
+      "-select_streams", "a",
+      "-show_entries", "stream=codec_name,sample_rate,channels",
+      "-of", "default=noprint_wrappers=1:nokey=1",
+      infile
+    ))
   )
 })
 

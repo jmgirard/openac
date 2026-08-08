@@ -11,22 +11,27 @@ local_outpath <- function(.env = parent.frame()) {
   file.path(withr::local_tempdir(.local_envir = .env), "out.wav")
 }
 
-# The exact string os_prep_audio() builds. The doubled space after the input
-# path is what the source produces ('" ' followed by ' -map'); it is pinned
-# here deliberately so a future cleanup shows up as a test change.
+# The exact argv os_prep_audio() builds, quoted as run_tool() quotes it (M13).
+# These returned one glued string until M13; the doubled space they used to pin
+# ('" ' followed by ' -map') was an artifact of string concatenation and is gone
+# with it, which is the test change that cleanup was meant to show up as.
 os_prep_cmd <- function(infile, outfile, stream = 0) {
-  paste0(
-    '-y -i "', infile, '" ',
-    ' -map 0:a:', stream,
-    ' -ar 44100 -ac 1 -c:a pcm_s16le "', outfile, '"'
-  )
+  shQuote(c(
+    "-y",
+    "-i", infile,
+    "-map", paste0("0:a:", stream),
+    "-ar", "44100",
+    "-ac", "1",
+    "-c:a", "pcm_s16le",
+    outfile
+  ))
 }
 
-# The whole filter chain aw_prep_audio(afilters = TRUE) inserts, in order.
-# Pinned entire rather than by fragment: a chain checked piecewise let
-# afftdn, compand and dynaudnorm go unasserted.
-aw_filter_chain <- paste0(
-  ' -af "',
+# The whole filter chain aw_prep_audio(afilters = TRUE) inserts, in order, as
+# the two tokens it now is: the flag, and the chain as ONE value. Pinned entire
+# rather than by fragment: a chain checked piecewise let afftdn, compand and
+# dynaudnorm go unasserted.
+aw_filter_chain <- c("-af", paste0(
   'loudnorm=I=-24:LRA=7:tp=-2,',
   'highpass=f=70,',
   'lowpass=f=14000,',
@@ -35,16 +40,20 @@ aw_filter_chain <- paste0(
   'dynaudnorm=p=0.7,',
   'areverse,',
   'asubboost,',
-  'areverse"'
-)
+  'areverse'
+))
 
-aw_prep_cmd <- function(infile, outfile, stream = 0, afilters = "") {
-  paste0(
-    '-y -i "', infile, '"',
-    ' -map 0:a:', stream,
+aw_prep_cmd <- function(infile, outfile, stream = 0, afilters = character()) {
+  shQuote(c(
+    "-y",
+    "-i", infile,
+    "-map", paste0("0:a:", stream),
     afilters,
-    ' -ar 16000 -ac 1 -c:a pcm_s16le "', outfile, '"'
-  )
+    "-ar", "16000",
+    "-ac", "1",
+    "-c:a", "pcm_s16le",
+    outfile
+  ))
 }
 
 # --- os_prep_audio -----------------------------------------------------------
@@ -57,7 +66,7 @@ test_that("os_prep_audio() builds the documented ffmpeg command", {
   os_prep_audio(infile, outfile)
 
   expect_identical(boundary_tools(state), "ffmpeg")
-  expect_identical(boundary_args(state), os_prep_cmd(infile, outfile))
+  expect_identical(boundary_argv(state)[[1]], os_prep_cmd(infile, outfile))
 })
 
 test_that("os_prep_audio() maps the requested audio stream", {
@@ -67,7 +76,7 @@ test_that("os_prep_audio() maps the requested audio stream", {
 
   os_prep_audio(infile, outfile, stream = 2)
 
-  expect_identical(boundary_args(state), os_prep_cmd(infile, outfile, stream = 2))
+  expect_identical(boundary_argv(state)[[1]], os_prep_cmd(infile, outfile, stream = 2))
 })
 
 test_that("os_prep_audio(overwrite = FALSE) skips an existing output", {
@@ -87,7 +96,7 @@ test_that("os_prep_audio(overwrite = FALSE) still runs when output is absent", {
 
   os_prep_audio(infile, outfile, overwrite = FALSE)
 
-  expect_identical(boundary_args(state), os_prep_cmd(infile, outfile))
+  expect_identical(boundary_argv(state)[[1]], os_prep_cmd(infile, outfile))
 })
 
 test_that("os_prep_audio() creates a missing output directory", {
@@ -121,7 +130,7 @@ test_that("aw_prep_audio() counts streams before building its ffmpeg command", {
   aw_prep_audio(infile, outfile)
 
   expect_identical(boundary_tools(state), c("ffprobe", "ffmpeg"))
-  expect_identical(boundary_args(state)[[2]], aw_prep_cmd(infile, outfile))
+  expect_identical(boundary_argv(state)[[2]], aw_prep_cmd(infile, outfile))
   # Both calls belong to aw_prep_audio, not to the inner ffp_count_streams.
   expect_identical(boundary_owners(state), c("aw_prep_audio", "aw_prep_audio"))
 })
@@ -133,7 +142,7 @@ test_that("aw_prep_audio() maps the requested audio stream", {
 
   aw_prep_audio(infile, outfile, stream = 1)
 
-  expect_identical(boundary_args(state)[[2]], aw_prep_cmd(infile, outfile, stream = 1))
+  expect_identical(boundary_argv(state)[[2]], aw_prep_cmd(infile, outfile, stream = 1))
 })
 
 test_that("aw_prep_audio() rejects a stream the file does not have", {
@@ -154,7 +163,7 @@ test_that("aw_prep_audio(afilters = TRUE) inserts the filter chain", {
   # The whole command, so every filter in the chain -- and its position between
   # the stream map and the output format flags -- is asserted.
   expect_identical(
-    boundary_args(state)[[2]],
+    boundary_argv(state)[[2]],
     aw_prep_cmd(infile, outfile, afilters = aw_filter_chain)
   )
 })
@@ -166,7 +175,7 @@ test_that("aw_prep_audio(afilters = FALSE) inserts no filter chain", {
 
   aw_prep_audio(infile, outfile, afilters = FALSE)
 
-  expect_no_match(boundary_args(state)[[2]], "-af", fixed = TRUE)
+  expect_false(shQuote("-af") %in% boundary_argv(state)[[2]])
 })
 
 test_that("aw_prep_audio(overwrite = FALSE) skips an existing output", {

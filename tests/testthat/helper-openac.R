@@ -817,6 +817,29 @@ boundary_args <- function(state) {
   vapply(boundary_argv(state), paste, character(1), collapse = " ")
 }
 
+# The output path a boundary call was told to write, recovered from its argv.
+#
+# The side-effecting fakes stand in for tools that WRITE a file their caller
+# then reads, so they have to know where. Before M13 they dug the path out of
+# the glued argument string with `sub('^.*"([^"]+)"$', "\\1", args)`; a token
+# vector has no such string, and that regex silently returned the whole shQuoted
+# last element instead -- `file.create()` then made a file with literal quotes
+# in its name, or failed, and the test read as a wrapper bug.
+#
+# Now it reads the last token, which is where every openac assembler puts the
+# output path, and strips the one layer of quoting run_tool() added. Stripping
+# is deliberately naive -- outer quote characters only -- because no test path
+# contains a quote; a path that did would need shQuote's escaping undone, and
+# this would return it wrong rather than pretend otherwise.
+boundary_outfile <- function(args) {
+  last <- as.character(args)[[length(args)]]
+  qc <- substr(shQuote("x"), 1L, 1L)
+  if (nchar(last) >= 2L && startsWith(last, qc) && endsWith(last, qc)) {
+    last <- substr(last, 2L, nchar(last) - 1L)
+  }
+  last
+}
+
 # The outermost openac function responsible for each boundary call.
 boundary_owners <- function(state) {
   vapply(

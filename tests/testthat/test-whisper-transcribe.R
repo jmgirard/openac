@@ -223,7 +223,7 @@ test_that("aw_transcribe() discards the temp wav it creates when wavfile is NULL
   file.create(infile)
   written <- NULL
   writer <- function(command, args) {
-    written <<- sub('^.*"([^"]+)"$', "\\1", args)
+    written <<- boundary_outfile(args)
     file.create(written)
     "ok"
   }
@@ -245,7 +245,7 @@ test_that("aw_transcribe() forwards audio_args to the preparation step", {
   infile <- withr::local_tempfile(fileext = ".mp4")
   file.create(infile)
   writer <- function(command, args) {
-    file.create(sub('^.*"([^"]+)"$', "\\1", args))
+    file.create(boundary_outfile(args))
     "ok"
   }
   state <- local_fake_tools(

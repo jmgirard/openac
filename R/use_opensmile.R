@@ -168,13 +168,14 @@ os_prep_audio <- function(infile, outfile, stream = 0, overwrite = TRUE) {
     dir.create(dirname(outfile), recursive = TRUE)
   }
   # Construct ffmpeg command
-  arg <- paste0(
-    '-y -i "', infile, '" ',
-    ' -map 0:a:', stream,
-    ' -ar 44100', # set sample rate to 44.1kHz
-    ' -ac 1', # set to mono audio (1 channel)
-    ' -c:a pcm_s16le', # set to 16-bit PCM Little-Endian codec
-    ' "', outfile, '"'
+  arg <- c(
+    "-y",
+    "-i", infile,
+    "-map", paste0("0:a:", stream), # one token: ffmpeg takes the value joined
+    "-ar", "44100", # set sample rate to 44.1kHz
+    "-ac", "1", # set to mono audio (1 channel)
+    "-c:a", "pcm_s16le", # set to 16-bit PCM Little-Endian codec
+    outfile
   )
   # Run ffmpeg command
   ffmpeg(arg)
