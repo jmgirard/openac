@@ -1,35 +1,34 @@
-# M09: Test-harness hardening — fake fidelity and a non-vacuous coverage gate
+# M09: Test-harness hardening — fake fidelity at the tool boundary
 
 - **Status:** in-progress
 - **Priority:** normal
 - **Depends on:** —
-- **Driving RR:** RR02
+- **Driving RR:** —
 - **Principles touched:** GP7, IP1
 - **Branch/PR:** `m09-harness-hardening` · https://github.com/jmgirard/openac/pull/10
 
 ## Goal
 
-Close the nine harness findings the M06, M07 and M08 reviews logged, so the
-boundary harness's fakes behave like the functions they stand in for and its
-coverage gate cannot pass vacuously.
+Close the harness-fidelity findings the M06, M07 and M08 reviews logged, so the
+boundary harness's fakes behave like the functions they stand in for. The
+coverage gate the original cut also carried is M10.
 
 ## Scope
 
 **In:** `tests/testthat/helper-openac.R` and its own test file
-`test-helper-boundary.R`, plus `test-zzz-command-contract.R`'s skip condition
-and the call-site updates those changes force in `test-programs-resolve.R` and
-`test-commands-probe.R`; plus, from RR02, `tests/testthat.R` (the
-`OPENAC_FULL_SUITE` declaration), the decision-function unit tests, and the
-fixture suites those tests generate at runtime.
-One shared `Sys.which()` executability predicate, driven by the faked OS and
-faithful to real `Sys.which()` on both platforms; per-platform fixture binaries;
-`rappdirs` redirection folded into `local_fake_tools()`; an absolute-command
-assertion inside the recorder; an unflattened `args` accessor; a computed
-alias-class lock over `openac_name_of()`; and a coverage gate that fails rather
-than skips when a full run records nothing.
+`test-helper-boundary.R`, plus the call-site updates those changes force in
+`test-programs-resolve.R` and `test-commands-probe.R`. One shared `Sys.which()`
+executability predicate, driven by the faked OS and faithful to real
+`Sys.which()` on both platforms; per-platform fixture binaries; `rappdirs`
+redirection folded into `local_fake_tools()`; an absolute-command assertion
+inside the recorder; an unflattened `args` accessor; and a computed alias-class
+lock over `openac_name_of()`.
 
 **Out:** any change under `R/` — this milestone is test-code only, and a defect
-it surfaces in package code becomes a `/hotfix` or its own milestone. GP7
+it surfaces in package code becomes a `/hotfix` or its own milestone. The
+command-contract coverage gate and everything RR02 binds is **M10**; this
+milestone reverts `test-zzz-command-contract.R` and its support machinery to the
+default branch's state so M10 starts from one baseline. GP7
 layer 2 (`test-real-tools.R`, real gated invocations) is untouched: it runs the
 unmocked `system2` and AC5's check cannot reach it. The `test-coverage`/Codecov
 workflow stays a candidate row (it needs a repository secret). `covr`
@@ -79,82 +78,9 @@ percentages remain a diagnostic, never a gate (PROFILE `test-doctrine`).
       closure and asserts `openac_name_of()` returns the recorded primary; an
       unrecorded class fails by name. Four today: `ffm`/`ffmpeg`, `ffp`/`ffprobe`,
       `of`/`openface`, `opensmile`/`os`.
-- [ ] AC8 (BC1,BC2,BC9): completeness is OBSERVED, not inferred. `ran` is
-      recorded at `test_that` execution time by a shadow in `helper-openac.R`
-      forwarding the unevaluated call to `testthat::test_that`; `expected` is
-      every `^test-.*\.[Rr]$` in the test directory, from one
-      directory-parameterized function performing no file read (no
-      `readLines`/`scan`/`parse`/`file(` in its body), which the contract file
-      also uses for the real directory. A fixture suite generated at runtime into
-      `withr::local_tempdir()`, never committed, using a registry separate from
-      `openac_registry`, asserts the expected set is invariant under appending
-      `# local_fake_tools()` to a member and still holds an unparseable
-      `test-garbage.R`, and that a file whose only test begins with `skip()` still
-      joins `ran`. The contract file asserts no test file uses
-      `testthat::test_that`, `describe()` or `it()`, and that parallel is off by
-      both routes — `packageDescription("openac")$"Config/testthat/parallel"` and
-      `TESTTHAT_PARALLEL`.
-- [x] AC9: `Rscript -e 'devtools::test()'` clean and `Rscript -e
+- [x] AC8: `Rscript -e 'devtools::test()'` clean and `Rscript -e
       'devtools::check()'` clean (0 errors, 0 warnings; the standing spelling
       NOTE justified).
-- [ ] AC10 (BC6): the skip/fail/enforce decision is a pure function of
-      `(expected, ran, covered, domain, deferred, declared_full)`, and
-      `tests/testthat.R` sets `OPENAC_FULL_SUITE=true` before
-      `test_check("openac")`. Unit tests cover all five returns by name:
-      `enforce_pass`; `enforce_fail(uncovered)` naming the functions;
-      `fail_incomplete` (declared full, any expected file missing) naming the
-      files; `skip_partial` (undeclared, same state) naming the files; and a
-      complete run with empty `covered` -> fail.
-- [ ] AC11 (BC3,BC4,BC8): the gate fails CLOSED. The contract file's first test
-      asserts its own file name is in `ran`, recorded through the same shadow
-      every other file uses with no self-registration path, and runs — not skips —
-      under full, filtered and single-file invocation. Mutation evidence in the
-      work log, gathered in an isolated worktree or copied tree and NEVER the
-      shared working tree: `harness_caller_file()` forced to `NA_character_`, and
-      separately the shadow removed, each fail the canary with the contract never
-      reporting enforce-pass, and each FAIL rather than skip under
-      `OPENAC_FULL_SUITE=true`; and forcing every test in one real harness file to
-      skip makes a full run FAIL naming uncovered functions.
-- [ ] AC12 (BC5,BC7,BC10): healthy-tree run modes and the deletions. Full
-      `devtools::test()`: FAIL 0, contract ENFORCING not skipping, the only skips
-      `test-real-tools.R`'s binary gates. `devtools::test(filter =
-      "helper-boundary|zzz")`: exactly 1 contract skip, 0 failures, its reason
-      naming every non-run test file. `testthat::test_file()` on the contract file
-      alone: 0 failures, completeness comparison skipped, canary passed. Retired
-      machinery gone: `grep -rnE
-      'harness_runs|harness_test_files|harness_files|registry\$(runs|files)'
-      tests/testthat/` gives no output (exit 1). The contract file asserts it
-      executes last: sorts last in `expected`, and `Config/testthat/start_first`
-      is absent from DESCRIPTION.
-
-### Deviations from RR02
-
-Every departure from RR02's binding criteria as written, per the ingest audit.
-BC1-BC10 are consolidated into AC8/AC10/AC11/AC12 rather than appended, because
-all ten serve the single criterion that has now failed twice and M09 already
-carried 9 against a 7-criterion tripwire; no substance was dropped.
-
-| BC | Departure | Why |
-|---|---|---|
-| BC1 | Added: the contract file's real expected set uses the same directory-parameterized function, and that function is asserted to perform no file read | As written, both fixture assertions pass while a second content-reading path lives in the contract body — the proxy shape that failed twice |
-| BC1, BC2 | Fixtures generated at runtime into `withr::local_tempdir()`, never committed | PROFILE `test-doctrine` hard-stops on committed fixtures without `data-raw/` provenance; a committed unparseable `test-garbage.R` would violate it |
-| BC2 | Bounded to files executing at least one bare `test_that()`, plus an assertion that no test file uses `testthat::test_that`/`describe()`/`it()` | The flat universal is false for qualified calls, zero-test files, and top-level errors; today's 13 files are a snapshot, not an invariant |
-| BC2 | Added: the nested fixture `test_dir()` uses a registry separate from `openac_registry` | Otherwise fixture file names leak into the real `ran` |
-| BC3 | Added: recorded through the same shadow every other file uses, no self-registration path | A one-line self-registration satisfies BC3 verbatim while the shadow is dead — the exact failure the canary exists to catch |
-| BC4 | Deleted "and 0 contract skips"; added the shadow-removal mutation and the `OPENAC_FULL_SUITE=true` fail case | **Unsatisfiable as written.** `devtools::test()` never runs `tests/testthat.R`, so `declared_full = FALSE`, and BC6's own table routes broken recording to `skip_partial`. BC4 forbade the skip BC6 requires |
-| BC6 | All five return values enumerated by name, adding `enforce_pass` and `enforce_fail(uncovered)` | "every branch, including" three left the branch the gate exists for unnamed |
-| BC5 | Folded into AC12; the filtered-run skip reason now names every non-run test file across all 13, not the 7 harness files | BC1's content-free expected set widens the message; BC5's wording would otherwise read as a mismatch against prior evidence |
-| BC7 | Pattern replaced with `grep -rnE 'harness_runs\|harness_test_files\|harness_files\|registry\$(runs\|files)'` | Verified: BC7's third alternative matches nothing (exit 1) — it demands `local_fake_" "tools` while the source has `paste0("local_fake_", "tools(")`. `openac_registry$runs` was named in prose but absent from the pattern |
-| BC8 | Comment-append relabelled as regression evidence, not a discriminating check | Once BC1 holds it cannot fail; presenting it as a check repeats M07's could-not-fail finding |
-| BC8 | "Sorts last" supplemented with `Config/testthat/start_first` absent from DESCRIPTION | Sorting last is not executing last; testthat honours `start_first` independently |
-| BC9 | DESCRIPTION half made a standing in-suite assertion via `packageDescription()` | As written it was a one-time review observation, so a future maintainer adding the field gets no failure — the silent disarm BC9 exists to prevent |
-| BC10 | Dropped "pass count >= 504" and the never-shrinks tolerance; dropped the `check()` and five-platform clauses | The floor encodes this machine's tool inventory (ffmpeg/ffprobe are installed here and contribute passes), contradicts the deletions BC7 mandates, and a count floor is the gate class PROFILE forbids; the dropped clauses duplicate AC9 and AC3 |
-| BC4, BC8 | Mutations required to run in an isolated worktree or copied tree | This review's own process defect: in-place mutation of the shared tree corrupted two of three lenses |
-
-No numeric projection with a stated tolerance survives ingestion — BC10's pass-count
-floor was the only one, and it was dropped as unmeasurable. So there are no
-projection-vs-outcome pairs to carry to the merge gate.
-
 ## Coverage
 
 - AC1 → T1
@@ -164,11 +90,7 @@ projection-vs-outcome pairs to carry to the merge gate.
 - AC5 → T5
 - AC6 → T6
 - AC7 → T7
-- AC8 → T10
-- AC9 → T9
-- AC10 → T11
-- AC11 → T12
-- AC12 → T13
+- AC8 → T9, T14
 
 ## Tasks
 
@@ -192,10 +114,7 @@ projection-vs-outcome pairs to carry to the merge gate.
 - [x] T8: replace `test-zzz-command-contract.R`'s `skip_if(length(covered) == 0)`
       ([:80](tests/testthat/test-zzz-command-contract.R:80)) with a run-scope
       signal separate from attribution; record both runs.
-- [ ] T10: replace the text-search completeness signal with the `test_that` shadow and the content-free expected set (AC8).
-- [ ] T11: factor the skip/fail/enforce decision into a pure function; declare full runs in `tests/testthat.R`; unit-test all five branches (AC10).
-- [ ] T12: add the canary and gather the mutation evidence in an isolated worktree (AC11).
-- [ ] T13: delete the retired machinery; record the three run modes and the ordering assertion (AC12).
+- [ ] T14: revert `test-zzz-command-contract.R` and its support machinery (`openac_registry$runs`/`$files`, `harness_runs()`, `harness_files()`, `harness_caller_file()`, the install-site recording, and `test-helper-boundary.R`'s recording test) to the default branch's state — the gate is M10's.
 - [x] T9: `devtools::document()` if roxygen changed, `devtools::test()`,
       `devtools::check()`; retire the M08 executability lesson from LESSONS.md
       and write its replacement.
@@ -247,6 +166,9 @@ projection-vs-outcome pairs to carry to the merge gate.
 - 2026-08-08: binding-criteria audit ran before ingestion — an [O] reader returned one UNSATISFIABLE criterion and nine needing rewording, all recorded in the Deviations table. The decisive find: BC4 forbade a contract skip that BC6's own decision table requires, because `devtools::test()` never executes `tests/testthat.R` and so never declares a full run. Verified independently, as were BC7's dead grep alternative and BC10's machine-dependent pass floor.
 - 2026-08-08: RR02 corrected a factual error in this session's return — `test-whisper-transcribe.R` does NOT depend on `audio.whisper`; it mocks `predict` in openac's namespace and its header says so. audio.whisper is absent on this machine and the file runs with the gate enforcing; the skip I attributed to it belongs to `test-real-tools.R`. The conditional-skip hole class is real and was reproduced artificially, but has no live instance. The corrected doctrine is stronger: because the boundary is fully mocked, a command test never has a legitimate reason to conditionally skip, so the right behavior is to fail naming functions rather than to accommodate it.
 - 2026-08-08: Scope "In:" amended to name `tests/testthat.R`, the decision-function unit tests, and the runtime-generated fixture suites — the audit flagged that the frozen "In:" is an enumeration and RR02's work falls outside it, which is what O24 returned this milestone for last pass.
+- 2026-08-08: RE-CUT by /milestone-plan — the coverage gate and everything RR02 binds moved to M10 (planned, high, depends on M09). M09 keeps the fake-fidelity work and is retitled. The re-cut was forced by three agreeing sizing signals after RR02's ingestion: 12 acceptance criteria against a 7 tripwire, 13 tasks against 10, and 202 plan-owned lines against a 150 cap that survived the one mandated compression pass.
+- 2026-08-08: thrash rule — a re-cut increments the defect-return count and never resets it, so M09 stands at 3 and trigger (a) is at its threshold. The split IS the prescribed remedy and is being applied now; what it means going forward is that a further return on M09 may NOT be answered with another re-plan — the remaining moves are `/milestone-brief` escalation, parking as `blocked` with the blocker named, or dropping at the user's explicit decision.
+- 2026-08-08: re-cut gate chose reverting the gate to the default branch's state over merging the current one as an interim, because the current gate carries the reproduced comment hole and M10 replaces it wholesale; merging it would ship a defect review has already confirmed and named. Falsified if the revert turns out to regress something the fidelity work depends on, which T14 must check.
 - 2026-08-07: 9 acceptance criteria exceeds the 7 tripwire deliberately — one per independent review finding plus the profile's verify slot, each separately fenceable at review; merging them would blur which finding a piece of evidence closes.
 
 ## Decisions
@@ -269,7 +191,7 @@ This replaces the evidence gathered before the first review returned the milesto
 - AC7 — alias classes computed by grouping namespace names on closure identity yield exactly `ffm`/`ffmpeg`, `ffp`/`ffprobe`, `of`/`openface`, `opensmile`/`os`; `expect_setequal()` fails by name on an unrecorded class, and `openac_name_of()` is asked via every binding.
 - AC8 — **SUPERSEDED 2026-08-08**: AC8 was replaced wholesale by RR02's ingestion; this evidence describes the returned mechanism. Original: three runs on the current tree. **Partial run**, `devtools::test(filter = "helper-boundary|zzz")`: FAIL 0, SKIP 1 at `test-zzz-command-contract.R:129` — "command contract needs the full test suite (1 of 7 harness files ran; missing test-batch-dirs.R, test-commands-extract.R, test-commands-prep.R, test-commands-probe.R, test-programs-resolve.R, test-whisper-transcribe.R)". **Contract file alone** under `test_file()`: FAIL 0, SKIP 1 at `:117`. **Full suite with attribution disabled and installs still recorded**: FAIL 2, `:141` — "Expected owners recorded across 101 harness installs > 0". Helper restored and verified clean by `git diff` afterwards.
 - AC8 non-vacuity (**SUPERSEDED**, same reason) — the completeness signal was falsified as well: with `harness_caller_file()`'s result forced to `NA`, a healthy full run FAILS at `:122` ("Expected test files recorded across 101 harness installs > 0") rather than skipping. A broken recorder cannot turn the gate off.
-- AC9 — `devtools::test()`: **504 pass, 0 fail**, 2 skips (both `test-real-tools.R` binary gates). `devtools::check()`: **0 errors, 0 warnings, 1 NOTE** — the standing spelling NOTE, which carries its own ROADMAP candidate row.
+- AC8 (was AC9) — `devtools::test()`: **504 pass, 0 fail**, 2 skips (both `test-real-tools.R` binary gates). `devtools::check()`: **0 errors, 0 warnings, 1 NOTE** — the standing spelling NOTE, which carries its own ROADMAP candidate row.
 
 **Falsifiability of the return's two new mechanisms.** Each fix was reverted in place and the suite re-run: reinstating the `!file.exists(path)` guard produces 2 failures in the sibling drives; restoring the host-reading fixture namer produces 3 failures in the simulated-platform test. Both mechanisms discriminate.
 
