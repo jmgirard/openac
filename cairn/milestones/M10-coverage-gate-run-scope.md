@@ -31,11 +31,14 @@ guard, `boundary_argv()`, alias lock) is M09's and is untouched here. The
 
 - [ ] AC1 (BC1,BC2): completeness is OBSERVED, not inferred. `ran` is recorded at
       `test_that` execution time by a shadow in `helper-openac.R` forwarding the
-      unevaluated call to `testthat::test_that`. `expected` comes from one
-      directory-parameterized function, which the contract file uses for the real
-      directory and whose output its decision consumes. The GUARANTEE is
+      unevaluated call to `testthat::test_that`, and it names the file that is
+      EXECUTING, not the file a test body was written in — a test a helper
+      generates records the test file that called the helper. `expected` comes
+      from one directory-parameterized function, which the contract file uses for
+      the real directory and whose output its decision consumes. The GUARANTEE is
       behavioral: it returns a set identical to `sort(list.files(dir, pattern =
-      "^test-.*\.[Rr]$"))` and is invariant under arbitrary mutation of every
+      "^test.*\.[rR]$"))` — testthat's own discovery pattern, so no file testthat
+      executes is exempt — and is invariant under arbitrary mutation of every
       fixture member's contents (append, truncate, replace with garbage). A
       call-head whitelist over its body is hygiene, NOT the guarantee: a token
       blacklist is the proxy shape that failed twice, beaten by delegation.
@@ -86,8 +89,10 @@ guard, `boundary_argv()`, alias lock) is M09's and is untouched here. The
       leaves the sourced-file set unchanged, so a rename cannot smuggle the
       install-site recording through; `test-helper-boundary.R`'s `harness_files()`
       assertion is deleted. Ordering: no expected file sorts after the contract
-      file; `Config/testthat/start_first` absent from DESCRIPTION; parallel off by
-      both `packageDescription("openac")$"Config/testthat/parallel"` and
+      file; `Config/testthat/start-first` — the field testthat actually reads, per
+      `testthat:::find_test_start_first` — absent from DESCRIPTION, with mutation
+      evidence that adding it makes the assertion FAIL; parallel off by both
+      `packageDescription("openac")$"Config/testthat/parallel"` and
       `TESTTHAT_PARALLEL`.
 - [x] AC6: `Rscript -e 'devtools::test()'` clean and `Rscript -e
       'devtools::check()'` clean (0 errors, 0 warnings; the standing spelling NOTE
@@ -97,39 +102,26 @@ guard, `boundary_argv()`, alias lock) is M09's and is untouched here. The
 
 ### Deviations from RR02
 
-BC1–BC10 are consolidated into AC1–AC5 rather than appended one-per-criterion;
-no substance was dropped. Every departure from RR02's wording, per the
-pre-ingest audit:
-
-| BC | Departure | Why |
-|---|---|---|
-| BC1 | Added: the contract file's real expected set uses the same directory-parameterized function, and that function is asserted to perform no file read | As written, both fixture assertions pass while a second content-reading path lives in the contract body — the proxy shape that failed twice |
-| BC1, BC2 | Fixtures generated at runtime into `withr::local_tempdir()`, never committed | PROFILE `test-doctrine` hard-stops on committed fixtures without `data-raw/` provenance; a committed unparseable `test-garbage.R` would violate it |
-| BC2 | Bounded to files executing at least one bare `test_that()`, plus an assertion that no test file uses `testthat::test_that`/`describe()`/`it()` | The flat universal is false for qualified calls, zero-test files, and top-level errors; today's 13 files are a snapshot, not an invariant |
-| BC2 | Added: the nested fixture `test_dir()` uses a registry separate from `openac_registry` | Otherwise fixture file names leak into the real `ran` |
-| BC3 | Added: recorded through the same shadow every other file uses, no self-registration path | A one-line self-registration satisfies BC3 verbatim while the shadow is dead — the exact failure the canary exists to catch |
-| BC4 | Deleted "and 0 contract skips"; added the shadow-removal mutation and the `OPENAC_FULL_SUITE=true` fail case | **Unsatisfiable as written.** `devtools::test()` never runs `tests/testthat.R`, so `declared_full = FALSE`, and BC6's own table routes broken recording to `skip_partial`. BC4 forbade the skip BC6 requires |
-| BC5 | Folded into AC5; the filtered-run skip reason now names every non-run test file across all 13, not the 7 harness files | BC1's content-free expected set widens the message; BC5's wording would otherwise read as a mismatch against prior evidence |
-| BC6 | All five return values enumerated by name, adding `enforce_pass` and `enforce_fail(uncovered)` | "every branch, including" three left the branch the gate exists for unnamed |
-| BC7 | Pattern replaced with `grep -rnE 'harness_runs\|harness_test_files\|harness_files\|registry\$(runs\|files)'` | Verified: BC7's third alternative matches nothing (exit 1) — it demands `local_fake_" "tools` while the source has `paste0("local_fake_", "tools(")`. `openac_registry$runs` was named in prose but absent from the pattern |
-| BC8 | Comment-append relabelled as regression evidence, not a discriminating check | Once BC1 holds it cannot fail; presenting it as a check repeats M07's could-not-fail finding |
-| BC8 | "Sorts last" supplemented with `Config/testthat/start_first` absent from DESCRIPTION | Sorting last is not executing last; testthat honours `start_first` independently |
-| BC9 | DESCRIPTION half made a standing in-suite assertion via `packageDescription()` | As written it was a one-time review observation, so a future maintainer adding the field gets no failure — the silent disarm BC9 exists to prevent |
-| BC10 | Dropped "pass count >= 504" and the never-shrinks tolerance; dropped the `check()` and five-platform clauses into AC6 | The floor encodes one machine's tool inventory (ffmpeg/ffprobe installed there contribute passes), contradicts the deletions BC7 mandates, and a count floor is the gate class PROFILE forbids |
-| BC4, BC8 | Mutations required to run in an isolated worktree or copied tree | M09's review process defect: in-place mutation of the shared tree corrupted two of three review lenses |
-
-No numeric projection with a stated tolerance survives ingestion — BC10's
-pass-count floor was the only one, and it was dropped as unmeasurable. So there
-are no projection-vs-outcome pairs to carry to the merge gate.
+BC1–BC10 are consolidated into AC1–AC5; no substance was dropped. The
+departures the criteria do not themselves show: BC4's "0 contract skips" was
+unsatisfiable — `devtools::test()` never runs `tests/testthat.R`, so BC6's own
+table routes broken recording to the `skip_partial` BC4 forbade — and the
+shadow-removal mutation and `OPENAC_FULL_SUITE=true` fail case replace it;
+BC7's third pattern alternative was measured to match nothing, so the deletion
+grep is rewritten; BC10's "pass count >= 504" floor was dropped as one
+machine's tool inventory and a gate class PROFILE forbids, its `check()` and
+five-platform clauses moving to AC6. The rest are audit trail, held by git and
+RR02. No numeric projection with a stated tolerance survives ingestion, so no
+projection-vs-outcome pair goes to the merge gate.
 
 ## Coverage
 
-- AC1 → T1, T2
+- AC1 → T1, T2, T8, T9
 - AC2 → T2
 - AC3 → T3
 - AC4 → T4
-- AC5 → T5
-- AC6 → T6
+- AC5 → T5, T7
+- AC6 → T6, T10
 
 ## Tasks
 
@@ -146,6 +138,14 @@ are no projection-vs-outcome pairs to carry to the merge gate.
 - [x] T5: delete the retired machinery; assert parallel-off by both routes and
       last-execution; record the three run modes.
 - [x] T6: `devtools::test()`, `devtools::check()`, and the five-platform CI run.
+- [ ] T7: assert the `Config/testthat/start-first` field testthat reads, with
+      mutation evidence that adding it turns the assertion red.
+- [ ] T8: widen `expected_test_files()` to testthat's own discovery pattern and
+      prove the widened member is one testthat executes.
+- [ ] T9: attribute recording to the EXECUTING file, with a regression fixture
+      whose test is generated by a helper.
+- [ ] T10: re-run `devtools::test()`, `devtools::check()` and the five-platform
+      CI after the review-return fixes.
 
 ## Work log
 
@@ -169,6 +169,11 @@ are no projection-vs-outcome pairs to carry to the merge gate.
 - 2026-08-08: all tasks complete; status → review.
 - 2026-08-08: review gathered fresh evidence for all six criteria (all passed as written), ran the consistency gate clean (`cairn_validate` exit 0, `document()` no diff, check 0/0/1-NOTE, five CI platforms green), and ran the three-lens fan-out; blame-history and prior-review lenses found nothing, the diff-bug lens reported 31 candidates, three scored ≥ 80.
 - 2026-08-08: review FAILED and returned to `in-progress` on three reproduced findings. F1: the `Config/testthat/start_first` assertion is inert because testthat reads `start-first` (hyphen, confirmed in `testthat:::find_test_start_first`) — adding the real field disarms the local gate with nothing red; AC5 names the underscored field, so this is an amendment return on AC5. F3: `expected_test_files()` matches `^test-.*\.[Rr]$` while testthat discovers `^test.*\.[rR]$`, so a `test_foo.R` runs, sorts after the contract file, and is exempt from every check; AC1 embeds the narrow pattern, so this is an amendment return on AC1. F2: `harness_caller_file()`'s srcref route returns the file the test body was written in, not the executing file — reproduced with a `helper-*.R`-defined generator leaving `test-viahelper.R` absent from `ran` and `helper-openac.R` present — falsifying both the behavior and the comment at `helper-openac.R:90-95`; actioned as a defect. AC1 and AC5 un-ticked; AC2/AC3/AC4/AC6 keep their recorded evidence.
+
+- 2026-08-08: read `testthat:::find_test_start_first` and `testthat:::find_test_scripts` (testthat 3.3.2) at the implement gate: the former reads `Config/testthat/start-first` (hyphen), the latter discovers `dir(path, "^test.*\.[rR]$")` — the two facts both amendment returns rest on.
+- 2026-08-08: amendment return: AC1 — "it returns a set identical to `sort(list.files(dir, pattern = "^test.*\.[rR]$"))` — testthat's own discovery pattern, so no file testthat executes is exempt"; the same amendment adds "and it names the file that is EXECUTING, not the file a test body was written in — a test a helper generates records the test file that called the helper", so F2's fix is criterion-mapped rather than uncredited.
+- 2026-08-08: amendment return: AC5 — "`Config/testthat/start-first` — the field testthat actually reads, per `testthat:::find_test_start_first` — absent from DESCRIPTION, with mutation evidence that adding it makes the assertion FAIL".
+- 2026-08-08: implement gate chose to credit the executing file (frame-walk first, srcref fallback) over narrowing the guarantee to the written-in file, accepting the dependence on testthat's `source_file()` frame; T7–T10 added and AC1/AC5 remapped in Coverage.
 
 ## Decisions
 
