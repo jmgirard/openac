@@ -1,7 +1,7 @@
 # Roadmap
 
 _The only authority on milestone status. Grouped by status, not ID._
-_Last hygiene check: 2026-08-07 (M08 merged and archived; M02 row pruned under terminal-row retention; harness-hardening candidate absorbed M08 review F6/F7)_
+_Last hygiene check: 2026-08-07 (M07 merged and archived; M03 row pruned under terminal-row retention; harness-hardening candidate absorbed M07 review B1/P1; batch case-sensitivity candidate added from M07 review D3)_
 _Released 0.1.0 (GitHub) 2026-07-11._
 
 ## Milestones
@@ -10,8 +10,7 @@ _Released 0.1.0 (GitHub) 2026-07-11._
 |---|---|---|---|---|---|
 | M08 | GitHub Actions CI — R CMD check across platforms | done | — | high | milestones/archive/M08-github-actions-ci.md |
 | M06 | Wrapper testing contract — system2-boundary command tests | done | — | high | milestones/archive/M06-wrapper-command-tests.md |
-| M07 | Wrapper testing contract — remainder and gated real invocations | review | M06 | normal | milestones/M07-wrapper-tests-remainder.md |
-| M03 | whisper tidy reader (`aw_read`) | done | M01 | normal | milestones/archive/M03-whisper-reader.md |
+| M07 | Wrapper testing contract — remainder and gated real invocations | done | M06 | normal | milestones/archive/M07-wrapper-tests-remainder.md |
 | M04 | R CMD check hygiene (docs, namespace, build) | done | — | high | milestones/archive/M04-check-hygiene.md |
 | M05 | Rewrite stale vignettes | done | M04 | normal | milestones/archive/M05-vignette-rewrite.md |
 
@@ -31,4 +30,5 @@ _Released 0.1.0 (GitHub) 2026-07-11._
 - Run-time tool-version capture (surface tool versions in outputs/attributes for methods reporting and drift debugging) — added 2026-07-11 — design interview
 - Add the `test-coverage` / Codecov workflow (usethis `use_github_action("test-coverage")`); needs a `CODECOV_TOKEN` repository secret only the maintainer can add, so an unauthenticated job would block every later merge — added 2026-08-07 — M06 review 2; the check-standard half became M08 on 2026-08-07
 - Turn on branch protection with the CI checks required on the default branch — GitHub repository settings, not files, so no milestone can land it — added 2026-08-07 — M08
-- Harden the system2 test harness: redirect config in every test, assert absolute command paths, keep `args` unflattened, alias-safe `do.call` attribution, fail rather than skip when the coverage registry is empty; plus `fake_is_executable()`'s Windows branch resolving any existing path where real `Sys.which()` resolves by extension, and neither of its branches being covered in `test-helper-boundary.R` — added 2026-08-07 — M06 review 2 (R2, R13, R12, R3, R5); M08 review (F6, F7)
+- Batch wrappers now match extensions case-insensitively on all five `*_dir` functions (`dir_inputs()` hard-codes `ignore.case = TRUE`, where three were case-sensitive before); undocumented, and on a case-sensitive filesystem two inputs differing only in extension case derive one output path and silently overwrite — added 2026-08-07 — M07 review D3 (74)
+- Harden the system2 test harness: redirect config in every test, assert absolute command paths, keep `args` unflattened, alias-safe `do.call` attribution, fail rather than skip when the coverage registry is empty; plus `fake_is_executable()`'s Windows branch resolving any existing path where real `Sys.which()` resolves by extension, and neither of its branches being covered in `test-helper-boundary.R` — added 2026-08-07 — M06 review 2 (R2, R13, R12, R3, R5); M08 review (F6, F7); M07 review (B1, P1 — a second `Sys.which` fake in `local_fake_downloads()` carries the same gap)
