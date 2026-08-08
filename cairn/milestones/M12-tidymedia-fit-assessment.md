@@ -5,7 +5,7 @@
 - **Depends on:** —
 - **Driving RR:** —
 - **Principles touched:** IP1, GP3, GP4
-- **Branch/PR:** `m12-tidymedia-fit-assessment`
+- **Branch/PR:** `m12-tidymedia-fit-assessment` · https://github.com/jmgirard/openac/pull/13
 
 ## Goal
 
