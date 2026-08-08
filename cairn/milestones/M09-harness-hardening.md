@@ -1,6 +1,6 @@
 # M09: Test-harness hardening — fake fidelity and a non-vacuous coverage gate
 
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** normal
 - **Depends on:** —
 - **Driving RR:** —
@@ -179,6 +179,8 @@ percentages remain a diagnostic, never a gate (PROFILE `test-doctrine`).
 - 2026-08-08: AC3 amended at the return gate — "the SIMULATED platform requires", not the host's, which the O3 fix made false. Behavior is identical wherever no platform is faked, which is every pre-existing test.
 - 2026-08-08: AC1 note for review — the executability RULE now lives in exactly one function, `fake_sys_which_path()`, and `fake_is_executable()` is a one-line view over it rather than a second copy. AC1's evidence grep still returns 2, both at top level (helper-openac.R:184 and :230).
 - 2026-08-08: local `devtools::check()` clean after the return work — 0 errors, 0 warnings, 1 NOTE, the standing spelling NOTE. Suite 504 pass / 0 fail, 2 skips (both `test-real-tools.R` binary gates). Second probe workflow deleted; its measurements survive in the comment on `fake_sys_which_path()` and the M09 LESSONS entries.
+- 2026-08-08: AC3 evidence after the return work — branch CI run 31241019278 (commit cce4012) green on all five platforms: macOS release, Windows release, Ubuntu devel / release / oldrel-1. This is the run that exercises the measured sibling rule and the simulated-platform fixture namer on a real Windows host.
+- 2026-08-08: all criteria met again; status -> review. The `## Review` section below still holds the evidence gathered before the return and is stale for AC1/AC2/AC3/AC8 — review regathers it fresh.
 - 2026-08-07: 9 acceptance criteria exceeds the 7 tripwire deliberately — one per independent review finding plus the profile's verify slot, each separately fenceable at review; merging them would blur which finding a piece of evidence closes.
 
 ## Decisions
