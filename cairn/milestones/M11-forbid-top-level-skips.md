@@ -1,6 +1,6 @@
 # M11: A wholly-skipped test file cannot exist — the coverage gate's blind spot, closed at the door
 
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** normal
 - **Depends on:** M10
 - **Driving RR:** —
@@ -97,9 +97,9 @@ completeness itself is observed (D-013 stands unamended).
 - [x] T5: Add AC5's declaration guard — static parse of `tests/testthat.R` plus
       the `_R_CHECK_PACKAGE_NAME_` conditional (measured 2026-08-08: a vanilla
       `R CMD check` sets it to the package name for the test process).
-- [ ] T6: Mutation-verify T5: delete the `Sys.setenv()` line at
+- [x] T6: Mutation-verify T5: delete the `Sys.setenv()` line at
       tests/testthat.R:22, record the failing `devtools::test()` output, revert.
-- [ ] T7: Append the DECISIONS entry recording the standing prohibition as an
+- [x] T7: Append the DECISIONS entry recording the standing prohibition as an
       extension of D-013's forbidden-forms list; absorb the ROADMAP candidate
       row; run `devtools::document()` and `devtools::test()` clean.
 
@@ -113,6 +113,8 @@ completeness itself is observed (D-013 stands unamended).
 - 2026-08-08 (T3): assertion added to `test-zzz-command-contract.R`; `devtools::test()` reports 546 pass, 0 fail, 2 skip (OpenFace and whisper absent on this machine).
 - 2026-08-08 (T4): mutation verified — a `skip_on_cran()` hoisted above the first `test_that()` of `test-real-tools.R` gives FAIL 1, raised by `test-zzz-command-contract.R:157` with `actual: "test-real-tools.R"`; the completeness check stays green because `NOT_CRAN=true` makes the hoisted call a runtime no-op, so the scanner is the sole cause. Reverted.
 - 2026-08-08 (T5): `declaration_present()` added to `helper-openac.R` and asserted in the contract file, with the `_R_CHECK_PACKAGE_NAME_` check as the secondary half; `devtools::test()` reports 548 pass, 0 fail.
+- 2026-08-08 (T6): mutation verified — deleting `Sys.setenv(OPENAC_FULL_SUITE = "true")` from `tests/testthat.R` gives FAIL 1 at `test-zzz-command-contract.R:151`, `Expected declaration_present(runner) to be TRUE`. Reverted; suite back to 548 pass.
+- 2026-08-08 (T7): D-015 appended; the ROADMAP candidate row was absorbed into the M11 row at plan time, so nothing was left to prune. `devtools::document()` produced no diff and `devtools::test()` is clean at 548 pass, 0 fail, 2 skip.
 - 2026-08-08: plan chose a parse walk excluding `test_that()` and `function` subtrees over a top-level call-head match, because the head match misses `if (cond) skip()`, `local({ skip() })` and `suppressWarnings(skip_on_cran())`, each of which aborts a file identically; falsified by a skip form that aborts a file while sitting inside one of the two excluded subtrees.
 
 ## Decisions

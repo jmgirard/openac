@@ -279,3 +279,40 @@ vacuous — a known gap, guarded only by M10's ROADMAP row and its dependency on
 M09. This entry retires itself in effect once M10 merges: at that point D-013's
 Consequences describe the tree, and this annotation is history explaining a
 window that has closed.
+
+### D-015 (2026-08-08): A test file may not skip before its tests run
+
+**Context:** D-013 makes completeness an observation — a `test_that` shadow
+records a file when one of its tests executes, compared against the test files
+on disk. A file whose top level skips, which is the idiomatic whole-file
+`skip_on_cran()`, executes no `test_that()` at all: nothing records it, and
+`contract_decision()` reports it as a file that never ran. Under the
+`OPENAC_FULL_SUITE` declaration CI and `R CMD check` set, that is a FAILURE for
+a file behaving exactly as its author intended. M10's review reproduced it
+(finding D20, scored 85) and left it as a ROADMAP candidate.
+**Decision:** forbid the shape rather than widen the observation. A test file in
+this suite may not skip outside a `test_that()` body. `top_level_skips()`
+reports a skip call occurring anywhere in a top-level expression except within a
+`test_that()` call or a function definition — so `if (cond) skip()`,
+`local({ skip() })` and `suppressWarnings(skip_on_cran())` are all caught — and
+`test-zzz-command-contract.R` fails while it returns anything. D-013's
+observation rule is untouched. Considered and rejected: recording the files
+testthat SOURCES, via a `Reporter` subclass whose `start_file()` fires whatever
+a file contains. It fixes the whole class rather than one form, but it needs
+`R6` in Suggests, a fix for the ordering problem that `tests/testthat.R` runs
+before testthat sources helpers (so the registry the observer was bound to is
+rebuilt under it), and a widening of D-013's definition of the observation —
+while every skip in this suite is already written inside a test, which is also
+where GP7 asks for it. Promote the rejected approach on evidence that a real
+whole-file skip is needed which per-test gating cannot express.
+**Consequences:** this suite's forbidden-form list grows by one — alongside
+qualified `testthat::test_that()`, `describe()` and `it()` (D-013), a skip
+outside a `test_that()` body is a suite failure naming the file and telling the
+author to move it inside. `test-real-tools.R` keeps its per-test
+`skip_on_cran()` calls unchanged. One hole is disclosed rather than closed: a
+top-level call to a locally defined wrapper that itself skips is invisible to a
+static scan, being the mirror of the function-definition exclusion. Separately,
+the declaration the gate's whole failure mode rests on is now asserted —
+`declaration_present()` parses `tests/testthat.R` for its
+`Sys.setenv(OPENAC_FULL_SUITE = ...)` call, because deleting that one line
+turned every incompleteness into a silent pass and nothing anywhere noticed.
