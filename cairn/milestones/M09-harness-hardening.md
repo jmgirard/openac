@@ -1,9 +1,9 @@
 # M09: Test-harness hardening — fake fidelity and a non-vacuous coverage gate
 
-- **Status:** blocked
+- **Status:** in-progress
 - **Priority:** normal
 - **Depends on:** —
-- **Driving RR:** —
+- **Driving RR:** RR02
 - **Principles touched:** GP7, IP1
 - **Branch/PR:** `m09-harness-hardening` · https://github.com/jmgirard/openac/pull/10
 
@@ -18,7 +18,9 @@ coverage gate cannot pass vacuously.
 **In:** `tests/testthat/helper-openac.R` and its own test file
 `test-helper-boundary.R`, plus `test-zzz-command-contract.R`'s skip condition
 and the call-site updates those changes force in `test-programs-resolve.R` and
-`test-commands-probe.R`.
+`test-commands-probe.R`; plus, from RR02, `tests/testthat.R` (the
+`OPENAC_FULL_SUITE` declaration), the decision-function unit tests, and the
+fixture suites those tests generate at runtime.
 One shared `Sys.which()` executability predicate, driven by the faked OS and
 faithful to real `Sys.which()` on both platforms; per-platform fixture binaries;
 `rappdirs` redirection folded into `local_fake_tools()`; an absolute-command
@@ -35,76 +37,123 @@ percentages remain a diagnostic, never a gate (PROFILE `test-doctrine`).
 
 ## Acceptance criteria
 
-- [ ] AC1: `helper-openac.R` defines exactly one executability predicate —
-      "would a real `Sys.which()` resolve this path" — taking the platform as an
-      explicit argument rather than reading `.Platform$OS.type` internally, and
-      both `local_fake_tools()` and `local_fake_downloads()` install one shared
-      `Sys.which` fake calling it with the platform their test's
-      `local_fake_os()` names, not the host's. Evidence:
-      `grep -c "fake_is_executable <- function\|fake_sys_which <- function"
-      tests/testthat/helper-openac.R` returns 2, both at top level.
-- [x] AC2: the predicate models what R's `Sys.which()` was MEASURED to do (M09
-      probes, R 4.6.1, GitHub runners). Driven with the platform set to Windows
-      it returns `TRUE` for an existing file carrying any extension — `.exe`,
-      `.bat`, `.cmd`, `.com` and `.txt` all measured as resolving — and, for an
-      extensionless path, `TRUE` iff a sibling carrying `.exe`, `.bat`, `.cmd`
-      or `.com` exists, whether or not the extensionless path itself does; a
-      `.txt` sibling and no sibling both measured as not resolving. File mode is
-      irrelevant there, and `fake_sys_which_path()` returns that sibling rather
-      than the name asked for. Driven with Unix it returns `TRUE` for an existing
-      mode-0755 file whatever its extension and `FALSE` for an existing mode-0644
-      file. The Windows drives run wherever the suite runs, so a macOS run still
-      exercises them; the Unix drive is skipped as root (`file.access(path, 1L)`
-      returns 0 there whatever the mode) and on a Windows host, which has no mode
-      bit for it to read. One measured divergence is deliberate and tested: the
-      real Windows `Sys.which()` returned a DIRECTORY named `tool.exe` when asked
-      for it, and the predicate refuses it, because openac would hand that
-      straight to `system2()`.
-- [x] AC3: `local_fake_tools()` creates fixture binaries carrying the extension
-      the SIMULATED platform requires (`.exe` when the test's `local_fake_os()`
-      names Windows, or when nothing is faked and the host is Windows; none
-      otherwise), the fake resolves a bare program name to that fixture on every
-      platform, and `boundary_tools()` records the extension-stripped program
-      name so every existing tool assertion holds unchanged. Evidence:
-      `R CMD check` green on all five CI platforms in this milestone's PR
-      (macOS, Windows, Ubuntu devel/release/oldrel-1).
+- [ ] AC1: `helper-openac.R` has exactly one executability rule,
+      `fake_sys_which_path()`, taking the platform as an explicit argument rather
+      than reading `.Platform$OS.type`; `fake_is_executable()` is a single call to
+      it, not a second copy; both `local_fake_tools()` and
+      `local_fake_downloads()` install one shared `Sys.which` fake driven by the
+      platform their test's `local_fake_os()` names, not the host's. Evidence:
+      `grep -c "^fake_sys_which_path <- function\|^fake_is_executable <- function"
+      tests/testthat/helper-openac.R` returns 2.
+- [x] AC2: the rule matches what `Sys.which()` was MEASURED to do (M09 probes,
+      R 4.6.1, GitHub runners). Windows: TRUE for an existing file with any
+      extension (`.exe`/`.bat`/`.cmd`/`.com`/`.txt` all measured); for an
+      extensionless path, TRUE iff a `.com`/`.exe`/`.bat`/`.cmd` sibling exists —
+      whether or not the path itself does — returning that sibling, and FALSE for
+      a `.txt` sibling or none; mode irrelevant. Unix: TRUE at mode 0755, FALSE at
+      0644, extension irrelevant. The Windows drives run wherever the suite runs;
+      the Unix drive skips as root and on a Windows host. One deliberate, tested
+      divergence: the real Windows `Sys.which()` returns a DIRECTORY named
+      `tool.exe`; the fake refuses it, since openac would hand it to `system2()`.
+- [x] AC3: fixtures carry the extension the SIMULATED platform requires (`.exe`
+      when the test's `local_fake_os()` names Windows, or unfaked on a Windows
+      host), the fake resolves a bare name to that fixture on every platform, and
+      `boundary_tools()` strips it so every existing assertion holds. Evidence:
+      `R CMD check` green on all five CI platforms in this milestone's PR.
 - [x] AC4: `local_fake_tools()` redirects every `rappdirs::` function openac's
-      package code calls. A test enumerates those call sites by walking the
-      loaded `openac` namespace for `rappdirs::user_*_dir` calls — the source
-      tree is absent under `R CMD check` — and asserts each named function
-      returns something other than its real value inside scope — so a future
-      call site to a third `rappdirs` dir fails the test rather than leaking.
-- [x] AC5: `fake_system2()` fails the calling test when the `command` it
-      receives is not absolute, decided by an explicit `is_absolute_path()`
-      matching the three absolute forms — POSIX `/x`, UNC `\\server\share`, and
-      a Windows drive `C:/x` or `C:\x`. Not
-      `identical(path, normalizePath(path, "/", mustWork = FALSE))`, which was
-      tried and is silently wrong: `normalizePath()` returns a path it cannot
-      resolve unchanged, so every relative path that does not exist compared
-      equal and passed — exactly the regression the check guards against. The
-      check runs on every boundary call routed through `local_fake_tools()`, not
-      a chosen sample. A test asserts it fires for a relative command.
-- [x] AC6: a `boundary_argv(state)` accessor returns each call's `args` exactly
-      as `system2()` received it, and `boundary_args()` is defined in terms of
-      it. A test asserts `boundary_argv()` distinguishes a call made with
-      `c("-i", "a b")` from one made with `"-i a b"`, which `boundary_args()`
-      renders identically.
-- [x] AC7: a test computes every set of openac namespace names bound to one
-      identical closure and asserts `openac_name_of()` returns the recorded
-      primary for each; an alias class absent from the recorded table fails the
-      test naming it. The four classes today are `ffm`/`ffmpeg`, `ffp`/`ffprobe`,
+      code calls, enumerated by walking the loaded namespace for
+      `rappdirs::user_*_dir` (the source tree is absent under `R CMD check`) and
+      asserting each differs from its real value in scope, so a third dir fails
+      the test rather than leaking.
+- [x] AC5: `fake_system2()` fails the calling test when `command` is not
+      absolute, decided by `is_absolute_path()` matching POSIX `/x`, UNC
+      `\\server\share`, and Windows `C:/x` or `C:\x`. NOT
+      `identical(path, normalizePath(path, "/", mustWork = FALSE))`, which returns
+      an unresolvable path unchanged and so passed every relative path that does
+      not exist. Runs on every call routed through `local_fake_tools()`, not a
+      sample; a test asserts it fires.
+- [x] AC6: `boundary_argv(state)` returns each call's `args` as `system2()`
+      received it and `boundary_args()` is defined over it; a test asserts
+      `c("-i", "a b")` is distinguished from `"-i a b"`.
+- [x] AC7: a test computes every set of namespace names bound to one identical
+      closure and asserts `openac_name_of()` returns the recorded primary; an
+      unrecorded class fails by name. Four today: `ffm`/`ffmpeg`, `ffp`/`ffprobe`,
       `of`/`openface`, `opensmile`/`os`.
-- [ ] AC8: `test-zzz-command-contract.R` decides whether to enforce from whether
-      the run was complete, not from whether anything was recorded. With owner
-      *attribution* disabled while the harness still records that it ran, a full
-      suite run makes the file FAIL rather than skip; `testthat::test_file()` on
-      that file alone still skips; and on a healthy tree a partial run covering
-      only some of the harness's test files
-      (`devtools::test(filter = "helper-boundary|zzz")`) skips rather than fails.
-      All three runs and their output go in the work log.
+- [ ] AC8 (BC1,BC2,BC9): completeness is OBSERVED, not inferred. `ran` is
+      recorded at `test_that` execution time by a shadow in `helper-openac.R`
+      forwarding the unevaluated call to `testthat::test_that`; `expected` is
+      every `^test-.*\.[Rr]$` in the test directory, from one
+      directory-parameterized function performing no file read (no
+      `readLines`/`scan`/`parse`/`file(` in its body), which the contract file
+      also uses for the real directory. A fixture suite generated at runtime into
+      `withr::local_tempdir()`, never committed, using a registry separate from
+      `openac_registry`, asserts the expected set is invariant under appending
+      `# local_fake_tools()` to a member and still holds an unparseable
+      `test-garbage.R`, and that a file whose only test begins with `skip()` still
+      joins `ran`. The contract file asserts no test file uses
+      `testthat::test_that`, `describe()` or `it()`, and that parallel is off by
+      both routes — `packageDescription("openac")$"Config/testthat/parallel"` and
+      `TESTTHAT_PARALLEL`.
 - [x] AC9: `Rscript -e 'devtools::test()'` clean and `Rscript -e
       'devtools::check()'` clean (0 errors, 0 warnings; the standing spelling
       NOTE justified).
+- [ ] AC10 (BC6): the skip/fail/enforce decision is a pure function of
+      `(expected, ran, covered, domain, deferred, declared_full)`, and
+      `tests/testthat.R` sets `OPENAC_FULL_SUITE=true` before
+      `test_check("openac")`. Unit tests cover all five returns by name:
+      `enforce_pass`; `enforce_fail(uncovered)` naming the functions;
+      `fail_incomplete` (declared full, any expected file missing) naming the
+      files; `skip_partial` (undeclared, same state) naming the files; and a
+      complete run with empty `covered` -> fail.
+- [ ] AC11 (BC3,BC4,BC8): the gate fails CLOSED. The contract file's first test
+      asserts its own file name is in `ran`, recorded through the same shadow
+      every other file uses with no self-registration path, and runs — not skips —
+      under full, filtered and single-file invocation. Mutation evidence in the
+      work log, gathered in an isolated worktree or copied tree and NEVER the
+      shared working tree: `harness_caller_file()` forced to `NA_character_`, and
+      separately the shadow removed, each fail the canary with the contract never
+      reporting enforce-pass, and each FAIL rather than skip under
+      `OPENAC_FULL_SUITE=true`; and forcing every test in one real harness file to
+      skip makes a full run FAIL naming uncovered functions.
+- [ ] AC12 (BC5,BC7,BC10): healthy-tree run modes and the deletions. Full
+      `devtools::test()`: FAIL 0, contract ENFORCING not skipping, the only skips
+      `test-real-tools.R`'s binary gates. `devtools::test(filter =
+      "helper-boundary|zzz")`: exactly 1 contract skip, 0 failures, its reason
+      naming every non-run test file. `testthat::test_file()` on the contract file
+      alone: 0 failures, completeness comparison skipped, canary passed. Retired
+      machinery gone: `grep -rnE
+      'harness_runs|harness_test_files|harness_files|registry\$(runs|files)'
+      tests/testthat/` gives no output (exit 1). The contract file asserts it
+      executes last: sorts last in `expected`, and `Config/testthat/start_first`
+      is absent from DESCRIPTION.
+
+### Deviations from RR02
+
+Every departure from RR02's binding criteria as written, per the ingest audit.
+BC1-BC10 are consolidated into AC8/AC10/AC11/AC12 rather than appended, because
+all ten serve the single criterion that has now failed twice and M09 already
+carried 9 against a 7-criterion tripwire; no substance was dropped.
+
+| BC | Departure | Why |
+|---|---|---|
+| BC1 | Added: the contract file's real expected set uses the same directory-parameterized function, and that function is asserted to perform no file read | As written, both fixture assertions pass while a second content-reading path lives in the contract body — the proxy shape that failed twice |
+| BC1, BC2 | Fixtures generated at runtime into `withr::local_tempdir()`, never committed | PROFILE `test-doctrine` hard-stops on committed fixtures without `data-raw/` provenance; a committed unparseable `test-garbage.R` would violate it |
+| BC2 | Bounded to files executing at least one bare `test_that()`, plus an assertion that no test file uses `testthat::test_that`/`describe()`/`it()` | The flat universal is false for qualified calls, zero-test files, and top-level errors; today's 13 files are a snapshot, not an invariant |
+| BC2 | Added: the nested fixture `test_dir()` uses a registry separate from `openac_registry` | Otherwise fixture file names leak into the real `ran` |
+| BC3 | Added: recorded through the same shadow every other file uses, no self-registration path | A one-line self-registration satisfies BC3 verbatim while the shadow is dead — the exact failure the canary exists to catch |
+| BC4 | Deleted "and 0 contract skips"; added the shadow-removal mutation and the `OPENAC_FULL_SUITE=true` fail case | **Unsatisfiable as written.** `devtools::test()` never runs `tests/testthat.R`, so `declared_full = FALSE`, and BC6's own table routes broken recording to `skip_partial`. BC4 forbade the skip BC6 requires |
+| BC6 | All five return values enumerated by name, adding `enforce_pass` and `enforce_fail(uncovered)` | "every branch, including" three left the branch the gate exists for unnamed |
+| BC5 | Folded into AC12; the filtered-run skip reason now names every non-run test file across all 13, not the 7 harness files | BC1's content-free expected set widens the message; BC5's wording would otherwise read as a mismatch against prior evidence |
+| BC7 | Pattern replaced with `grep -rnE 'harness_runs\|harness_test_files\|harness_files\|registry\$(runs\|files)'` | Verified: BC7's third alternative matches nothing (exit 1) — it demands `local_fake_" "tools` while the source has `paste0("local_fake_", "tools(")`. `openac_registry$runs` was named in prose but absent from the pattern |
+| BC8 | Comment-append relabelled as regression evidence, not a discriminating check | Once BC1 holds it cannot fail; presenting it as a check repeats M07's could-not-fail finding |
+| BC8 | "Sorts last" supplemented with `Config/testthat/start_first` absent from DESCRIPTION | Sorting last is not executing last; testthat honours `start_first` independently |
+| BC9 | DESCRIPTION half made a standing in-suite assertion via `packageDescription()` | As written it was a one-time review observation, so a future maintainer adding the field gets no failure — the silent disarm BC9 exists to prevent |
+| BC10 | Dropped "pass count >= 504" and the never-shrinks tolerance; dropped the `check()` and five-platform clauses | The floor encodes this machine's tool inventory (ffmpeg/ffprobe are installed here and contribute passes), contradicts the deletions BC7 mandates, and a count floor is the gate class PROFILE forbids; the dropped clauses duplicate AC9 and AC3 |
+| BC4, BC8 | Mutations required to run in an isolated worktree or copied tree | This review's own process defect: in-place mutation of the shared tree corrupted two of three lenses |
+
+No numeric projection with a stated tolerance survives ingestion — BC10's pass-count
+floor was the only one, and it was dropped as unmeasurable. So there are no
+projection-vs-outcome pairs to carry to the merge gate.
 
 ## Coverage
 
@@ -115,8 +164,11 @@ percentages remain a diagnostic, never a gate (PROFILE `test-doctrine`).
 - AC5 → T5
 - AC6 → T6
 - AC7 → T7
-- AC8 → T8
+- AC8 → T10
 - AC9 → T9
+- AC10 → T11
+- AC11 → T12
+- AC12 → T13
 
 ## Tasks
 
@@ -140,6 +192,10 @@ percentages remain a diagnostic, never a gate (PROFILE `test-doctrine`).
 - [x] T8: replace `test-zzz-command-contract.R`'s `skip_if(length(covered) == 0)`
       ([:80](tests/testthat/test-zzz-command-contract.R:80)) with a run-scope
       signal separate from attribution; record both runs.
+- [ ] T10: replace the text-search completeness signal with the `test_that` shadow and the content-free expected set (AC8).
+- [ ] T11: factor the skip/fail/enforce decision into a pure function; declare full runs in `tests/testthat.R`; unit-test all five branches (AC10).
+- [ ] T12: add the canary and gather the mutation evidence in an isolated worktree (AC11).
+- [ ] T13: delete the retired machinery; record the three run modes and the ordering assertion (AC12).
 - [x] T9: `devtools::document()` if roxygen changed, `devtools::test()`,
       `devtools::check()`; retire the M08 executability lesson from LESSONS.md
       and write its replacement.
@@ -186,26 +242,33 @@ percentages remain a diagnostic, never a gate (PROFILE `test-doctrine`).
 - 2026-08-08: process defect in this review, recorded rather than papered over — the orchestrator ran in-place falsification patches on `helper-openac.R` in the working tree the three fresh-context reviewers share. Two lenses (P1, B1) read the deliberately broken file mid-run and reported a non-existent `keep.source` flakiness bug, each having lost its primary finding to the corruption. Verified refuted: `keep.source` is FALSE during the test run in both invocation paths and the mechanism works regardless; 8 consecutive plain-`Rscript` runs on a verified-clean tree were 8/8 green with the helper blob unchanged. B2 was refuted too — M07's review did record B1 (35) and P1 (33) for this concern, in the full text at commit ccc47ad; the lens read only the compressed archive.
 - 2026-08-08: a verified fix direction for O6 exists — detecting the call sites by PARSING each test file and walking for the `local_fake_tools` symbol, rather than searching its text, yields exactly the seven real harness files and ignores comment mentions. O7 is not addressed by that change and needs its own answer.
 - 2026-08-08: blocked on RB02 — AC8's run-completeness signal escalated after two failures of the same shape; the thrash rule (b) offer was taken at the return gate.
+- 2026-08-08: ingested RR02. Its answer: completeness is the right precondition (the contract is a global absence claim, undecidable from a partial run), but both failures were failures of INFERENCE. `ran` becomes an observation — a `test_that` shadow recording at execution time — and `expected` a content-free ground truth, with the runner declaring full runs. RR02 rejected the parse-tree fix this session proposed at the return gate: it closes the comment hole but keeps the content-proxy shape that produced both failures. Load-bearing fact: testthat's `filter` selects whole files, never individual tests, so "every test file executed" is a biconditional for completeness rather than a proxy.
+- 2026-08-08: amendment return: AC1 — "Evidence: exactly one function decides executability — `fake_sys_which_path()` — and `fake_is_executable()` is defined over it rather than restating the rule; `grep -c \"^fake_sys_which_path <- function\|^fake_is_executable <- function\" tests/testthat/helper-openac.R` returns 2, and the body of `fake_is_executable()` is a single call to `fake_sys_which_path()`."
+- 2026-08-08: binding-criteria audit ran before ingestion — an [O] reader returned one UNSATISFIABLE criterion and nine needing rewording, all recorded in the Deviations table. The decisive find: BC4 forbade a contract skip that BC6's own decision table requires, because `devtools::test()` never executes `tests/testthat.R` and so never declares a full run. Verified independently, as were BC7's dead grep alternative and BC10's machine-dependent pass floor.
+- 2026-08-08: RR02 corrected a factual error in this session's return — `test-whisper-transcribe.R` does NOT depend on `audio.whisper`; it mocks `predict` in openac's namespace and its header says so. audio.whisper is absent on this machine and the file runs with the gate enforcing; the skip I attributed to it belongs to `test-real-tools.R`. The conditional-skip hole class is real and was reproduced artificially, but has no live instance. The corrected doctrine is stronger: because the boundary is fully mocked, a command test never has a legitimate reason to conditionally skip, so the right behavior is to fail naming functions rather than to accommodate it.
+- 2026-08-08: Scope "In:" amended to name `tests/testthat.R`, the decision-function unit tests, and the runtime-generated fixture suites — the audit flagged that the frozen "In:" is an enumeration and RR02's work falls outside it, which is what O24 returned this milestone for last pass.
 - 2026-08-07: 9 acceptance criteria exceeds the 7 tripwire deliberately — one per independent review finding plus the profile's verify slot, each separately fenceable at review; merging them would blur which finding a piece of evidence closes.
 
 ## Decisions
 
 - 2026-08-07: review RETURNED at the independent-review gate. AC2 fails on O1 — the `<path>.exe` sibling branch is unreachable because the `!file.exists(path)` guard precedes it, so `fake_is_executable(".../SMILExtract", os = "Windows")` returns FALSE where the criterion requires TRUE; the clause was inferred, not measured, since the probe created both `tool` and `tool.exe`. AC8 fails on O15 — `devtools::test(filter = "helper-boundary|zzz")` FAILs on a healthy tree. AC1 fails on O3 — `fake_program_file()` reads the host platform while the predicate reads the simulated one. AC2 also needs a gated text amendment (O9): "Both drives run wherever the suite runs" is contradicted by `skip_on_os("windows")`. AC1/AC2/AC3/AC8 unticked. Defect returns for this milestone: 1.
 
+- 2026-08-08 (RR02): completeness is established by observation plus declaration, never inference. Recorded as D-013; see the Deviations table for every departure from RR02's criteria as written.
+
 ## Review
 
 **Evidence gathered 2026-08-08 on branch `m09-harness-hardening` at 094a8e0, PR #10.**
 This replaces the evidence gathered before the first review returned the milestone; every line below was re-executed after the return work.
 
-- AC1 — `grep -c "fake_is_executable <- function\|fake_sys_which <- function" tests/testthat/helper-openac.R` returns **2**, both at top level (`:189`, `:235`). The executability rule itself lives in exactly one function, `fake_sys_which_path()`; `fake_is_executable()` is a one-line view over it, not a second copy. `local_fake_tools()` installs `fake_sys_which(resolve, bindir, os)` (`:368`), `local_fake_downloads()` installs `fake_sys_which()` (`:463`); both read the simulated platform, and neither defines a fake of its own.
+- AC1 — **SUPERSEDED 2026-08-08**: this evidence tested the pre-amendment criterion; AC1's evidence clause was amended after O4 and needs regathering. Original: `grep -c "fake_is_executable <- function\|fake_sys_which <- function" tests/testthat/helper-openac.R` returns **2**, both at top level (`:189`, `:235`). The executability rule itself lives in exactly one function, `fake_sys_which_path()`; `fake_is_executable()` is a one-line view over it, not a second copy. `local_fake_tools()` installs `fake_sys_which(resolve, bindir, os)` (`:368`), `local_fake_downloads()` installs `fake_sys_which()` (`:463`); both read the simulated platform, and neither defines a fake of its own.
 - AC2 — every clause driven by argument on a macOS host, so the Windows drives ran off-platform. Sibling `.exe`/`.bat`/`.cmd`/`.com` → TRUE, each resolving to the sibling's own path; `.txt` sibling → FALSE; no sibling → FALSE; a directly named `.exe` at 0644 → TRUE; a directly named `.txt` → TRUE; a directory named `dir.exe` → FALSE. Unix: 0755 → TRUE, 0644 → FALSE, 0755 `.txt` → TRUE. The rules are measured (probe 31240405772, R 4.6.1, `windows-latest`), one case per directory, always asking for the extensionless name. The Unix drive skips as root and on a Windows host.
 - AC3 — under `local_fake_os("Windows")` on this macOS host the fixtures are `ffmpeg.exe`, `ffprobe.exe`, `openface.exe`, `opensmile.exe`, `state$os` is `Windows`, `Sys.which("ffmpeg")` returns `ffmpeg.exe`, and `boundary_tools()` still reads `ffmpeg`. With nothing faked the fixtures are extensionless and `boundary_tools()` is unchanged. CI run 31241019278 (cce4012, the last code commit): **green on all five platforms** — macOS release, Windows release, Ubuntu devel/release/oldrel-1. Run 31241140171 on HEAD (094a8e0, tracking files only) also green.
 - AC4 — the enumeration walks `asNamespace("openac")`, finds `user_config_dir` and `user_data_dir`, and asserts each differs from its real value inside `local_fake_tools()` scope; `expect_gt(length(used), 0)` guards the walk against matching nothing. Passes in the targeted run below.
 - AC5 — `is_absolute_path()` verified directly: `/usr/bin/ffmpeg`, `C:/x/f.exe`, `C:\x\f.exe`, `\\srv\share\t.exe` all TRUE; `ffmpeg`, `rel/ffmpeg`, `./ffmpeg` all FALSE. The check sits in `fake_system2()` before the queue index advances, so it sees every call any test routes through the harness. Tests assert it fires for a bare name and for a relative path.
 - AC6 — `boundary_argv()` returns `list(c("-i", "a b"), "-i a b")` for two calls `boundary_args()` renders identically; the test asserts both halves.
 - AC7 — alias classes computed by grouping namespace names on closure identity yield exactly `ffm`/`ffmpeg`, `ffp`/`ffprobe`, `of`/`openface`, `opensmile`/`os`; `expect_setequal()` fails by name on an unrecorded class, and `openac_name_of()` is asked via every binding.
-- AC8 — three runs on the current tree. **Partial run**, `devtools::test(filter = "helper-boundary|zzz")`: FAIL 0, SKIP 1 at `test-zzz-command-contract.R:129` — "command contract needs the full test suite (1 of 7 harness files ran; missing test-batch-dirs.R, test-commands-extract.R, test-commands-prep.R, test-commands-probe.R, test-programs-resolve.R, test-whisper-transcribe.R)". **Contract file alone** under `test_file()`: FAIL 0, SKIP 1 at `:117`. **Full suite with attribution disabled and installs still recorded**: FAIL 2, `:141` — "Expected owners recorded across 101 harness installs > 0". Helper restored and verified clean by `git diff` afterwards.
-- AC8 non-vacuity — the completeness signal was falsified as well: with `harness_caller_file()`'s result forced to `NA`, a healthy full run FAILS at `:122` ("Expected test files recorded across 101 harness installs > 0") rather than skipping. A broken recorder cannot turn the gate off.
+- AC8 — **SUPERSEDED 2026-08-08**: AC8 was replaced wholesale by RR02's ingestion; this evidence describes the returned mechanism. Original: three runs on the current tree. **Partial run**, `devtools::test(filter = "helper-boundary|zzz")`: FAIL 0, SKIP 1 at `test-zzz-command-contract.R:129` — "command contract needs the full test suite (1 of 7 harness files ran; missing test-batch-dirs.R, test-commands-extract.R, test-commands-prep.R, test-commands-probe.R, test-programs-resolve.R, test-whisper-transcribe.R)". **Contract file alone** under `test_file()`: FAIL 0, SKIP 1 at `:117`. **Full suite with attribution disabled and installs still recorded**: FAIL 2, `:141` — "Expected owners recorded across 101 harness installs > 0". Helper restored and verified clean by `git diff` afterwards.
+- AC8 non-vacuity (**SUPERSEDED**, same reason) — the completeness signal was falsified as well: with `harness_caller_file()`'s result forced to `NA`, a healthy full run FAILS at `:122` ("Expected test files recorded across 101 harness installs > 0") rather than skipping. A broken recorder cannot turn the gate off.
 - AC9 — `devtools::test()`: **504 pass, 0 fail**, 2 skips (both `test-real-tools.R` binary gates). `devtools::check()`: **0 errors, 0 warnings, 1 NOTE** — the standing spelling NOTE, which carries its own ROADMAP candidate row.
 
 **Falsifiability of the return's two new mechanisms.** Each fix was reverted in place and the suite re-run: reinstating the `!file.exists(path)` guard produces 2 failures in the sibling drives; restoring the host-reading fixture namer produces 3 failures in the simulated-platform test. Both mechanisms discriminate.

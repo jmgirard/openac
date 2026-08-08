@@ -215,3 +215,33 @@ the release that introduced the function — that would declare a dependency on
 an experimental API whose signature changed without a NEWS entry.
 **Consequences:** DESCRIPTION Suggests carries the bound; testthat 3.2.0 is a
 2023 release, so no practical burden. M07's tests inherit the same floor.
+
+### D-013 (2026-08-08): The command contract's completeness precondition is observed and declared, never inferred
+
+**Context:** D-010 enforces the command contract with a failing test, but that
+test is only decidable over a complete suite run. M09 tried twice to infer
+completeness from a content-derived proxy — harness install counts, then a text
+search of test files — and both proxies diverged from the thing proxied, each
+time leaving the gate silently disarmed. RB02/RR02 escalated the question.
+**Decision:** completeness is established by OBSERVING which test files executed
+(a `test_that` shadow recording at execution time) compared against a
+content-free ground truth (the test files on disk), with the runner DECLARING a
+full run via `OPENAC_FULL_SUITE` in `tests/testthat.R`. A declared-full run that
+is incomplete FAILS; an undeclared partial run skips, naming the missing files;
+and a canary in the contract file asserts its own recording in every run mode, so
+a broken recorder fails the next run of any scope rather than skipping forever.
+This rests on testthat's `filter` selecting whole files, never individual tests,
+which makes "every test file executed" a biconditional for completeness rather
+than a proxy. Considered and rejected: parse-tree detection of call sites (keeps
+the content-proxy shape that failed twice), `testthat:::find_test_scripts()` and
+other internals (fail open on reorganization, with no surfacing failure),
+per-function enforcement over files that ran (undefinable for exactly the
+uncovered functions the gate exists to catch), and moving the contract out of the
+suite (advisory-only locally, which D-010 rejects).
+**Consequences:** D-010's enforcement stands; its skip surface is now explicit.
+A local filtered run skips the contract and says which files were missing; CI and
+`R CMD check` declare full and therefore fail on incompleteness. Command tests
+must never conditionally skip — the boundary is fully mocked, so a command test
+that cannot run everywhere is a harness gap or an explicit `deferred` entry.
+Parallel testthat is incompatible with the cross-file registry and is asserted
+off by both routes (`Config/testthat/parallel` and `TESTTHAT_PARALLEL`).
