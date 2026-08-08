@@ -1,6 +1,6 @@
 # M09: Test-harness hardening — fake fidelity and a non-vacuous coverage gate
 
-- **Status:** in-progress
+- **Status:** blocked
 - **Priority:** normal
 - **Depends on:** —
 - **Driving RR:** —
@@ -185,6 +185,7 @@ percentages remain a diagnostic, never a gate (PROFILE `test-doctrine`).
 - 2026-08-08: thrash rule (b) fires — AC8 has now failed twice, each time because its run-completeness signal is a proxy that does not mean what the gate takes it to mean (return 1: installs counted as completeness; return 2: a text match counted as a harness call site). The plan gate recorded no alternative for AC8's mechanism, so escalation via `/milestone-brief` is offered per D-004. Trigger (a) does not fire: this is the second return, not the third.
 - 2026-08-08: process defect in this review, recorded rather than papered over — the orchestrator ran in-place falsification patches on `helper-openac.R` in the working tree the three fresh-context reviewers share. Two lenses (P1, B1) read the deliberately broken file mid-run and reported a non-existent `keep.source` flakiness bug, each having lost its primary finding to the corruption. Verified refuted: `keep.source` is FALSE during the test run in both invocation paths and the mechanism works regardless; 8 consecutive plain-`Rscript` runs on a verified-clean tree were 8/8 green with the helper blob unchanged. B2 was refuted too — M07's review did record B1 (35) and P1 (33) for this concern, in the full text at commit ccc47ad; the lens read only the compressed archive.
 - 2026-08-08: a verified fix direction for O6 exists — detecting the call sites by PARSING each test file and walking for the `local_fake_tools` symbol, rather than searching its text, yields exactly the seven real harness files and ignores comment mentions. O7 is not addressed by that change and needs its own answer.
+- 2026-08-08: blocked on RB02 — AC8's run-completeness signal escalated after two failures of the same shape; the thrash rule (b) offer was taken at the return gate.
 - 2026-08-07: 9 acceptance criteria exceeds the 7 tripwire deliberately — one per independent review finding plus the profile's verify slot, each separately fenceable at review; merging them would blur which finding a piece of evidence closes.
 
 ## Decisions
