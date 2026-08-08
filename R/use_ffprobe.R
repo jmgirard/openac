@@ -4,8 +4,15 @@
 #'
 #' Attempt to find and run ffprobe with the specified arguments.
 #'
-#' @param arg (string) A string of space-separated arguments to append to the
-#'   ffprobe command line call.
+#' @param arg (character) The arguments to append to the ffprobe
+#'   command line call, in either of two forms. Give a **character vector**
+#'   with one CLI token per element and each element is quoted for you at the
+#'   process boundary, so a file path may contain spaces or a `$`. (One known
+#'   gap: on Windows, `%` is not escaped, so a path containing a token such as
+#'   `%TEMP%` can still be expanded by the command interpreter.) Give a
+#'   **single string** and
+#'   it is passed through to the shell exactly as written, quoting and all,
+#'   which leaves any quoting up to you. Prefer the vector form.
 #' @return A character vector containing the output of ffprobe. Errors if
 #'   ffprobe cannot be found.
 #' @references https://ffmpeg.org/ffprobe.html
@@ -14,13 +21,11 @@
 #' @examples 
 #' \dontrun{
 #' ffprobe('-version')
+#' ffprobe(c("-show_entries", "stream=codec_type", "my video.mp4"))
 #' }
 #' 
 ffprobe <- function(arg) {
-  # Validate input
-  stopifnot(rlang::is_string(arg))
-  # Run ffprobe
-  system2(require_program("ffprobe"), args = arg, stdout = TRUE, stderr = TRUE)
+  run_tool("ffprobe", arg)
 }
 
 
@@ -47,14 +52,15 @@ ffp_count_streams <- function(infile) {
   # Validate inputs
   stopifnot(file.exists(infile))
   
-  # Get types for ALL streams
-  arg <- paste0(
-    '-v error',
-    ' -show_entries stream=codec_type', 
-    ' -of csv=p=0',
-    ' "', infile, '"'
+  # Get types for ALL streams. One element per CLI token: run_tool() quotes
+  # each one at the process boundary, so `infile` needs no quoting here.
+  arg <- c(
+    "-v", "error",
+    "-show_entries", "stream=codec_type",
+    "-of", "csv=p=0",
+    infile
   )
-  
+
   # Run ffprobe
   stream_types <- ffprobe(arg)
   

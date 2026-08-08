@@ -4,8 +4,15 @@
 #'
 #' Attempt to find and run opensmile with the specified arguments.
 #'
-#' @param arg A string including space-separated arguments to append to the
-#'   SMILEextract command line call.
+#' @param arg (character) The arguments to append to the SMILEextract
+#'   command line call, in either of two forms. Give a **character vector**
+#'   with one CLI token per element and each element is quoted for you at the
+#'   process boundary, so a file path may contain spaces or a `$`. (One known
+#'   gap: on Windows, `%` is not escaped, so a path containing a token such as
+#'   `%TEMP%` can still be expanded by the command interpreter.) Give a
+#'   **single string** and
+#'   it is passed through to the shell exactly as written, quoting and all,
+#'   which leaves any quoting up to you. Prefer the vector form.
 #' @return A character vector containing the output of opensmile. Errors if
 #'   opensmile cannot be found.
 #' @references https://audeering.github.io/opensmile/
@@ -14,13 +21,11 @@
 #' @examples
 #' \dontrun{
 #' opensmile('-h')
+#' opensmile(c("-C", "my config.conf", "-I", "in.wav"))
 #' }
 #'
 opensmile <- function(arg) {
-  # Validate input
-  stopifnot(rlang::is_string(arg))
-  # Run opensmile
-  system2(require_program("opensmile"), args = arg, stdout = TRUE, stderr = TRUE)
+  run_tool("opensmile", arg)
 }
 
 
@@ -111,11 +116,11 @@ os_check_audio <- function(infile, verbose = FALSE) {
   # Count streams
   streams <- ffp_count_streams(infile)
   # Create ffprobe command
-  arg <- paste0(
-    '-v error',
-    ' -show_entries stream=codec_name,sample_rate,channels',
-    ' -of default=noprint_wrappers=1:nokey=1',
-    ' "', infile, '"'
+  arg <- c(
+    "-v", "error",
+    "-show_entries", "stream=codec_name,sample_rate,channels",
+    "-of", "default=noprint_wrappers=1:nokey=1",
+    infile
   )
   # Run ffprobe command
   dat <- ffprobe(arg)
@@ -171,13 +176,14 @@ os_prep_audio <- function(infile, outfile, stream = 0, overwrite = TRUE) {
     dir.create(dirname(outfile), recursive = TRUE)
   }
   # Construct ffmpeg command
-  arg <- paste0(
-    '-y -i "', infile, '" ',
-    ' -map 0:a:', stream,
-    ' -ar 44100', # set sample rate to 44.1kHz
-    ' -ac 1', # set to mono audio (1 channel)
-    ' -c:a pcm_s16le', # set to 16-bit PCM Little-Endian codec
-    ' "', outfile, '"'
+  arg <- c(
+    "-y",
+    "-i", infile,
+    "-map", paste0("0:a:", stream), # one token: ffmpeg takes the value joined
+    "-ar", "44100", # set sample rate to 44.1kHz
+    "-ac", "1", # set to mono audio (1 channel)
+    "-c:a", "pcm_s16le", # set to 16-bit PCM Little-Endian codec
+    outfile
   )
   # Run ffmpeg command
   ffmpeg(arg)
@@ -328,20 +334,12 @@ os_extract_wav <- function(
     dir.create(dirname(lldfile), recursive = TRUE)
   }
   # Construct opensmile command
-  arg <- paste0(
-    '-C "', config, '"',
-    ' -I "', infile, '"',
-    ifelse(
-      test = !is.null(aggfile),
-      yes = paste0(' -csvoutput "', aggfile, '"'),
-      no = ''
-    ),
-    ifelse(
-      test = !is.null(lldfile),
-      yes = paste0(' -lldcsvoutput "', lldfile, '"'),
-      no = ''
-    ),
-    ' -instname "', basename(infile), '"'
+  arg <- c(
+    "-C", config,
+    "-I", infile,
+    opt_arg(!is.null(aggfile), "-csvoutput", aggfile),
+    opt_arg(!is.null(lldfile), "-lldcsvoutput", lldfile),
+    "-instname", basename(infile)
   )
   # Run opensmile command
   out <- opensmile(arg)

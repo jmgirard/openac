@@ -17,12 +17,12 @@ aw_check_audio <- function(infile, verbose = FALSE) {
   # Count streams
   streams <- ffp_count_streams(infile)
   # Create ffprobe command
-  arg <- paste0(
-    '-v error',
-    ' -select_streams a', 
-    ' -show_entries stream=codec_name,sample_rate,channels',
-    ' -of default=noprint_wrappers=1:nokey=1',
-    ' "', infile, '"'
+  arg <- c(
+    "-v", "error",
+    "-select_streams", "a",
+    "-show_entries", "stream=codec_name,sample_rate,channels",
+    "-of", "default=noprint_wrappers=1:nokey=1",
+    infile
   )
   # Run ffprobe command
   dat <- ffprobe(arg)
@@ -104,10 +104,12 @@ aw_prep_audio <- function(
   if (!dir.exists(dirname(outfile))) {
     dir.create(dirname(outfile), recursive = TRUE)
   }
-  # Construct audio filters if requested
+  # Construct audio filters if requested. Two tokens -- the flag and the whole
+  # filter chain as one value -- so run_tool() quotes the chain at the boundary;
+  # `character()` when unrequested, which vanishes inside the c() below.
+  afilter <- character()
   if (afilters) {
-    afstring <- paste0(
-      ' -af "',
+    afilter <- c("-af", paste0(
       # Normalize loudness
       'loudnorm=I=-24:LRA=7:tp=-2,',
       # Filter to human speech frequencies
@@ -122,18 +124,19 @@ aw_prep_audio <- function(
       # Boost subtle transient details
       'areverse,',
       'asubboost,',
-      'areverse"'
-    )
+      'areverse'
+    ))
   }
   # Construct ffmpeg command
-  arg <- paste0(
-    '-y -i "', infile, '"',
-    ' -map 0:a:', stream,
-    ifelse(test = afilters, yes = afstring, no = ''),
-    ' -ar 16000', # set sample rate to 16kHz
-    ' -ac 1', # set to mono audio (1 channel)
-    ' -c:a pcm_s16le', # set to 16-bit PCM codec
-    ' "', outfile, '"'
+  arg <- c(
+    "-y",
+    "-i", infile,
+    "-map", paste0("0:a:", stream),
+    afilter,
+    "-ar", "16000", # set sample rate to 16kHz
+    "-ac", "1", # set to mono audio (1 channel)
+    "-c:a", "pcm_s16le", # set to 16-bit PCM codec
+    outfile
   )
   # Run ffmpeg command
   ffmpeg(arg)

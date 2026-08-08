@@ -162,16 +162,23 @@ report installed/working status; `install_*_{win,mac}` fetch and place
 binaries.
 
 **Calling the CLIs.** Each tool has a low-level passthrough (`ffmpeg()`,
-`ffprobe()`, `openface()`, `opensmile()`) that takes a single
-space-separated argument string and runs
-`system2(require_program(<tool>), args = arg, stdout = TRUE, stderr = TRUE)`,
-returning captured output as a character vector. The internal
+`ffprobe()`, `openface()`, `opensmile()`), and all four delegate to the
+internal `run_tool()`, which is **the one place openac quotes for the shell**
+(D-017). `system2()` does not quote its `args` — it pastes them into a command
+string the shell re-splits — so `run_tool()` decides by length: a **length-1**
+`arg` is the legacy raw string and is passed through untouched, while a
+**longer character vector** is one CLI token per element, each `shQuote()`d
+individually (no explicit `type`, so base picks sh- or cmd-style per platform).
+It then runs `system2(require_program(<tool>), args = …, stdout = TRUE,
+stderr = TRUE)` and returns captured output as a character vector.
 `require_program()` aborts when the tool is absent, because `system2(NULL, …)`
 would otherwise run the argument string as a shell command (M06). Typed
-high-level functions
-(`of_extract()`, `os_extract()`, `aw_transcribe()`, …) validate named
-parameters and assemble the argument string, then delegate to the
-passthrough.
+high-level functions (`of_extract()`, `os_extract()`, `aw_transcribe()`, …)
+validate named parameters and assemble a **token vector**, then delegate to the
+passthrough; optional flags come from `opt_arg()`, since `character()` is the
+absence a token vector needs where `""` would be a real empty argument. No call
+site quotes by hand: that idiom survived a space and lost to a `$`, which the
+shell expands inside double quotes (M13).
 
 **Batch & parallelism.** `*_dir()` functions enumerate input files by
 extension and map the single-file operation across them via `furrr`/`future`

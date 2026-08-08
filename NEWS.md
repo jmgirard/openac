@@ -1,5 +1,18 @@
 # openac (development version)
 
+* File paths containing a `$` are now handled correctly. Previously a file such
+  as `my $clip.mp4` was passed to ffmpeg, ffprobe, OpenFace or openSMILE with
+  the `$clip` part removed, so the tool was asked for a file that did not
+  exist. Paths containing spaces were already handled and are unaffected. One
+  gap remains, on Windows only: a path containing a token such as `%TEMP%` can
+  still be expanded by the command interpreter.
+
+* `ffmpeg()`, `ffprobe()`, `openface()` and `opensmile()` now also accept a
+  character vector giving one command-line argument per element, and quote each
+  element for you. Passing a single string still works exactly as before, with
+  quoting left to you; the vector form is preferred and is what the rest of
+  openac now uses internally.
+
 * The batch functions match `inext` regardless of case, so `inext = "mp4"` also
   takes `.MP4` files. This is now documented, and it can no longer cost you a
   result: where two inputs differing only in extension case would have derived

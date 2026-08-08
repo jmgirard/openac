@@ -4,8 +4,15 @@
 #'
 #' Attempt to find and run openface with the specified arguments.
 #'
-#' @param arg (string) Space-separated arguments to append to the
-#'   FaceLandmarkVidMulti.exe command line call.
+#' @param arg (character) The arguments to append to the FaceLandmarkVidMulti.exe
+#'   command line call, in either of two forms. Give a **character vector**
+#'   with one CLI token per element and each element is quoted for you at the
+#'   process boundary, so a file path may contain spaces or a `$`. (One known
+#'   gap: on Windows, `%` is not escaped, so a path containing a token such as
+#'   `%TEMP%` can still be expanded by the command interpreter.) Give a
+#'   **single string** and
+#'   it is passed through to the shell exactly as written, quoting and all,
+#'   which leaves any quoting up to you. Prefer the vector form.
 #' @return A character vector containing the output of openface. Errors if
 #'   openface cannot be found.
 #' @references https://github.com/TadasBaltrusaitis/OpenFace/wiki/Command-line-arguments
@@ -14,13 +21,11 @@
 #' @examples
 #' \dontrun{
 #' openface('-h')
+#' openface(c("-f", "my video.mp4", "-of", "out.csv"))
 #' }
 #' 
 openface <- function(arg) {
-  # Validate input
-  stopifnot(rlang::is_string(arg))
-  # Run openface
-  system2(require_program("openface"), args = arg, stdout = TRUE, stderr = TRUE)
+  run_tool("openface", arg)
 }
 
 
@@ -77,17 +82,17 @@ of_extract <- function(
   stopifnot(rlang::is_bool(wild))
   stopifnot(rlang::is_bool(multiview))
   # Construct openface command
-  arg <- paste0(
-    '-f "', infile, '"',
-    ' -of "', outfile, '"',
-    ifelse(fp2D, ' -2Dfp', ''),
-    ifelse(fp3D, ' -3Dfp', ''),
-    ifelse(pdm, ' -pdmparams', ''),
-    ifelse(pose, ' -pose', ''),
-    ifelse(gaze, ' -gaze', ''),
-    ifelse(aus, ' -aus', ''),
-    ifelse(wild, ' -wild', ''),
-    ifelse(multiview, ' -multi_view 1', '')
+  arg <- c(
+    "-f", infile,
+    "-of", outfile,
+    opt_arg(fp2D, "-2Dfp"),
+    opt_arg(fp3D, "-3Dfp"),
+    opt_arg(pdm, "-pdmparams"),
+    opt_arg(pose, "-pose"),
+    opt_arg(gaze, "-gaze"),
+    opt_arg(aus, "-aus"),
+    opt_arg(wild, "-wild"),
+    opt_arg(multiview, "-multi_view", "1")
   )
   # Run openface command
   openface(arg)

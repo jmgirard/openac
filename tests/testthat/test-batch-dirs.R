@@ -229,8 +229,11 @@ test_that("os_extract_dir() derives a path per requested output kind", {
   # os_extract on a conforming input: two os_check_audio rounds then openSMILE.
   conforming <- list("audio", c("pcm_s16le", "44100", "1"))
   writer <- function(command, args) {
-    for (path in regmatches(args, gregexpr('(?<=csvoutput ")[^"]+', args, perl = TRUE))[[1]]) {
-      write_fake_os_output(path)
+    # Reads the token after each output flag rather than regexing the glued
+    # argument string, which no longer exists (M13). `-csvoutput` is matched
+    # exactly, so it no longer also matches `-lldcsvoutput` by suffix.
+    for (flag in c("-csvoutput", "-lldcsvoutput")) {
+      for (path in boundary_value(args, flag)) write_fake_os_output(path)
     }
     "ok"
   }

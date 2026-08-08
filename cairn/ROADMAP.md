@@ -8,7 +8,7 @@ _Released 0.1.0 (GitHub) 2026-07-11._
 
 | ID | Title | Status | Depends on | Priority | File/Archive |
 |---|---|---|---|---|---|
-| M13 | Quote at the process boundary, not at the call site | planned | — | high | milestones/M13-boundary-quoting.md |
+| M13 | Quote at the process boundary, not at the call site | review | — | high | milestones/M13-boundary-quoting.md |
 | M14 | A bad file is an outcome, not the end of the batch | planned | M13 | normal | milestones/M14-resilient-stream-count.md |
 | M12 | Does openac belong on top of tidymedia? — a fit assessment, and a decision | done | — | high | milestones/archive/M12-tidymedia-fit-assessment.md |
 | M11 | A wholly-skipped test file cannot exist — the coverage gate's blind spot, closed at the door | done | M10 | normal | milestones/archive/M11-forbid-top-level-skips.md |
@@ -33,6 +33,7 @@ _Released 0.1.0 (GitHub) 2026-07-11._
 - Add the `test-coverage` / Codecov workflow (usethis `use_github_action("test-coverage")`); needs a `CODECOV_TOKEN` repository secret only the maintainer can add, so an unauthenticated job would block every later merge — added 2026-08-07 — M06 review 2; the check-standard half became M08 on 2026-08-07
 - Turn on branch protection with the CI checks required on the default branch — GitHub repository settings, not files, so no milestone can land it — added 2026-08-07 — M08
 - Show the constructed command — GP5's remaining half; once M13 makes commands token vectors, a display/return surface is cheap (tidymedia renders both from one structure via ffm_compile/ffm_args, R/ffm.R:1152,1164) — added 2026-08-08 — M13 Out; D-017
+- Windows `%` is the unfixed analogue of the `$` bug M13 closed: `shQuote(type="cmd")` does not escape `%`, and cmd.exe expands `%VAR%` inside double quotes, so a path holding a token like `%TEMP%` still reaches the tool mangled; `shQuote(type="cmd2")` exists for this, and the Windows branch has no shell-level oracle today — added 2026-08-08 — M13 review B5
 - Extend M14's per-file-outcome treatment to the other probe-and-abort guards (os_check_config, the stopifnot(file.exists()) guards in of_extract/os_extract) — added 2026-08-08 — M14 Out
 - Revisit the 8 names openac and tidymedia both export at the 1.0 API freeze — the README now warns users (2026-08-08); renaming is the other half and only makes sense once the API is frozen — added 2026-08-08 — M12 (cairn/references/tidymedia-fit.md, C1-C8)
 - Restore GP6 for output-path collisions — drop colliding files into the `*_dir` outcome table as per-file failures instead of aborting the batch pre-flight; needs plumbing the derivation result through `dir_walk` — added 2026-08-07 — hotfix batch-extension-case, PR #9
