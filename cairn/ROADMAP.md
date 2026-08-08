@@ -1,7 +1,7 @@
 # Roadmap
 
 _The only authority on milestone status. Grouped by status, not ID._
-_Last hygiene check: 2026-08-07 (M07 merged and archived; M03 row pruned under terminal-row retention; harness-hardening candidate absorbed M07 review B1/P1; batch case-sensitivity candidate added from M07 review D3)_
+_Last hygiene check: 2026-08-07 (batch case-sensitivity fixed by hotfix PR #9 and its candidate row consumed; GP6-collision and inst/WORDLIST candidates added from that hotfix)_
 _Released 0.1.0 (GitHub) 2026-07-11._
 
 ## Milestones
@@ -30,4 +30,6 @@ _Released 0.1.0 (GitHub) 2026-07-11._
 - Run-time tool-version capture (surface tool versions in outputs/attributes for methods reporting and drift debugging) — added 2026-07-11 — design interview
 - Add the `test-coverage` / Codecov workflow (usethis `use_github_action("test-coverage")`); needs a `CODECOV_TOKEN` repository secret only the maintainer can add, so an unauthenticated job would block every later merge — added 2026-08-07 — M06 review 2; the check-standard half became M08 on 2026-08-07
 - Turn on branch protection with the CI checks required on the default branch — GitHub repository settings, not files, so no milestone can land it — added 2026-08-07 — M08
+- Restore GP6 for output-path collisions — drop colliding files into the `*_dir` outcome table as per-file failures instead of aborting the batch pre-flight; needs plumbing the derivation result through `dir_walk` — added 2026-08-07 — hotfix batch-extension-case, PR #9
+- `R CMD check` carries a standing spelling NOTE — 55 domain terms (openSMILE, ffmpeg, wav, PCM, ORCID…) flagged against a 2-entry `inst/WORDLIST`; run `spelling::update_wordlist()` and keep it current, or drop `tests/spelling.R` — added 2026-08-07 — hotfix batch-extension-case, PR #9
 - Harden the system2 test harness: redirect config in every test, assert absolute command paths, keep `args` unflattened, alias-safe `do.call` attribution, fail rather than skip when the coverage registry is empty; plus `fake_is_executable()`'s Windows branch resolving any existing path where real `Sys.which()` resolves by extension, and neither of its branches being covered in `test-helper-boundary.R` — added 2026-08-07 — M06 review 2 (R2, R13, R12, R3, R5); M08 review (F6, F7); M07 review (B1, P1 — a second `Sys.which` fake in `local_fake_downloads()` carries the same gap)
