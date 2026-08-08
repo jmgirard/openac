@@ -74,7 +74,7 @@ guard, `boundary_argv()`, alias lock) is M09's and is untouched here. The
       separately the shadow removed, each fail the canary with no enforce-pass and
       each FAIL rather than skip under `OPENAC_FULL_SUITE=true`; and skipping every
       test in one real harness file makes a full run FAIL naming uncovered functions.
-- [ ] AC5 (BC5,BC7,BC10): run modes and deletions. Full `devtools::test()`: FAIL
+- [x] AC5 (BC5,BC7,BC10): run modes and deletions. Full `devtools::test()`: FAIL
       0, contract ENFORCING, the only skips `test-real-tools.R`'s binary gates —
       the nested fixture runs report silently so they cannot leak into that count.
       Filtered `devtools::test(filter = "helper-boundary|zzz")`: exactly 1 contract
@@ -506,3 +506,31 @@ first; D28 (45) the `start-first` mutation was gathered only under
 decision function and its caller are coupled through a string; P1 (40) the
 `source_file()` dependency was promoted to primary; P2 (48) the untested route
 moved to the srcref fallback; P3 (55) the frame walk checks no namespace.
+
+### Third pass — AC5 only, after the amendment
+
+Re-reviewed 2026-08-08. `git diff ff3f46a..HEAD -- tests/ R/` is empty: no code
+changed since the three-lens fan-out, so its findings and their triage carry
+over unchanged and no re-spawn was warranted. AC1–AC4 and AC6 keep their
+second-pass evidence; only AC5's text changed, so only AC5 was re-executed.
+
+- AC5 — PASS against the amended clause. Full `devtools::test()` →
+  `[ FAIL 0 | WARN 0 | SKIP 2 | PASS 541 ]`, the two skips
+  `test-real-tools.R:149` and `:168`. Filtered
+  `devtools::test(filter = "helper-boundary|zzz")` →
+  `[ FAIL 0 | WARN 0 | SKIP 1 | PASS 85 ]`, the one skip the contract, naming all
+  13 non-run files. `testthat::test_file()` on the contract alone (package
+  loaded) → `[ FAIL 0 | WARN 0 | SKIP 1 | PASS 10 ]`. Declared-full
+  `OPENAC_FULL_SUITE=true` → `[ FAIL 0 | WARN 0 | SKIP 2 | PASS 541 ]`, and the
+  `R CMD check` witness recorded under the second pass is unchanged. The amended
+  no-install-site-recording clause: the behavioral REQUIREMENT passes inside
+  `devtools::test(filter = "harness-recording")` → `[ FAIL 0 | WARN 0 | SKIP 0 |
+  PASS 15 ]`, which includes the assertion that `local_fake_tools()` and
+  `local_fake_downloads()` leave the recorded-file set unchanged; the grep gives
+  no output (exit 1) as hygiene, now stated as such rather than as evidence of a
+  deletion. Ordering, `start-first` and parallel are standing assertions and
+  pass.
+
+Consistency gate re-run: `cairn_validate` exit 0, `devtools::document()` no diff.
+D8 is resolved by this amendment — the criterion no longer asserts a deletion
+that never happened. D20 stands as the ROADMAP candidate recorded above.
