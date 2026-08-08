@@ -10,7 +10,7 @@ _Released 0.1.0 (GitHub) 2026-07-11._
 |---|---|---|---|---|---|
 | M08 | GitHub Actions CI — R CMD check across platforms | done | — | high | milestones/archive/M08-github-actions-ci.md |
 | M06 | Wrapper testing contract — system2-boundary command tests | done | — | high | milestones/archive/M06-wrapper-command-tests.md |
-| M07 | Wrapper testing contract — remainder and gated real invocations | planned | M06 | normal | milestones/M07-wrapper-tests-remainder.md |
+| M07 | Wrapper testing contract — remainder and gated real invocations | in-progress | M06 | normal | milestones/M07-wrapper-tests-remainder.md |
 | M03 | whisper tidy reader (`aw_read`) | done | M01 | normal | milestones/archive/M03-whisper-reader.md |
 | M04 | R CMD check hygiene (docs, namespace, build) | done | — | high | milestones/archive/M04-check-hygiene.md |
 | M05 | Rewrite stale vignettes | done | M04 | normal | milestones/archive/M05-vignette-rewrite.md |

@@ -1,12 +1,12 @@
 # M07: Wrapper testing contract — remainder and gated real invocations
 
-- **Status:** planned
+- **Status:** in-progress
 - **Priority:** normal
 - **Depends on:** M06
 - **Driving RR:** —
 - **Principles touched:** GP3, GP6, GP7, IP1
 
-- **Branch/PR:** —
+- **Branch/PR:** `m07-wrapper-tests-remainder`
 
 ## Goal
 
