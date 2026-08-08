@@ -138,7 +138,7 @@ projection-vs-outcome pair goes to the merge gate.
 - [x] T5: delete the retired machinery; assert parallel-off by both routes and
       last-execution; record the three run modes.
 - [x] T6: `devtools::test()`, `devtools::check()`, and the five-platform CI run.
-- [ ] T7: assert the `Config/testthat/start-first` field testthat reads, with
+- [x] T7: assert the `Config/testthat/start-first` field testthat reads, with
       mutation evidence that adding it turns the assertion red.
 - [ ] T8: widen `expected_test_files()` to testthat's own discovery pattern and
       prove the widened member is one testthat executes.
@@ -174,6 +174,8 @@ projection-vs-outcome pair goes to the merge gate.
 - 2026-08-08: amendment return: AC1 — "it returns a set identical to `sort(list.files(dir, pattern = "^test.*\.[rR]$"))` — testthat's own discovery pattern, so no file testthat executes is exempt"; the same amendment adds "and it names the file that is EXECUTING, not the file a test body was written in — a test a helper generates records the test file that called the helper", so F2's fix is criterion-mapped rather than uncredited.
 - 2026-08-08: amendment return: AC5 — "`Config/testthat/start-first` — the field testthat actually reads, per `testthat:::find_test_start_first` — absent from DESCRIPTION, with mutation evidence that adding it makes the assertion FAIL".
 - 2026-08-08: implement gate chose to credit the executing file (frame-walk first, srcref fallback) over narrowing the guarantee to the written-in file, accepting the dependence on testthat's `source_file()` frame; T7–T10 added and AC1/AC5 remapped in Coverage.
+
+- 2026-08-08: T7 — the ordering test now asserts `Config/testthat/start-first`, the hyphenated field `find_test_start_first()` reads. Mutation evidence (scratchpad copy `<scratch>/rt1`, `.git` removed, shared tree untouched): `cd <scratch>/rt1 && Rscript -e 'devtools::test(filter = "zzz")'` with `Config/testthat/start-first: test-zzz-command-contract.R` appended to DESCRIPTION → `[ FAIL 1 | WARN 0 | SKIP 1 | PASS 9 ]`, "the suite runs this file last, serially, in one process" FAILED at `test-zzz-command-contract.R:126:3` with the field read back as `'test-zzz-command-contract.R'` — so the assertion now discriminates, and `packageDescription()` does surface the field. Unmutated `devtools::test()`: `[ FAIL 0 | WARN 0 | SKIP 2 | PASS 537 ]`.
 
 ## Decisions
 

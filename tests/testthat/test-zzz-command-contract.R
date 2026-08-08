@@ -117,10 +117,13 @@ test_that("the suite runs this file last, serially, in one process", {
   expected <- expected_test_files(test_path("."))
   # Sorting last is what makes every other file's record already present.
   expect_identical(expected[[length(expected)]], "test-zzz-command-contract.R")
-  # ...but sorting last is not EXECUTING last: testthat honours start_first
+  # ...but sorting last is not EXECUTING last: testthat honours start-first
   # independently, and a file promoted there would run before the ones this
-  # counts.
-  expect_null(packageDescription("openac")$"Config/testthat/start_first")
+  # counts. The field is spelled with a HYPHEN -- `find_test_start_first()`
+  # reads `Config/testthat/start-first`, and the underscored name this asserted
+  # until M10's review is a field testthat never looks at, so the assertion
+  # passed no matter what DESCRIPTION said.
+  expect_null(packageDescription("openac")$"Config/testthat/start-first")
   # Parallel testthat gives each worker its own registry, so no worker ever sees
   # the whole suite. Asserted by BOTH routes that can turn it on, so a future
   # maintainer adding either gets a failure rather than a silently vacuous gate
