@@ -1,11 +1,11 @@
 # M12: Does openac belong on top of tidymedia? — a fit assessment, and a decision
 
-- **Status:** planned
+- **Status:** in-progress
 - **Priority:** high
 - **Depends on:** —
 - **Driving RR:** —
 - **Principles touched:** IP1, GP3, GP4
-- **Branch/PR:** —
+- **Branch/PR:** `m12-tidymedia-fit-assessment`
 
 ## Goal
 
@@ -91,7 +91,7 @@ ROADMAP rows for whatever the assessment surfaces and this milestone does not do
 
 ## Tasks
 
-- [ ] T1. Compute set O (AC2's procedure over the six openac files) and set C
+- [x] T1. Compute set O (AC2's procedure over the six openac files) and set C
       (the two `NAMESPACE` export-set intersection, AC5); record both lists and
       the tidymedia commit SHA read. Both are scripted, not hand-listed.
 - [ ] T2. For each paired row, write the difference verdict with `file:line` in
@@ -122,6 +122,7 @@ ROADMAP rows for whatever the assessment surfaces and this milestone does not do
 - 2026-08-08: plan gate chose assess-and-decide-only over assess-decide-and-adopt because adoption's size is unknowable until the assessment exists; falsified by the assessment concluding adoption is a mechanical one-file change.
 - 2026-08-08: plan gate chose the collisions-plus-invocation-layer depth over a full capability sweep of tidymedia's ~86 exports because the sweep's rows are mostly task recipes irrelevant to the dependency question; falsified by a later milestone wanting a tidymedia capability the sweep would have surfaced.
 - 2026-08-08: plan chose a two-NAMESPACE intersection over the candidate row's three-filename hint as set C's procedure because the hint enumerated filenames rather than the overlap domain and dropped the one genuinely conflicting name; falsified by the intersection missing a conflict that is not a shared export.
+- 2026-08-08: T1 done — set O is 33 members (24 exported, 9 internal, incl. `require_program`), set C is 8; openac exports 48, tidymedia 86. tidymedia pinned at `b99f7e8`; it advanced two commits during M12's planning session, which is why AC1's snapshot `Extraction:` form is the right classifier.
 - 2026-08-08: plan chose a committed `references/` synthesis note over keeping the analysis in this milestone file because the CRAN-distribution question and the queued install/discovery candidates will re-read it after this milestone archives; falsified by the decision closing the question with no later reader.
 
 ## Decisions
