@@ -8,7 +8,7 @@ _Released 0.1.0 (GitHub) 2026-07-11._
 
 | ID | Title | Status | Depends on | Priority | File/Archive |
 |---|---|---|---|---|---|
-| M12 | Does openac belong on top of tidymedia? — a fit assessment, and a decision | in-progress | — | high | milestones/M12-tidymedia-fit-assessment.md |
+| M12 | Does openac belong on top of tidymedia? — a fit assessment, and a decision | review | — | high | milestones/M12-tidymedia-fit-assessment.md |
 | M11 | A wholly-skipped test file cannot exist — the coverage gate's blind spot, closed at the door | done | M10 | normal | milestones/archive/M11-forbid-top-level-skips.md |
 | M09 | Test-harness hardening — fake fidelity at the tool boundary | done | — | normal | milestones/archive/M09-harness-hardening.md |
 | M10 | Command-contract coverage gate — completeness observed, not inferred | done | M09 | high | milestones/archive/M10-coverage-gate-run-scope.md |
@@ -31,4 +31,7 @@ _Released 0.1.0 (GitHub) 2026-07-11._
 - Run-time tool-version capture (surface tool versions in outputs/attributes for methods reporting and drift debugging) — added 2026-07-11 — design interview
 - Add the `test-coverage` / Codecov workflow (usethis `use_github_action("test-coverage")`); needs a `CODECOV_TOKEN` repository secret only the maintainer can add, so an unauthenticated job would block every later merge — added 2026-08-07 — M06 review 2; the check-standard half became M08 on 2026-08-07
 - Turn on branch protection with the CI checks required on the default branch — GitHub repository settings, not files, so no milestone can land it — added 2026-08-07 — M08
+- Quote at the process boundary, not at the call site — adopt a token-vector + shQuote contract in the passthroughs (the pattern tidymedia centralizes in run_program) so a forgotten literal quote at one call site cannot ship a broken command; today every caller hand-quotes paths (R/use_ffprobe.R:51-56) — added 2026-08-08 — M12 (cairn/references/tidymedia-fit.md, E7)
+- Make ffp_count_streams resilient rather than fatal — it aborts on an unreadable file (R/use_ffprobe.R:48) where a batch would rather get NA and a warning, as tidymedia's probe_all does (R/ffprobe.R:119-124); relates to GP6/GP9 — added 2026-08-08 — M12 (cairn/references/tidymedia-fit.md, E5)
+- Document that openac and tidymedia share 8 exported names of which 6 disagree (ffm most sharply: passthrough alias vs. job constructor), so attaching both masks silently — a README/vignette note, or a rename at the 1.0 API freeze — added 2026-08-08 — M12 (cairn/references/tidymedia-fit.md, C1-C8)
 - Restore GP6 for output-path collisions — drop colliding files into the `*_dir` outcome table as per-file failures instead of aborting the batch pre-flight; needs plumbing the derivation result through `dir_walk` — added 2026-08-07 — hotfix batch-extension-case, PR #9

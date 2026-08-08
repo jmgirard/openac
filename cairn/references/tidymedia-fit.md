@@ -273,8 +273,8 @@ package whose maintainer has deliberately reserved the right to do so.
 ## Disposition
 
 Where every row above lands. The dependency decision itself is not this page's
-to make — it is recorded in `DECISIONS.md` by the milestone that commissioned
-this page.
+to make — it is recorded as **D-016** (2026-08-08): decline the dependency,
+harvest the boundary-quoting idea.
 
 **Rows tagged `Reject` (28 of 33), with their reason.** E10, E11, E15–E20,
 E30–E33 concern openface, opensmile, or whisper, which tidymedia's stated scope
@@ -309,6 +309,11 @@ This page produced no rule, so it names no test file.
 
 ## Open questions
 
-- Whether the maintainer wants openac and tidymedia to share one config
-  directory, given E-C4 below — this page records the divergence but does not
-  propose a resolution — observed 2026-08-08.
+- Whether openac and tidymedia should share one config directory (C4–C7) was
+  open when this page was drafted; D-016 declined the dependency, which makes it
+  moot for now — the two families stay independent, and a user of both records
+  each tool twice. Re-opens only if the dependency question re-opens — resolved
+  and re-checked 2026-08-08.
+- This page's verdicts rest on tidymedia at `b99f7e8`, which advanced twice
+  during M12 itself; any future session reopening D-016 re-reads tidymedia
+  before relying on the ledgers above — observed 2026-08-08.

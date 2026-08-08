@@ -1,6 +1,6 @@
 # M12: Does openac belong on top of tidymedia? — a fit assessment, and a decision
 
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** high
 - **Depends on:** —
 - **Driving RR:** —
@@ -111,7 +111,7 @@ ROADMAP rows for whatever the assessment surfaces and this milestone does not do
 - [x] T5. Assemble `cairn/references/tidymedia-fit.md` from the synthesis-note
       template with the Provenance block, the snapshot `Extraction:` status, and
       its `INDEX.md` line; run `cairn_validate`.
-- [ ] T6. Question gate: present the assessment, record the chosen disposition as
+- [x] T6. Question gate: present the assessment, record the chosen disposition as
       a D-entry in `cairn/DECISIONS.md`, and add or absorb the ROADMAP bullets
       the Disposition section routes.
 
@@ -128,6 +128,8 @@ ROADMAP rows for whatever the assessment surfaces and this milestone does not do
 - 2026-08-08: T3 done — tidymedia has no CRAN release and no git tags, so a hard dep needs `Remotes: jmgirard/tidymedia`. Framed honestly: openac's CRAN gate is ALREADY closed by `audio.whisper` (`DESCRIPTION:35-36`), so this adds a second independent blocker rather than closing an open gate; the added cost is tidymedia's no-shim clean-break rename policy pre-0.2.0.
 - 2026-08-08: T4 done — 6 of the 8 shared exports disagree outright; `ffm` disagrees most sharply (openac: alias of the passthrough; tidymedia: alias of the `ffm_files` job constructor). Invocation-layer verdict: tidymedia quotes once at the boundary (`run_program` + `shQuote`), openac quotes by hand at every call site — the one axis where tidymedia is clearly ahead, and it transfers as an idea without a dependency.
 - 2026-08-08: T5 done — note assembled with Disposition and INDEX line; `cairn_validate` all-green (references staleness read the snapshot Extraction form rather than exempting the page); `devtools::test()` 0 fail / 557 pass / 2 skip, unchanged since no code was touched.
+- 2026-08-08: T6 done — user chose "decline the dependency; harvest the ideas" at the gate; recorded as D-016 with three rejected alternatives (full dep, ffmpeg/ffprobe-only dep, adopting `install_on_win`). Three candidate rows added, quoted verbatim in the note's Disposition; AC7's string match verified mechanically against `cairn/ROADMAP.md`.
+- 2026-08-08: `DESCRIPTION` deliberately unchanged — the decision adds no Imports/Suggests/Remotes entry, so the dependency surface this milestone touches is empty.
 - 2026-08-08: plan chose a committed `references/` synthesis note over keeping the analysis in this milestone file because the CRAN-distribution question and the queued install/discovery candidates will re-read it after this milestone archives; falsified by the decision closing the question with no later reader.
 
 ## Decisions
