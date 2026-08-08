@@ -7,14 +7,87 @@
 # binary runs (D-010). So we mock `base::system2` and, for determinism,
 # `base::Sys.which`.
 
-# Suite-wide record of which openac function drove each boundary call.
-# Accumulates across test files within one run; the command-contract test reads
-# it to decide which members of the computed domain the suite actually covers,
-# so coverage is never a hand-maintained list of names (D-010).
+# Suite-wide record of which openac function drove each boundary call, and of
+# which test files actually executed. Accumulates across test files within one
+# run; the command-contract test reads `owners` to decide which members of the
+# computed domain the suite covers (D-010), and `ran` to decide whether the run
+# was complete enough for that question to mean anything (D-013).
 openac_registry <- new.env(parent = emptyenv())
 openac_registry$owners <- character()
+openac_registry$ran <- character()
 
 registered_owners <- function() sort(unique(openac_registry$owners))
+
+# The test files observed to have executed at least one test.
+recorded_test_files <- function() sort(unique(openac_registry$ran))
+
+# The test file whose `test_that()` call is currently being set up, or NA.
+#
+# Read from the srcref testthat attaches when it parses a test file, which names
+# the file the expression was read from -- so it answers for the file that is
+# executing, never for a file that merely exists. The fallback reads `path` out
+# of the `source_file()` frame testthat runs each file inside; it exists because
+# a run with source references dropped would otherwise report NA for every file,
+# and NA is indistinguishable from "did not run".
+#
+# Both routes FAIL CLOSED. Whatever breaks them, `ran` comes back short and the
+# contract file's canary -- which asserts its OWN name is in `ran`, recorded
+# through this same path -- fails on the next run of any scope. That is the
+# whole reason the canary exists (D-013): a recorder that silently stops
+# recording must not read as a suite that silently stopped running.
+harness_caller_file <- function(expr = NULL) {
+  file <- tryCatch(utils::getSrcFilename(expr), error = function(e) character())
+  if (length(file) == 1L && nzchar(file)) return(basename(file))
+
+  frames <- sys.frames()
+  calls <- sys.calls()
+  for (i in rev(seq_along(calls))) {
+    head <- calls[[i]][[1L]]
+    name <- if (is.symbol(head)) {
+      as.character(head)
+    } else if (is.call(head) &&
+               as.character(head[[1L]])[[1L]] %in% c("::", ":::")) {
+      as.character(head[[3L]])
+    } else {
+      next
+    }
+    if (!identical(name, "source_file")) next
+    path <- tryCatch(get("path", envir = frames[[i]], inherits = FALSE),
+                     error = function(e) NULL)
+    if (is.character(path) && length(path) == 1L && nzchar(path)) {
+      return(basename(path))
+    }
+  }
+  NA_character_
+}
+
+# Shadow `test_that()` so that running a test RECORDS its file.
+#
+# Completeness used to be inferred from the content of test files -- an install
+# count, then a text search -- and both proxies diverged from the thing proxied,
+# leaving the coverage gate silently disarmed (D-013). This records the fact
+# itself, at execution time: a file joins `ran` because one of its tests ran,
+# not because something about its text suggested one would.
+#
+# testthat sources helper files into the environment test files are evaluated
+# in, so this binding shadows `testthat::test_that` for every test file in the
+# suite -- which is why this suite may only call `test_that()` bare. A qualified
+# `testthat::test_that()`, and `describe()`/`it()`, reach past the shadow and
+# are forbidden here (D-013); `test-zzz-command-contract.R` asserts their
+# absence.
+#
+# The call is forwarded UNEVALUATED to the real `test_that()`: `code` is never
+# forced here, so the test body runs exactly once, inside testthat's own
+# handlers, and a test that fails or skips is recorded exactly as one that
+# passes. Recording before the forward is deliberate -- a file whose only test
+# begins with `skip()` still ran.
+test_that <- function(desc, code) {
+  file <- harness_caller_file(substitute(code))
+  if (!is.na(file)) openac_registry$ran <- c(openac_registry$ran, file)
+  call <- match.call()
+  call[[1L]] <- quote(testthat::test_that)
+  eval.parent(call)
+}
 
 # Programs `find_program()` knows about; the fake resolver serves these.
 fake_programs <- function() c("ffmpeg", "ffprobe", "openface", "opensmile")
