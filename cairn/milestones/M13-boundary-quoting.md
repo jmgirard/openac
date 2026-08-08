@@ -137,6 +137,9 @@ direct docs commit to the default branch, not a milestone.
 - 2026-08-08: writing B1's regression test surfaced a second instance of the same class, which no reviewer found: `shQuote()` chooses its quoting style for the whole VECTOR, not per element — MEASURED, `shQuote(c("-i", "Jeff's.mp4"))` double-quotes BOTH elements while `shQuote("-i")` alone single-quotes. So `boundary_value()`'s scalar `shQuote(flag)` comparison silently matched nothing whenever any element of that argv held an apostrophe. It now matches on unquoted values.
 - 2026-08-08: second debris incident — a file named `first`, from a malformed heredoc, swept into cf650ad by `git add -A` and caught by `R CMD check`, not by me. Twice on one branch is a pattern: `git add -A` after any failed command needs `git status` read first.
 - 2026-08-08: post-return verification: suite 598 pass / 0 fail / 2 skip; `R CMD check` 0/0/0; `cairn_validate` clean; AC3's named mutation re-confirmed red with the mutation verified present in the file before running.
+- 2026-08-08: Windows CI FAILED on a test I wrote during the return. `test-helper-boundary.R:390` asserted the two argvs start with different characters — true only on unix, where sh-style quoting has two branches; cmd-style has one, so on Windows both start with `"` and the assertion is false. MEASURED locally via `shQuote(..., type = "cmd")`. Split into its own `skip_on_os("windows")` test so the platform-independent assertions keep running there.
+- 2026-08-08: that failure vindicates review finding B9, which I scored 48 and rejected as reporting hygiene. B9's point was that a mid-test platform skip takes the whole test with it; here the inverse shape — a platform-specific assertion folded into a platform-independent test — took the test down on Windows and turned a green local run into a red gate. The finding was right about the shape and I was wrong to reject it on severity.
+- 2026-08-08: the review fan-out and local checks both missed this; the cross-platform CI gate is what caught it, which is the case M08 added it for.
 - 2026-08-08: plan chose to arm the unquoted-whitespace invariant in the harness over asserting it per command test, because the harness already carries the sibling absolute-path invariant (helper-openac.R:605) and a per-test assertion is skipped by omission; falsified by a legitimate boundary call the invariant cannot express, requiring more opt-outs than the one test-helper-boundary.R needs.
 
 ## Decisions
@@ -240,6 +243,20 @@ token vector) and a file named `first` at the return (a malformed heredoc), each
 swept into a commit by `git add -A` and each caught by `R CMD check` as a
 non-portable or non-standard top-level file rather than by me. Both removed;
 check is 0/0/0. The pattern, not either instance, is the lesson.
+
+### Post-approval: Windows CI caught what the review did not
+
+`test-helper-boundary.R:390`, written during the return, asserted a property
+that holds on unix only — sh-style quoting has two branches, cmd-style has one —
+so it failed on the Windows runner while passing locally and in the three-lens
+review. Split into its own `skip_on_os("windows")` test; the platform-independent
+assertions still run everywhere.
+
+This vindicates B9, scored 48 and rejected above as reporting hygiene: its point
+was that mixing platform-specific and platform-independent assertions in one
+test misreports, and the inverse of exactly that shape turned a green local run
+into a red gate. B9 was right about the shape; the rejection weighed severity
+and got it wrong.
 
 ### One correction
 

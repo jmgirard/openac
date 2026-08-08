@@ -385,9 +385,22 @@ test_that("boundary_value() matches on unquoted values, not on a quoted flag", {
 
   expect_identical(boundary_value(plain, "-i"), "a b.mp4")
   expect_identical(boundary_value(apost, "-i"), "Jeff's clip.mp4")
-  # The two argvs really did take different shQuote branches, so this is not
-  # asserting the same case twice.
-  expect_false(identical(substr(plain[[1]], 1L, 1L), substr(apost[[1]], 1L, 1L)))
+})
+
+test_that("the two argvs above really do take different shQuote branches", {
+  # Its own test rather than a fourth assertion in the one above, because it
+  # holds on unix ONLY: sh-style quoting has two branches, cmd-style has one,
+  # so on Windows both argvs legitimately start with the same character. Folded
+  # into the previous test behind a mid-test skip, it took the whole test down
+  # with it -- which is how it FAILED on the Windows runner while passing
+  # locally, and is the split M13's own review finding B9 recommended.
+  skip_on_os("windows")
+
+  plain <- shQuote(c("-i", "a b.mp4"))
+  apost <- shQuote(c("-i", "Jeff's clip.mp4"))
+
+  expect_identical(substr(plain[[1]], 1L, 1L), "'")
+  expect_identical(substr(apost[[1]], 1L, 1L), "\"")
 })
 
 test_that("boundary_value() reports its degenerate cases rather than hiding them", {
