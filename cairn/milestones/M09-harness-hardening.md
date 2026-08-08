@@ -1,6 +1,6 @@
 # M09: Test-harness hardening — fake fidelity and a non-vacuous coverage gate
 
-- **Status:** review
+- **Status:** in-progress
 - **Priority:** normal
 - **Depends on:** —
 - **Driving RR:** —
@@ -35,7 +35,7 @@ percentages remain a diagnostic, never a gate (PROFILE `test-doctrine`).
 
 ## Acceptance criteria
 
-- [x] AC1: `helper-openac.R` defines exactly one executability predicate —
+- [ ] AC1: `helper-openac.R` defines exactly one executability predicate —
       "would a real `Sys.which()` resolve this path" — taking the platform as an
       explicit argument rather than reading `.Platform$OS.type` internally, and
       both `local_fake_tools()` and `local_fake_downloads()` install one shared
@@ -94,7 +94,7 @@ percentages remain a diagnostic, never a gate (PROFILE `test-doctrine`).
       primary for each; an alias class absent from the recorded table fails the
       test naming it. The four classes today are `ffm`/`ffmpeg`, `ffp`/`ffprobe`,
       `of`/`openface`, `opensmile`/`os`.
-- [x] AC8: `test-zzz-command-contract.R` decides whether to enforce from whether
+- [ ] AC8: `test-zzz-command-contract.R` decides whether to enforce from whether
       the run was complete, not from whether anything was recorded. With owner
       *attribution* disabled while the harness still records that it ran, a full
       suite run makes the file FAIL rather than skip; `testthat::test_file()` on
@@ -181,6 +181,10 @@ percentages remain a diagnostic, never a gate (PROFILE `test-doctrine`).
 - 2026-08-08: local `devtools::check()` clean after the return work — 0 errors, 0 warnings, 1 NOTE, the standing spelling NOTE. Suite 504 pass / 0 fail, 2 skips (both `test-real-tools.R` binary gates). Second probe workflow deleted; its measurements survive in the comment on `fake_sys_which_path()` and the M09 LESSONS entries.
 - 2026-08-08: AC3 evidence after the return work — branch CI run 31241019278 (commit cce4012) green on all five platforms: macOS release, Windows release, Ubuntu devel / release / oldrel-1. This is the run that exercises the measured sibling rule and the simulated-platform fixture namer on a real Windows host.
 - 2026-08-08: all criteria met again; status -> review. The `## Review` section below still holds the evidence gathered before the return and is stale for AC1/AC2/AC3/AC8 — review regathers it fresh.
+- 2026-08-08: review RETURNED at the independent-review gate, second defect return. AC8 fails on O6 (92) and O7 (90), both reproduced: `harness_test_files()` decides membership by searching each test file's TEXT for `local_fake_tools(`, so a bare mention in a COMMENT adds a file to the expected set that can never join the ran set, and the coverage gate skips silently and permanently on every run thereafter — reproduced by appending one comment line to `test-installers.R`. The same hole opens when a file's only harness installs sit behind a skip (reproduced: "6 of 7 harness files ran"), which `test-whisper-transcribe.R` will hit on any machine without the GitHub-only `audio.whisper`. This is the vacuity D-010 forbids, relocated rather than removed. AC1 fails on O4 (85) as an amendment return: after the return work the executability rule lives in `fake_sys_which_path()` (helper-openac.R:198), which AC1's evidence grep does not count — the grep's "2" now counts a one-line view and a mock factory, so it cannot detect the duplication AC1 exists to prevent. O15 (93) is triage-fix, not a criterion failure: `fake_sys_which()`'s `os` default is a cached promise, so a `local_fake_os()` call after the first `Sys.which()` is silently ignored while `local_fake_downloads()`'s docstring claims otherwise. AC1/AC8 unticked. Defect returns for this milestone: 2.
+- 2026-08-08: thrash rule (b) fires — AC8 has now failed twice, each time because its run-completeness signal is a proxy that does not mean what the gate takes it to mean (return 1: installs counted as completeness; return 2: a text match counted as a harness call site). The plan gate recorded no alternative for AC8's mechanism, so escalation via `/milestone-brief` is offered per D-004. Trigger (a) does not fire: this is the second return, not the third.
+- 2026-08-08: process defect in this review, recorded rather than papered over — the orchestrator ran in-place falsification patches on `helper-openac.R` in the working tree the three fresh-context reviewers share. Two lenses (P1, B1) read the deliberately broken file mid-run and reported a non-existent `keep.source` flakiness bug, each having lost its primary finding to the corruption. Verified refuted: `keep.source` is FALSE during the test run in both invocation paths and the mechanism works regardless; 8 consecutive plain-`Rscript` runs on a verified-clean tree were 8/8 green with the helper blob unchanged. B2 was refuted too — M07's review did record B1 (35) and P1 (33) for this concern, in the full text at commit ccc47ad; the lens read only the compressed archive.
+- 2026-08-08: a verified fix direction for O6 exists — detecting the call sites by PARSING each test file and walking for the `local_fake_tools` symbol, rather than searching its text, yields exactly the seven real harness files and ignores comment mentions. O7 is not addressed by that change and needs its own answer.
 - 2026-08-07: 9 acceptance criteria exceeds the 7 tripwire deliberately — one per independent review finding plus the profile's verify slot, each separately fenceable at review; merging them would blur which finding a piece of evidence closes.
 
 ## Decisions
@@ -206,6 +210,65 @@ This replaces the evidence gathered before the first review returned the milesto
 **Falsifiability of the return's two new mechanisms.** Each fix was reverted in place and the suite re-run: reinstating the `!file.exists(path)` guard produces 2 failures in the sibling drives; restoring the host-reading fixture namer produces 3 failures in the simulated-platform test. Both mechanisms discriminate.
 
 **Consistency gate.** `cairn_validate.py` exit 0 — all checks passed, 1 advisory (the deliberate 9-criteria sizing tripwire, justified in the work log). `devtools::document()` produces no diff. No `_pkgdown.yml` in this repo. The diff touches no README, NEWS, NAMESPACE, `man/` or DESCRIPTION file — this milestone is test-code only, so the changelog slot has nothing user-visible to record. No principle changed, so `cairn_impact` does not apply. No `Driving RR`, so no projection-vs-outcome pairs.
+
+## Independent review (2026-08-08, second pass)
+
+Three fresh-context lenses; findings scored by a fourth agent that generated none of them.
+Diff-bug lens: 21. Blame-history lens: 3. Prior-PR-comments lens: 1 (its `gh api` probe found no real
+inline review comments, so no PR-thread walk was made). 25 total.
+
+**Evidence integrity.** Two lenses (P1, B1) and one blame finding (B2) were refuted before scoring.
+P1/B1 both reported a `keep.source` dependency making the harness's file recording flaky; measured,
+`keep.source` is FALSE during the test run in both invocation paths and the mechanism works anyway,
+and 8 consecutive plain-`Rscript` runs on a verified-clean tree were 8/8 green. Their observed
+failures were caused by the orchestrator's own in-place falsification patches, applied to the shared
+working tree while they were reading it — a process defect recorded in the work log. B2 claimed the
+`M07 B1/P1` citation is unsupported; M07's review recorded both (scores 35 and 33) in its full text
+at commit ccc47ad, which the compressed archive drops.
+
+**Actioned (>=80) — four findings, three of them acceptance-criterion failures.**
+
+- **O6 (92, AC-FAIL AC8)** — "The completeness gate is disarmed by any *textual* mention of
+  `local_fake_tools(`, including a comment. `harness_test_files()` greps every `test-*.R` for the
+  literal string; any file in `expected` but not in `ran` turns the whole contract into a silent
+  skip." Reproduced: appending `# see local_fake_tools() for why` to `test-installers.R` makes a full
+  `devtools::test()` print "7 of 8 harness files ran; missing test-installers.R" and stop enforcing.
+- **O15 (93, DEFECT)** — "`os` is a cached promise in `fake_sys_which()`, so `local_fake_os()` after
+  first use is silently ignored." Reproduced: a closure created before the OS is faked keeps the old
+  platform; a freshly created one picks up the new. `local_fake_downloads()`'s docstring claims it
+  reads the platform `local_fake_os()` names and documents no ordering constraint.
+- **O7 (90, AC-FAIL AC8)** — "Same disarm via a conditionally-skipped install. If every
+  `local_fake_tools()` call in one file sits behind a platform/optional-package skip, that file is
+  permanently `missing` on that platform and the gate skips there." Reproduced: "6 of 7 harness files
+  ran". `test-whisper-transcribe.R` depends on `audio.whisper`, a GitHub-only Suggests.
+- **O4 (85, AC-WRONG AC1)** — "AC1's evidence grep does not test AC1's proposition. After the return
+  work the actual executability rule lives in `fake_sys_which_path()` (line 198), which the grep does
+  not count, while `fake_sys_which()` is a mock factory, not a predicate. So the '2' is coincidental."
+  Confirmed. A second genuine predicate could be added and the evidence would still pass.
+
+**Logged, below the 80 threshold (21 findings), surfaced not dropped.**
+O9 (72) the `harness_files()` test cannot fail from its own call — 8 earlier installs in the same file
+already recorded the name · O14 (52) the `resolve` fast path bypasses the shared predicate entirely,
+so namer/predicate agreement is structural rather than verified · O11 (50) `boundary_argv()`'s
+`as.character()` collapses `NULL` and `character(0)` · O8 (45) D-010 not amended for the widened skip
+surface · O21 (42) the `os =` override is documented but untested · O13 (40) `NA_character_` resolves
+as "not executable" rather than erroring · O16 (40) `local_fake_tools()` can override a caller's own
+`local_fake_config()`, whichever runs last winning · O1 (35) the sibling search is case-sensitive
+where real Windows is not · O2 (35) `fake_program_name()` strips a superset of what the namer adds ·
+O12 (35) zero-length command errors before the diagnostic fires · O17 (35) `harness_caller_file()`
+can error on an edge-case `getSrcFilename()` shape · O18 (35) the O3 regression test cannot
+discriminate on a Windows host · O3 (30) one extension list, two case semantics · O5 (25) the work
+log cites helper lines 184/230; actual 189/235 · O19 (25) nothing asserts a legitimate absolute
+command passes · O20 (20) the resolve branch builds a bindir path without an existence check ·
+O10 (8) refuted, AC8's fail case was re-measured after the restructure · B1 (5) · B2 (5) · B3 (5,
+self-declared non-defect) · P1 (5).
+
+**Gate outcome: RETURNED.** O6 and O7 demonstrate AC8 failing inside its own domain, which is the
+return floor; O4 additionally needs a gated amendment to AC1's evidence. Status -> in-progress.
+Second defect return for this milestone. Thrash rule (b) fires — AC8 has failed twice, each time
+because its completeness signal is a proxy that does not mean what the gate takes it to mean — and
+the plan gate recorded no alternative for this mechanism, so `/milestone-brief` escalation is offered
+per D-004. Trigger (a) does not fire at two returns.
 
 ## Independent review (2026-08-07)
 
