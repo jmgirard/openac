@@ -5,7 +5,7 @@
 - **Depends on:** M09
 - **Driving RR:** RR02
 - **Principles touched:** GP7
-- **Branch/PR:** `m10-coverage-gate`
+- **Branch/PR:** `m10-coverage-gate` / https://github.com/jmgirard/openac/pull/11
 
 ## Goal
 
@@ -29,7 +29,7 @@ guard, `boundary_argv()`, alias lock) is M09's and is untouched here. The
 
 ## Acceptance criteria
 
-- [ ] AC1 (BC1,BC2): completeness is OBSERVED, not inferred. `ran` is recorded at
+- [x] AC1 (BC1,BC2): completeness is OBSERVED, not inferred. `ran` is recorded at
       `test_that` execution time by a shadow in `helper-openac.R` forwarding the
       unevaluated call to `testthat::test_that`. `expected` comes from one
       directory-parameterized function, which the contract file uses for the real
@@ -39,7 +39,7 @@ guard, `boundary_argv()`, alias lock) is M09's and is untouched here. The
       fixture member's contents (append, truncate, replace with garbage). A
       call-head whitelist over its body is hygiene, NOT the guarantee: a token
       blacklist is the proxy shape that failed twice, beaten by delegation.
-- [ ] AC2 (BC2): two fixture directories, generated at runtime into
+- [x] AC2 (BC2): two fixture directories, generated at runtime into
       `withr::local_tempdir()` and never committed. A CONTENT directory holding an
       unparseable `test-garbage.R`, never executed — measured: `test_dir()` over a
       directory with an unparseable member errors — proves the expected set is
@@ -51,7 +51,7 @@ guard, `boundary_argv()`, alias lock) is M09's and is untouched here. The
       `testthat::test_that`/`describe()`/`it()` is a DIAGNOSTIC for a better error
       message, bounded to files executing at least one bare `test_that()`; the
       guarantee is `setdiff(expected, ran)`, never the scan.
-- [ ] AC3 (BC6): the skip/fail/enforce decision is a pure function of `(expected,
+- [x] AC3 (BC6): the skip/fail/enforce decision is a pure function of `(expected,
       ran, covered, domain, deferred, declared_full)`; the contract test decides by
       CALLING it and carries no other skip or failure path for completeness;
       `declared_full` reads `Sys.getenv("OPENAC_FULL_SUITE")`, which
@@ -60,7 +60,7 @@ guard, `boundary_argv()`, alias lock) is M09's and is untouched here. The
       `enforce_pass`; `enforce_fail(uncovered)` naming the functions;
       `fail_incomplete` naming the files; `skip_partial` naming the files; and
       `fail_broken_attribution` (complete run, empty `covered`).
-- [ ] AC4 (BC3,BC4,BC8): the gate fails CLOSED. The contract file's first test
+- [x] AC4 (BC3,BC4,BC8): the gate fails CLOSED. The contract file's first test
       asserts its own name is in `ran`, recorded through the same shadow every
       other file uses, and runs — not skips — under full, filtered and single-file
       invocation; "no self-registration path exists" is a review-read, not a check.
@@ -71,7 +71,7 @@ guard, `boundary_argv()`, alias lock) is M09's and is untouched here. The
       separately the shadow removed, each fail the canary with no enforce-pass and
       each FAIL rather than skip under `OPENAC_FULL_SUITE=true`; and skipping every
       test in one real harness file makes a full run FAIL naming uncovered functions.
-- [ ] AC5 (BC5,BC7,BC10): run modes and deletions. Full `devtools::test()`: FAIL
+- [x] AC5 (BC5,BC7,BC10): run modes and deletions. Full `devtools::test()`: FAIL
       0, contract ENFORCING, the only skips `test-real-tools.R`'s binary gates —
       the nested fixture runs report silently so they cannot leak into that count.
       Filtered `devtools::test(filter = "helper-boundary|zzz")`: exactly 1 contract
@@ -89,7 +89,7 @@ guard, `boundary_argv()`, alias lock) is M09's and is untouched here. The
       file; `Config/testthat/start_first` absent from DESCRIPTION; parallel off by
       both `packageDescription("openac")$"Config/testthat/parallel"` and
       `TESTTHAT_PARALLEL`.
-- [ ] AC6: `Rscript -e 'devtools::test()'` clean and `Rscript -e
+- [x] AC6: `Rscript -e 'devtools::test()'` clean and `Rscript -e
       'devtools::check()'` clean (0 errors, 0 warnings; the standing spelling NOTE
       justified), and `R CMD check` green on all five CI platforms in this
       milestone's PR: `macos-latest`/release, `windows-latest`/release, and
@@ -171,3 +171,88 @@ are no projection-vs-outcome pairs to carry to the merge gate.
 ## Decisions
 
 ## Review
+
+Reviewed 2026-08-08 on `m10-coverage-gate` / PR #11, cut from `origin/main` at
+`e730024`, which has not moved since. Every command below was executed in this
+review pass; nothing is read off the implement work log.
+
+### Acceptance criteria
+
+- AC1 — PASS. The shadow at `helper-openac.R` records into `openac_registry$ran`
+  before forwarding `match.call()` with only its head replaced, so `code` is
+  never forced here. `expected_test_files(dir)` is the single
+  directory-parameterized function, called by the contract file with
+  `test_path(".")` for both the decision's `expected` and the ordering
+  assertion. The behavioral guarantee measured fresh:
+  `devtools::test(filter = "harness-recording")` → `FAIL 0 | WARN 0 | SKIP 0 |
+  PASS 11`, which includes identity to `sort(list.files(dir, pattern =
+  "^test-.*\.[Rr]$"))` and invariance under append, truncate and
+  replace-with-garbage applied to every member. The call-head whitelist is
+  present and passing as hygiene, asserting only `sort` and `list.files`.
+- AC2 — PASS. Both fixture directories are built by `withr::local_tempdir()` at
+  runtime; `git ls-files tests/testthat` lists only the three M01-era reader
+  CSVs, no `test-garbage.R` and no generated suite. The CONTENT directory is
+  never executed and its unparseable member is measured to make `test_dir()`
+  error. The EXECUTABLE suite runs under `test_dir(reporter = "silent",
+  stop_on_failure = FALSE)` on a registry passed in by option, with a helper
+  written as a verbatim copy of `helper-openac.R` plus one appended line
+  rebinding `openac_registry`; the skip-only and failing files both join `ran`
+  and the real registry is unchanged. The bypass scan is used only to enrich the
+  failure message; the decision consumes `setdiff(expected, ran)`.
+- AC3 — PASS. `contract_decision()` takes exactly the six named arguments and
+  reads no global. The contract test's only completeness path is its single call
+  to that function plus the `skip_partial` branch. `declared_full_run()` reads
+  `Sys.getenv("OPENAC_FULL_SUITE")`, set by `tests/testthat.R` before
+  `test_check("openac")` with the "do not modify" boilerplate annotated in
+  place. `devtools::test(filter = "contract-decision")` → `FAIL 0 | WARN 0 |
+  SKIP 0 | PASS 18`, covering `enforce_pass`, `enforce_fail` (naming
+  `of_extract, aw_transcribe`), `fail_incomplete` (naming `test-b.R`),
+  `skip_partial` (naming both files) and `fail_broken_attribution`, plus the
+  env-var reader.
+- AC4 — PASS. The canary is the file's first test; run per-test in single-file
+  mode it reports `passed = 1, skipped = FALSE` while only the completeness
+  comparison skips, and it passes in the filtered and full modes too. Mutations
+  re-run fresh in scratchpad copies `rv1`/`rv2`/`rv3` of the current tree, never
+  the shared tree: `harness_caller_file()` forced to `NA_character_` →
+  `[ FAIL 2 | WARN 0 | SKIP 3 | PASS 534 ]`, canary failed and the contract
+  skipped, and under `OPENAC_FULL_SUITE=true` → `[ FAIL 3 | WARN 0 | SKIP 2 |
+  PASS 534 ]` with `decision$action` = `"fail_incomplete"`. Shadow removed gives
+  the identical pair of counts and the same two verdicts. Skipping all 12 tests
+  of `test-commands-extract.R` → `[ FAIL 1 | WARN 0 | SKIP 14 | PASS 506 ]`,
+  `decision$action` = `"enforce_fail"` naming `os_extract, os_extract_wav` on an
+  undeclared run.
+- AC5 — PASS. Full `devtools::test()` → `[ FAIL 0 | WARN 0 | SKIP 2 | PASS 537 ]`,
+  contract enforcing, the two skips being `test-real-tools.R:149` and `:168`, so
+  the nested fixture runs did not leak. Filtered
+  `devtools::test(filter = "helper-boundary|zzz")` → `[ FAIL 0 | WARN 0 | SKIP 1
+  | PASS 85 ]`, the one skip the contract, naming all 13 non-run files.
+  `test_file()` on the contract alone → `[ FAIL 0 | WARN 0 | SKIP 1 | PASS 10 ]`.
+  Declared-full `OPENAC_FULL_SUITE=true` → `[ FAIL 0 | WARN 0 | SKIP 2 | PASS
+  537 ]`, 0 contract skips. Deletions: the grep gives no output (exit 1) and
+  `test-helper-boundary.R` contains no `harness_files` occurrence, paired with
+  the passing behavioral assertion that `local_fake_tools()` and
+  `local_fake_downloads()` leave `ran` unchanged. Ordering and parallel are
+  standing assertions in the suite and pass.
+- AC6 — PASS. `Rscript -e 'devtools::test()'` clean (counts above).
+  `Rscript -e 'devtools::check()'` re-run at review: 0 errors, 0 warnings,
+  `Status: 1 NOTE` — the standing spelling NOTE, 55 domain terms against a
+  2-entry `inst/WORDLIST`, already carried as a ROADMAP candidate and unchanged
+  by this milestone. `gh pr checks 11` on the head commit: pass on
+  `macos-latest`/release, `windows-latest`/release, and `ubuntu-latest` at
+  devel, release and oldrel-1 — all five named platforms green.
+
+### Consistency gate
+
+`cairn_validate` exit 0, all 16 checks PASS and all 8 advisories OK, including
+`coverage complete` and `weight caps`. No `DESIGN.md` principle changed, so
+`cairn_impact` does not apply. Toolchain gate (`r-package`): `devtools::document()`
+leaves no diff; `NAMESPACE`, `man/` and `DESCRIPTION` are untouched by the branch;
+no pkgdown site exists; no new top-level files, so no `.Rbuildignore` entry is
+owed; `NEWS.md` gets no entry because the milestone is test-only with no
+user-visible change; `devtools::check()` clean as recorded under AC6.
+
+### Projection vs. outcome (Driving RR: RR02)
+
+None to record. RR02's only numeric projection was BC10's "pass count >= 504"
+floor, dropped at ingestion as unmeasurable, so no projection-vs-outcome pair
+exists to juxtapose.
