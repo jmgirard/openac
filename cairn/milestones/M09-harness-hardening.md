@@ -174,4 +174,6 @@ Process note: the criterion checkboxes were ticked at implement-completion, befo
 - AC8 — with attribution disabled and installs still recorded: full suite FAILS at `test-zzz-command-contract.R:89` — "Expected owners recorded across 22 harness installs > 0" (FAIL 2). The same file alone SKIPS at `:84` — "command contract needs the full test suite" (FAIL 0, SKIP 1). Helper restored, suite re-run clean.
 - AC9 — `devtools::test()`: **486 pass, 0 fail**, 2 skips (both `test-real-tools.R` binary gates). `devtools::check()`: **0 errors, 0 warnings, 1 NOTE** — the standing spelling NOTE, which carries its own ROADMAP candidate row.
 
+**PR CI.** Run 31239424053 on PR #10: pass on all five platforms — macOS release (1m27s), Windows release (2m3s), Ubuntu devel (2m37s) / release (1m42s) / oldrel-1 (1m36s).
+
 **Consistency gate.** `cairn_validate.py` exit 0, all checks passed (1 advisory: the deliberate 9-criteria sizing tripwire, justified in the work log). `devtools::document()` produces no diff. No `_pkgdown.yml` in this repo. README.Rmd/README.md unchanged by this milestone. No principle changed, so `cairn_impact` does not apply. No `Driving RR`, so no projection-vs-outcome pairs.
