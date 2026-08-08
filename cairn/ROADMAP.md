@@ -1,7 +1,7 @@
 # Roadmap
 
 _The only authority on milestone status. Grouped by status, not ID._
-_Last hygiene check: 2026-08-07 (batch case-sensitivity fixed by hotfix PR #9 and its candidate row consumed; GP6-collision and inst/WORDLIST candidates added from that hotfix)_
+_Last hygiene check: 2026-08-07 (re-audit after the PR #9 hotfix — all checks green, nothing in flight, no untriaged issues or PRs; no changes needed)_
 _Released 0.1.0 (GitHub) 2026-07-11._
 
 ## Milestones
