@@ -1,6 +1,6 @@
 # M09: Test-harness hardening — fake fidelity and a non-vacuous coverage gate
 
-- **Status:** review
+- **Status:** in-progress
 - **Priority:** normal
 - **Depends on:** —
 - **Driving RR:** —
@@ -33,7 +33,7 @@ percentages remain a diagnostic, never a gate (PROFILE `test-doctrine`).
 
 ## Acceptance criteria
 
-- [x] AC1: `helper-openac.R` defines exactly one executability predicate —
+- [ ] AC1: `helper-openac.R` defines exactly one executability predicate —
       "would a real `Sys.which()` resolve this path" — taking the platform as an
       explicit argument rather than reading `.Platform$OS.type` internally, and
       both `local_fake_tools()` and `local_fake_downloads()` install one shared
@@ -41,7 +41,7 @@ percentages remain a diagnostic, never a gate (PROFILE `test-doctrine`).
       `local_fake_os()` names, not the host's. Evidence:
       `grep -c "fake_is_executable <- function\|fake_sys_which <- function"
       tests/testthat/helper-openac.R` returns 2, both at top level.
-- [x] AC2: the predicate models what R's `Sys.which()` was measured to do (M09
+- [ ] AC2: the predicate models what R's `Sys.which()` was measured to do (M09
       probe, R 4.6.1, GitHub runners). Driven with the platform set to Windows it
       returns `TRUE` for an existing file carrying any extension — `.exe`,
       `.bat`, `.cmd`, `.com` and `.txt` all measured as resolving — `TRUE` for an
@@ -52,7 +52,7 @@ percentages remain a diagnostic, never a gate (PROFILE `test-doctrine`).
       drive as root (`file.access(path, 1L)` returns 0 there whatever the mode).
       Both drives run wherever the suite runs, so a macOS run still exercises the
       Windows branch.
-- [x] AC3: `local_fake_tools()` creates fixture binaries carrying the extension
+- [ ] AC3: `local_fake_tools()` creates fixture binaries carrying the extension
       the host platform requires (`.exe` on Windows, none elsewhere), the fake
       resolves a bare program name to that fixture on every platform, and
       `boundary_tools()` records the extension-stripped program name so every
@@ -85,7 +85,7 @@ percentages remain a diagnostic, never a gate (PROFILE `test-doctrine`).
       primary for each; an alias class absent from the recorded table fails the
       test naming it. The four classes today are `ffm`/`ffmpeg`, `ffp`/`ffprobe`,
       `of`/`openface`, `opensmile`/`os`.
-- [x] AC8: with owner *attribution* disabled while the harness still records
+- [ ] AC8: with owner *attribution* disabled while the harness still records
       that it ran, a full suite run makes `test-zzz-command-contract.R` FAIL
       rather than skip; `testthat::test_file()` on that file alone still skips.
       Both runs and their output go in the work log.
@@ -158,6 +158,8 @@ percentages remain a diagnostic, never a gate (PROFILE `test-doctrine`).
 
 ## Decisions
 
+- 2026-08-07: review RETURNED at the independent-review gate. AC2 fails on O1 — the `<path>.exe` sibling branch is unreachable because the `!file.exists(path)` guard precedes it, so `fake_is_executable(".../SMILExtract", os = "Windows")` returns FALSE where the criterion requires TRUE; the clause was inferred, not measured, since the probe created both `tool` and `tool.exe`. AC8 fails on O15 — `devtools::test(filter = "helper-boundary|zzz")` FAILs on a healthy tree. AC1 fails on O3 — `fake_program_file()` reads the host platform while the predicate reads the simulated one. AC2 also needs a gated text amendment (O9): "Both drives run wherever the suite runs" is contradicted by `skip_on_os("windows")`. AC1/AC2/AC3/AC8 unticked. Defect returns for this milestone: 1.
+
 ## Review
 
 **Evidence gathered 2026-08-07 on branch `m09-harness-hardening`, PR #10.**
@@ -177,3 +179,60 @@ Process note: the criterion checkboxes were ticked at implement-completion, befo
 **PR CI.** Run 31239424053 on PR #10: pass on all five platforms — macOS release (1m27s), Windows release (2m3s), Ubuntu devel (2m37s) / release (1m42s) / oldrel-1 (1m36s).
 
 **Consistency gate.** `cairn_validate.py` exit 0, all checks passed (1 advisory: the deliberate 9-criteria sizing tripwire, justified in the work log). `devtools::document()` produces no diff. No `_pkgdown.yml` in this repo. README.Rmd/README.md unchanged by this milestone. No principle changed, so `cairn_impact` does not apply. No `Driving RR`, so no projection-vs-outcome pairs.
+
+## Independent review (2026-08-07)
+
+Three fresh-context lenses; findings scored by a fourth agent that generated none of them.
+Prior-PR-comments lens: **no findings** — it checked each of the nine absorbed findings and
+confirmed all nine are addressed rather than reverted. Diff-bug lens: 24. Blame-history lens: 7.
+31 total, deduplicated to 28 distinct.
+
+**Actioned (>=80) — five findings, three of them acceptance-criterion failures.**
+
+- **O1 (95, AC-FAIL AC2)** — "`<path>.exe` sibling branch unreachable. The early guard
+  `!file.exists(path)` returns FALSE before the Windows branch, so the sibling check only fires
+  when the extensionless path ALSO exists. With only `SMILExtract.exe` present,
+  `fake_is_executable(".../SMILExtract", os = "Windows")` returns FALSE. AC2 says it must return TRUE."
+  Reproduced directly. AC2's sibling clause was written from an inference, not from the probe —
+  the probe created both `tool` and `tool.exe`, so the only-`.exe`-exists case was never measured.
+- **O15 (93, AC-FAIL AC8)** — "The new runs gate turns filtered suite runs into failures.
+  `devtools::test(filter = \"helper-boundary|zzz\")` gives FAIL 1 on a healthy tree." Reproduced.
+  The gate conflates "the harness ran" with "the harness ran completely"; AC8 tested only the two
+  extremes, full suite and single file.
+- **O9 (85, AC-WRONG AC2)** — "AC2's text says 'Both drives run wherever the suite runs' but the
+  Unix drive is skipped wholesale on Windows. Criterion ticked against a claim the code
+  contradicts." The `skip_on_os("windows")` narrowing was recorded in the work log as a minor
+  amendment; it changes what the criterion asserts and needed a gated amendment.
+- **O3 (80, AC-FAIL AC1)** — "`fake_program_file()` reads HOST `.Platform$OS.type` while
+  `fake_is_executable()` reads SIMULATED os. Under `local_fake_os(\"Windows\")` on macOS, bindir
+  serves extensionless while the predicate refuses it." Unexercised today (no test combines the
+  two helpers), but AC1 requires the platform their test's `local_fake_os()` names, not the host's.
+- **O24 (80, DEFECT)** — "Scope 'In:' understates the blast radius: the diff also rewrites
+  `test-programs-resolve.R` (34 lines) and `test-commands-probe.R`."
+
+**Logged, below the 80 threshold (23 findings), surfaced not dropped.**
+O2 (78) sibling rule returns the extensionless name, not the sibling — dead code while O1 stands ·
+O4/B1 (78) `local_fake_downloads()` docstring still claims it resolves any existing file ·
+O5 (72) recorder comment still names `normalizePath`, the mechanism AC5 rejected ·
+O23/B7 (72) `local_fake_config()` still standalone, so a stray call makes a second disconnected dir ·
+O8 (65) unix-on-Windows-host branch has zero coverage anywhere ·
+O21 (62) nothing asserts a legitimate absolute command passes ·
+O10 (62) the alias test's "every binding" loop issues the same call twice ·
+O12 (55) rappdirs walk misses `formals()`, bare imports, `site_*_dir`, non-toplevel functions ·
+O14 (55) the rappdirs assertion proves "differs from real", not "inside the sandbox" ·
+O18 (55) queue-exhausted message uses the unstripped basename ·
+B3 (55) D-010 not amended for the skip-semantics change ·
+B6 (55) work log cites D-051, which is plugin doctrine, not in this repo's DECISIONS.md ·
+O22 (45) the shared-rule test is largely tautological · O13 (45) self-contradicting comment ·
+O16/B4 (45) `runs` incremented only by `local_fake_tools()` · O11 (40) the alias table records
+behavior, not correctness · O6 (35) `~` and drive-relative forms outside AC5's three ·
+O20 (30) `character(0)`/`NA` command edge cases · O7 (30) lowercase `"windows"` falls to the unix
+branch · O17 (30) `harness_runs()` comment says boolean, returns count · B5 (30) the M07 citation
+is an analogy, not the same code path · O19 (30) unconditional extension strip — AC3 called for it ·
+B2 (25) `.exe`-only sibling matches AC2's literal text.
+
+**Gate outcome: RETURNED.** Three actioned findings demonstrate acceptance criteria failing inside
+their own domains (AC2 via O1, AC8 via O15, AC1 via O3), which is the return floor. AC2
+additionally needs a gated text amendment (O9). Status -> in-progress. First defect return for this
+milestone; the thrash rule's triggers do not fire.
+
