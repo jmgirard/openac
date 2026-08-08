@@ -111,9 +111,6 @@ percentages remain a diagnostic, never a gate (PROFILE `test-doctrine`).
 - [x] T6: add `boundary_argv()`, redefine `boundary_args()` over it, test the
       discrimination.
 - [x] T7: add the computed alias-class lock.
-- [x] T8: replace `test-zzz-command-contract.R`'s `skip_if(length(covered) == 0)`
-      ([:80](tests/testthat/test-zzz-command-contract.R:80)) with a run-scope
-      signal separate from attribution; record both runs.
 - [ ] T14: revert `test-zzz-command-contract.R` and its support machinery (`openac_registry$runs`/`$files`, `harness_runs()`, `harness_files()`, `harness_caller_file()`, the install-site recording, and `test-helper-boundary.R`'s recording test) to the default branch's state — the gate is M10's.
 - [x] T9: `devtools::document()` if roxygen changed, `devtools::test()`,
       `devtools::check()`; retire the M08 executability lesson from LESSONS.md

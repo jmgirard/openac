@@ -244,4 +244,7 @@ A local filtered run skips the contract and says which files were missing; CI an
 must never conditionally skip — the boundary is fully mocked, so a command test
 that cannot run everywhere is a harness gap or an explicit `deferred` entry.
 Parallel testthat is incompatible with the cross-file registry and is asserted
-off by both routes (`Config/testthat/parallel` and `TESTTHAT_PARALLEL`).
+off by both routes (`Config/testthat/parallel` and `TESTTHAT_PARALLEL`). Because
+the recording mechanism is a `test_that` shadow installed from the test helper,
+this suite may only call `test_that()` bare: qualified `testthat::test_that()`,
+and `describe()`/`it()`, bypass the shadow and are forbidden here.
