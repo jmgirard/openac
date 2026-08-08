@@ -1,0 +1,105 @@
+# M08: GitHub Actions CI — R CMD check across platforms
+
+- **Status:** planned
+- **Priority:** high
+- **Depends on:** —
+- **Driving RR:** —
+- **Principles touched:** GP3, GP7
+
+- **Branch/PR:** —
+
+## Goal
+
+Give the repo a working `R CMD check` workflow on Windows, macOS and Linux, so
+the review gate's never-merge-red-CI rule has something to read.
+
+## Scope
+
+**In:** `.github/workflows/R-CMD-check.yaml` from
+`usethis::use_github_action("check-standard")`, configured to skip the
+`Remotes:`-backed `audio.whisper` Suggest; the `^\.github$` `.Rbuildignore`
+entry; watching the first full run on this milestone's own PR and fixing what
+it surfaces within a bounded remit.
+
+**Out:** the `test-coverage` / Codecov workflow → candidate row (it needs a
+`CODECOV_TOKEN` repository secret only the maintainer can add, and a job that
+cannot authenticate blocks every later merge). Branch-protection and
+required-status-check settings → candidate row (GitHub repo settings, not
+files). Removing `Remotes:` for CRAN → the existing CRAN-readiness candidate.
+Platform breakage needing design work → its own follow-on milestone, per AC2.
+
+## Acceptance criteria
+
+- [ ] AC1 `.github/workflows/R-CMD-check.yaml` exists and, read as text: its
+      `on:` block triggers on `pull_request` and on `push` to `main` (the
+      branch `git symbolic-ref --short refs/remotes/origin/HEAD` reports); its
+      matrix declares at least one Windows, one macOS and one Linux job; and
+      its check step's effective `error-on` is `"warning"`, either written
+      explicitly or read from the `action.yml` of the pinned
+      `r-lib/actions/check-r-package` version, with whichever applies recorded.
+- [ ] AC2 Every job that workflow declares concludes `success` on this
+      milestone's own PR. The domain is enumerated by the workflow run's own
+      job list on its GitHub run page, and each job's status is read from
+      `gh pr checks <PR>`; both are recorded in the Review section. A run
+      registering no jobs, or a job skipped, cancelled or still queued, does
+      not satisfy this. Any entry dropped from usethis's default matrix is
+      named in the Review section with the failure that caused the drop, plus
+      its ROADMAP candidate row and follow-on milestone.
+- [ ] AC3 `.Rbuildignore` contains the literal line `^\.github$`, and
+      `devtools::check()` on the branch reports no "non-standard
+      file/directory found at top level" NOTE naming `.github`.
+- [ ] AC4 `audio.whisper` is absent from the installed library of every job
+      AC2 enumerates, while `testthat`, `withr`, `knitr`, `rmarkdown` and
+      `spelling` are present — evidenced by each job's dependency-listing step
+      and check log, cited by URL. No job installs any package from
+      `Remotes:`.
+- [ ] AC5 Every file changed under `R/` on this branch — the domain enumerated
+      by `git diff --name-only $(git merge-base main HEAD)..HEAD -- R/` —
+      exists to turn a named CI job green, and each change is recorded in the
+      work log with its observed failing-before evidence: a testthat test that
+      fails without the change where testthat can observe the defect,
+      otherwise the `R CMD check` output that fails without it. An empty diff
+      satisfies this vacuously, stated as such in the Review section.
+- [ ] AC6 On the branch, `devtools::document()` produces no diff and
+      `devtools::test()` passes.
+
+## Coverage
+
+- AC1 → T1, T2
+- AC2 → T4, T5, T6
+- AC3 → T1, T3
+- AC4 → T2, T6
+- AC5 → T5
+- AC6 → T3
+
+## Tasks
+
+- [ ] T1 Run `usethis::use_github_action("check-standard")`; confirm the
+      `^\.github$` entry landed in `.Rbuildignore` and add it if not.
+- [ ] T2 Configure the workflow to skip `Remotes:`-backed Suggests: request
+      hard dependencies plus `rcmdcheck`, `testthat`, `withr`, `knitr`,
+      `rmarkdown`, `spelling` as extras, and set `_R_CHECK_FORCE_SUGGESTS_:
+      false` on the check step. Verify the `on:` block and the effective
+      `error-on` per AC1.
+- [ ] T3 Run `document()`, `test()`, `check()` locally on the branch; record
+      the local NOTE set and confirm no `.github` top-level NOTE.
+- [ ] T4 Push the branch, open the PR, and watch the first full run with
+      `gh pr checks <PR> --watch`; record the run URL and per-job outcome.
+- [ ] T5 Triage failures. Fix what is solvable inside this milestone; for
+      anything needing design work, drop that matrix entry, add a ROADMAP
+      candidate row, and plan the follow-on milestone. Each `R/` change
+      carries its AC5 failing-before evidence.
+- [ ] T6 Re-run to green; record the final `gh pr checks` output and each
+      job's package listing showing `audio.whisper` absent.
+
+## Work log
+
+- 2026-08-07: created by /milestone-plan, promoting the CI candidate row added at M06 review 2.
+- 2026-08-07: criteria audit [O] returned five findings plus a coverage gap; fixed pre-gate — AC1's "generated by usethis" clause was unsatisfiable alongside its `error-on` clause (usethis fetches the upstream template, which carries no `error-on` line), AC2's `gh pr checks` enumerated check runs rather than declared jobs so a workflow that never ran passed vacuously, and AC5's two-dot diff spanned the default branch's own commits; routed to the gate — AC4's audio.whisper state was unreachable under the unmodified workflow, and no criterion covered the profile's second workflow.
+- 2026-08-07: plan gate chose skipping `audio.whisper` on CI over installing it on every job (and over installing it on one Linux job) because nothing in the check surface reaches it — no test loads it, every `@examples` block is `\dontrun{}`, both vignettes set `eval = FALSE`, and `man/` carries no `\link[audio.whisper]{}` — while installing it compiles whisper.cpp from an unpinned GitHub source on every runner; falsified by a check failure that only appears when the package is present.
+- 2026-08-07: plan gate chose deferring the `test-coverage` workflow over shipping it now or shipping it non-blocking, because Codecov requires a repository secret only the maintainer can add and an unauthenticated job goes red under a rule that blocks every later merge; falsified by the token existing before this milestone's PR is opened.
+- 2026-08-07: plan gate chose bounded fallout repair over fixing every platform here or merging red under a waiver, because macOS and Linux have never been exercised and the repair size is unknown at plan time; falsified by the first full run coming back green or with only mechanical failures.
+
+## Decisions
+
+## Review
