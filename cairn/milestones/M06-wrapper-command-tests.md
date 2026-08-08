@@ -30,7 +30,7 @@ defers it to submission time). CRAN submission → user-declared release window.
 
 ## Acceptance criteria
 
-- [ ] AC1 `tests/testthat/helper-openac.R` mocks `base::system2` via
+- [x] AC1 `tests/testthat/helper-openac.R` mocks `base::system2` via
       `testthat::local_mocked_bindings(.package = "base")` installed in the
       calling test's frame; records each call as `(command, args)` plus the
       call stack filtered to `asNamespace("openac")`; serves fake results from
@@ -39,7 +39,7 @@ defers it to submission time). CRAN submission → user-declared release window.
       `Sys.which()`), so results do not depend on what is installed on the
       machine. A test asserts interception through an alias (`ffm`), a primary
       name (`ffmpeg`), and an internal (`openac:::opensmile`).
-- [ ] AC2 `tests/testthat/test-command-contract.R` computes its domain at test
+- [x] AC2 `tests/testthat/test-command-contract.R` computes its domain at test
       time: seeded at `base::system2`, it walks `body()` over every object in
       `asNamespace("openac")` — exported or not — matching **any symbol
       occurrence**, not only call heads, and takes the transitive closure. It
@@ -48,7 +48,7 @@ defers it to submission time). CRAN submission → user-declared release window.
       naming the function, if any remaining member records no `system2` call in
       the suite. Coverage is attributed to the **outermost** openac frame of
       each recorded call, never to a hand-maintained list of names. Test passes.
-- [ ] AC3 For every function AC2's domain retains, the suite asserts the full
+- [x] AC3 For every function AC2's domain retains, the suite asserts the full
       ordered sequence of `(command, args)` pairs produced for default
       parameters. Each parameter is exercised once per distinct command shape it
       produces (flag parameters in both states; open-valued parameters at
@@ -57,7 +57,7 @@ defers it to submission time). CRAN submission → user-declared release window.
       inputs, the fake openSMILE install tree with `config/<name>.conf`, and
       tool outputs a post-step re-reads (`os_fix_csv`) — is created under a
       per-test temporary directory.
-- [ ] AC4 `find_program()` warns and returns `NULL`, not an error, on both
+- [x] AC4 `find_program()` warns and returns `NULL`, not an error, on both
       not-found paths (no config file; config file naming a location that no
       longer resolves), and returns an absolute path when the program resolves
       via `Sys.which()` or via the config file — the positive fakes being real
@@ -67,14 +67,14 @@ defers it to submission time). CRAN submission → user-declared release window.
       absent. The roxygen `@return` for `find_program()` matches the
       implemented behavior. Config I/O is redirected to a per-test temporary
       directory by mocking `rappdirs::user_config_dir()`.
-- [ ] AC5 `ffp_count_streams()` returns the documented `c(Video=, Audio=)`
+- [x] AC5 `ffp_count_streams()` returns the documented `c(Video=, Audio=)`
       counts (via `expect_equal`, as it returns integers) for mocked ffprobe
       output covering video+audio, audio-only, video-only and no-stream inputs.
       `os_check_audio()` and `aw_check_audio()` each return the documented
       logical for a conforming input and a non-conforming input carrying at
       least three probe fields; `aw_check_audio()` additionally returns `FALSE`
       for output with fewer than three fields.
-- [ ] AC6 `devtools::document()` (roxygen2 8.0.0, matching `RoxygenNote`)
+- [x] AC6 `devtools::document()` (roxygen2 8.0.0, matching `RoxygenNote`)
       produces no diff; `devtools::test()` passes with zero skips in the files
       this milestone adds; `devtools::check()` reports 0 errors and 0 warnings.
       Evidence is `00check.log` from the built tarball; the work log quotes the
@@ -312,3 +312,96 @@ F13 35 — `withr` Suggests-only with no `skip_if_not_installed()`; F9 30 —
 alias name collisions widen the domain (the intended over-approximation).
 
 Defect-return count for M06: 1.
+
+---
+
+**2026-08-07 — review 2.** Evidence below is fresh on
+`m06-wrapper-command-tests` at `03e0bcf`; `main` has not moved since the branch
+was cut.
+
+- **AC1 — met.** `test-helper-boundary.R` passes (15 expectations). The helper
+  mocks `base::system2` and `base::Sys.which` through
+  `local_mocked_bindings(.package = "base", .env = parent.frame())`; interception
+  is asserted through the primary name `ffmpeg`, the alias `ffm`, and the
+  internal `openac:::opensmile`; the exhausted queue errors ("queue exhausted");
+  resolution comes from the mode-0755 fake tree, asserted not to be a real
+  install path.
+- **AC2 — met.** The domain is computed, not listed: 27 members by symbol
+  occurrence over `asNamespace("openac")`, 7 literal deferrals, 20 enforced, all
+  covered. Both failure arms re-verified by mutation this session: dropping the
+  `os_extract_dir` deferral fails with "no test asserts the command they build:
+  os_extract_dir"; deferring `os_read`, which never reaches `system2`, fails with
+  "deferred but no longer reach system2 … os_read". Both mutations reverted, file
+  restored. The outermost-frame clause now holds for `do.call()` dispatch:
+  `openac_stack()` recovers a function-valued call head by identity, and
+  `test-helper-boundary.R` asserts `do.call(of_extract, …)` is owned by
+  `of_extract` (it reported `openface` before the fix).
+- **AC3 — met.** All 20 enforced members have command assertions: the 8
+  passthroughs/aliases by the pass-through identity assertion the criterion
+  permits; the four `check_*` now by their probe arguments
+  (`-version`, `-version`, `-h`, `-h`), closing review 1's first named gap; the
+  `afilters = TRUE` chain by a whole-command `expect_identical` including
+  `afftdn`, `compand` and `dynaudnorm`, closing the second; and `os_extract()`'s
+  default `wavfile = NULL` branch — temp wav created under `tempdir()`, passed
+  to openSMILE as `-I`, gone after the call — closing the third, verified
+  discriminating (disabling `unlink()` fails that expectation alone).
+  Per-parameter shapes: `stream`, `overwrite`, `afilters`, the eight `of_extract`
+  booleans, `config`, and `aggfile`/`lldfile` are each exercised in every command
+  shape they produce. Reading applied, stated so it is not silently charitable:
+  the criterion says *the suite* asserts the sequence, and coverage sits with the
+  function that BUILDS each command — a caller that forwards a parameter (e.g.
+  `os_extract`'s `config`, or the `ffp_count_streams` probe reached inside
+  `aw_check_audio`) has its ordered tool sequence pinned, with the argument
+  string pinned where it is constructed. This is the reading review 1 applied.
+  All fixtures are per-test temp dirs (`withr::local_tempdir`/`local_tempfile`),
+  including the fake openSMILE tree with `config/<name>.conf` and the outputs
+  `os_fix_csv()` re-reads.
+- **AC4 — met.** `test-programs-resolve.R` passes (31 expectations). Both
+  not-found paths warn and return `NULL` (no config file → "Failed to find";
+  config naming a vanished location, and an empty config file → "no longer
+  resolves"). Both positive paths return an absolute path: via `Sys.which()`,
+  and via the config file — including review 1's failing case, a config
+  recording a bare program name, which now resolves through `Sys.which()`
+  instead of reaching `tools::file_path_as_absolute()`. Verified pre-fix by
+  reverting `R/programs_find.R`: the test errored at `programs_find.R:52` with
+  "file 'ffmpeg' does not exist". All four `check_*()` return `FALSE` with a
+  warning when absent and `TRUE` when the tool resolves, including on the
+  bare-name config path that previously threw. `find_program()`'s roxygen
+  `@return` reads "An absolute path to the program as a string, or `NULL` (with
+  a warning) if the program could not be found" — matching behavior. All config
+  I/O runs against a mocked `rappdirs::user_config_dir()`.
+- **AC5 — met.** `test-commands-probe.R` passes (40 expectations).
+  `ffp_count_streams()` returns the documented `c(Video=, Audio=)` counts via
+  `expect_equal` for all four stream combinations (video+audio, audio-only,
+  video-only, none). `os_check_audio()` and `aw_check_audio()` each return the
+  documented logical for a conforming input and for non-conforming inputs
+  carrying three probe fields (wrong codec, wrong rate, two channels, a video
+  stream present), and `aw_check_audio()` returns `FALSE` for output with fewer
+  than three fields.
+- **AC6 — met.** `devtools::document()` (roxygen2 8.0.0 installed, matching
+  `RoxygenNote: 8.0.0`) leaves the tree clean. `devtools::test()` reports 252
+  pass, 0 fail, 0 skip — zero skips across the whole suite, including every file
+  this milestone adds. `devtools::check()` reports `Status: 1 NOTE` in
+  `00check.log` from the built tarball, 0 errors and 0 warnings. The single NOTE
+  is the T8 baseline, quoted from `00check.log:60`: `* checking tests ... NOTE /
+  Running 'spelling.R' / Comparing 'spelling.Rout' to 'spelling.Rout.save' ...`
+  — the pre-existing spelling-diff NOTE. Measured against `main` rather than
+  assumed: `spelling::spell_check_package()` run on both trees returns 54 words
+  each and a byte-identical sorted list, so this branch introduces no NOTE and
+  no new word.
+
+Consistency gate — universal: `cairn_validate` exit 0, all 16 checks PASS.
+Advisories, not gate failures: `sizing` (15 tasks, past the 10 tripwire — the
+send-back added T9–T15 to an already-planned milestone) and `work-log format`
+(47 — this session's work-log entries are hard-wrapped rather than one line
+each; the work log is history under IP4, so they are left as written and the
+lesson is captured instead). No DESIGN principle changed, so no impact report.
+Toolchain (`r-package` profile): `document()` no diff; generated files
+regenerate clean; README untouched and in sync; no `_pkgdown.yml`; `NEWS.md`
+carries a development-version entry for the four user-visible contract changes;
+no new top-level files, so no `.Rbuildignore` entries owed; `check()` clean at
+0 errors / 0 warnings / 1 justified NOTE. `NAMESPACE` is unchanged — the new
+`require_program()` is internal, so no export or reference-index row is owed.
+The repo has no `.github/workflows`, so the never-merge-red-CI rule has no CI to
+read; the local `check()` above is the evidence in its place, and CI setup is
+now a candidate row.
