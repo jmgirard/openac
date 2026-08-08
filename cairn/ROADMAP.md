@@ -1,18 +1,17 @@
 # Roadmap
 
 _The only authority on milestone status. Grouped by status, not ID._
-_Last hygiene check: 2026-08-08 (M11 planned, absorbing the wholly-skipped-file candidate from M10 review 2; M11 is the only workable planned milestone)_
+_Last hygiene check: 2026-08-08 (M11 merged and archived; M06 pruned under terminal-row retention; nothing is in flight and the candidate list is the only workable queue)_
 _Released 0.1.0 (GitHub) 2026-07-11._
 
 ## Milestones
 
 | ID | Title | Status | Depends on | Priority | File/Archive |
 |---|---|---|---|---|---|
-| M11 | A wholly-skipped test file cannot exist — the coverage gate's blind spot, closed at the door | review | M10 | normal | milestones/M11-forbid-top-level-skips.md |
+| M11 | A wholly-skipped test file cannot exist — the coverage gate's blind spot, closed at the door | done | M10 | normal | milestones/archive/M11-forbid-top-level-skips.md |
 | M09 | Test-harness hardening — fake fidelity at the tool boundary | done | — | normal | milestones/archive/M09-harness-hardening.md |
 | M10 | Command-contract coverage gate — completeness observed, not inferred | done | M09 | high | milestones/archive/M10-coverage-gate-run-scope.md |
 | M08 | GitHub Actions CI — R CMD check across platforms | done | — | high | milestones/archive/M08-github-actions-ci.md |
-| M06 | Wrapper testing contract — system2-boundary command tests | done | — | high | milestones/archive/M06-wrapper-command-tests.md |
 | M07 | Wrapper testing contract — remainder and gated real invocations | done | M06 | normal | milestones/archive/M07-wrapper-tests-remainder.md |
 
 ## Candidates
