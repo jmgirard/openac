@@ -84,6 +84,111 @@ test_that("the install-time mock intercepts the network and the extractor", {
   expect_true(file.exists(file.path(target, "bin", "tool")))
 })
 
+# AC2 -- the predicate the two Sys.which fakes share. Its rules were MEASURED
+# on GitHub runners (R 4.6.1, M09 probe workflow), and the assertions below
+# restate those measurements; see the comment on fake_is_executable(). The
+# platform is an argument, so a macOS run still exercises the Windows rule.
+
+test_that("the Windows rule resolves any extension, and mode is irrelevant", {
+  dir <- withr::local_tempdir()
+  make <- function(name, mode = "0755") {
+    p <- file.path(dir, name)
+    file.create(p)
+    Sys.chmod(p, mode)
+    p
+  }
+
+  # Measured: .exe, .bat, .cmd, .com AND .txt all resolved on Windows.
+  for (ext in c(".exe", ".bat", ".cmd", ".com", ".txt")) {
+    expect_true(
+      fake_is_executable(make(paste0("tool", ext)), os = "Windows"),
+      label = ext
+    )
+  }
+  # Measured: a 0644 file with an extension still resolved -- the mode plays
+  # no part on Windows, which is why file.access() is not consulted there.
+  expect_true(fake_is_executable(make("mode.exe", "0644"), os = "Windows"))
+})
+
+test_that("the Windows rule refuses an extensionless path unless .exe exists", {
+  dir <- withr::local_tempdir()
+  bare <- file.path(dir, "tool")
+  file.create(bare)
+  Sys.chmod(bare, "0755")
+
+  # No sibling: measured as <empty> on the runner, mode notwithstanding.
+  expect_false(fake_is_executable(bare, os = "Windows"))
+
+  # With the sibling: measured as resolving TO the sibling. This is how a
+  # recorded `SMILExtract` finds `SMILExtract.exe`.
+  file.create(paste0(bare, ".exe"))
+  expect_true(fake_is_executable(bare, os = "Windows"))
+})
+
+test_that("the Unix rule is the execute bit, whatever the extension", {
+  # file.access(path, 1L) reports 0 for root regardless of mode, and a Windows
+  # host has no mode bit to read at all (the probe measured -1 for a 0755
+  # extensionless file there), so the mode distinction is only observable on a
+  # non-root Unix host.
+  skip_on_os("windows")
+  skip_if(
+    identical(Sys.info()[["effective_user"]], "root"),
+    "file.access() ignores mode for root"
+  )
+  dir <- withr::local_tempdir()
+  make <- function(name, mode) {
+    p <- file.path(dir, name)
+    file.create(p)
+    Sys.chmod(p, mode)
+    p
+  }
+
+  expect_true(fake_is_executable(make("tool", "0755"), os = "Linux"))
+  expect_false(fake_is_executable(make("nonexec", "0644"), os = "Linux"))
+  # The extension plays no part here -- measured: tool.txt at 0755 resolved.
+  expect_true(fake_is_executable(make("tool.txt", "0755"), os = "Darwin"))
+  expect_false(fake_is_executable(make("nonexec.exe", "0644"), os = "Darwin"))
+})
+
+test_that("the predicate refuses what no Sys.which() would return", {
+  dir <- withr::local_tempdir()
+  for (os in c("Windows", "Linux")) {
+    expect_false(fake_is_executable("", os = os), label = os)
+    expect_false(fake_is_executable(file.path(dir, "missing"), os = os), label = os)
+    expect_false(fake_is_executable(file.path(dir, "missing.exe"), os = os), label = os)
+    # A directory: file.exists() is TRUE for one and file.access(dir, 1L) is 0
+    # for a searchable one, so both branches would otherwise let it through.
+    expect_false(fake_is_executable(dir, os = os), label = os)
+  }
+})
+
+test_that("both scoped helpers resolve by the same rule", {
+  # local_fake_downloads() used to carry its own Sys.which fake that resolved
+  # ANY existing file -- so it disagreed with local_fake_tools() about a
+  # non-executable one, and the install tests were asserting against a resolver
+  # no platform implements (M07 B1/P1). Observed here rather than asserted
+  # structurally: a file that exists but cannot run must resolve to "" under
+  # BOTH helpers.
+  skip_on_os("windows")  # where the mode bit carries no meaning
+  skip_if(identical(Sys.info()[["effective_user"]], "root"))
+  dir <- withr::local_tempdir()
+  dud <- file.path(dir, "dud")
+  file.create(dud)
+  Sys.chmod(dud, "0644")
+
+  under_downloads <- local({
+    local_fake_downloads()
+    Sys.which(dud)
+  })
+  under_tools <- local({
+    local_fake_tools()
+    Sys.which(dud)
+  })
+
+  expect_identical(unname(under_downloads), "")
+  expect_identical(unname(under_tools), "")
+})
+
 test_that("local_fake_tools() redirects every rappdirs dir openac's code reads", {
   # The domain is not a remembered list of two functions: it is whatever `R/`
   # actually calls, read off `R/` here. A future call site reaching a third

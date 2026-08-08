@@ -9,7 +9,10 @@
 # into /private/var, so a bare tempdir() path is not what comes back).
 fake_binary <- function(name = "tool") {
   dir <- withr::local_tempdir(.local_envir = parent.frame())
-  path <- file.path(dir, name)
+  # Carries the host's required extension: an extensionless file is not
+  # something a real Windows `Sys.which()` resolves, so a fixture without one
+  # would assert a resolution the platform refuses (M09).
+  path <- file.path(dir, fake_program_file(name))
   file.create(path)
   Sys.chmod(path, "0755")
   tools::file_path_as_absolute(path)
@@ -18,10 +21,11 @@ fake_binary <- function(name = "tool") {
 test_that("find_program() resolves a program found on PATH", {
   local_fake_tools()
 
-  expect_identical(basename(find_program("ffmpeg")), "ffmpeg")
-  expect_identical(basename(find_ffprobe()), "ffprobe")
-  expect_identical(basename(find_openface()), "openface")
-  expect_identical(basename(find_opensmile()), "opensmile")
+  nm <- function(x) fake_program_name(basename(x))
+  expect_identical(nm(find_program("ffmpeg")), "ffmpeg")
+  expect_identical(nm(find_ffprobe()), "ffprobe")
+  expect_identical(nm(find_openface()), "openface")
+  expect_identical(nm(find_opensmile()), "opensmile")
 })
 
 test_that("find_program() resolves a program recorded in the config file", {
@@ -44,7 +48,9 @@ test_that("find_program() resolves a config entry naming a bare program name", {
 
   expect_identical(
     find_program("opensmile"),
-    tools::file_path_as_absolute(file.path(state$bindir, "ffmpeg"))
+    tools::file_path_as_absolute(
+      file.path(state$bindir, fake_program_file("ffmpeg"))
+    )
   )
   # And the check_* contract holds on that path instead of erroring.
   expect_true(check_opensmile())

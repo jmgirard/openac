@@ -19,6 +19,19 @@ registered_owners <- function() sort(unique(openac_registry$owners))
 # Programs `find_program()` knows about; the fake resolver serves these.
 fake_programs <- function() c("ffmpeg", "ffprobe", "openface", "opensmile")
 
+# The file name a fixture binary must carry for the HOST's real `Sys.which()`
+# to resolve it. Windows needs an extension (see `fake_is_executable()`); an
+# extensionless fixture there is what a real Windows install would never have,
+# and testing against one asserts a resolution the platform refuses.
+fake_program_file <- function(name) {
+  paste0(name, if (.Platform$OS.type == "windows") ".exe" else "")
+}
+
+# Drop that extension again, so assertions read the same on every platform.
+fake_program_name <- function(file) {
+  sub("\\.(exe|bat|cmd|com)$", "", file, ignore.case = TRUE)
+}
+
 # Config names the fake openSMILE install ships, relative to its config/ dir
 # and without the .conf extension.
 fake_configs <- function() c("misc/emo_large", "egemaps/v02/eGeMAPSv02")
@@ -86,6 +99,65 @@ openac_stack <- function() {
   out
 }
 
+# Would a real `Sys.which()` resolve this path? MEASURED on GitHub runners
+# (R 4.6.1, M09 probe workflow), not assumed -- guessing this is how M08's CI
+# went red, and the guess it was replaced with was wrong too:
+#
+#   Unix     resolves an existing file iff `file.access(path, 1L) == 0`.
+#            The extension is irrelevant: `tool.txt` at 0755 resolved.
+#   Windows  resolves an existing file iff it carries ANY extension -- `.exe`,
+#            `.bat`, `.cmd`, `.com` and `.txt` all resolved, and `.txt` did so
+#            at 0755 while `file.access()` reported -1, so the mode is
+#            irrelevant there -- or, for an extensionless path, iff a
+#            `<path>.exe` sibling exists. That last case is how a recorded
+#            `SMILExtract` resolves to `SMILExtract.exe`.
+#
+# `os` is the platform being SIMULATED and defaults to what `Sys.info()`
+# reports, so `local_fake_os()` drives it and a macOS run still exercises the
+# Windows rule. Simulating unix on a Windows HOST is the one case the host
+# cannot answer -- a Windows filesystem has no mode bit to read, and the probe
+# measured `file.access(<0755 extensionless>, 1L)` as -1 there -- so the unix
+# branch degrades to existence when the host is Windows. Directories are
+# excluded outright: `file.exists()` is TRUE for one and `file.access(dir, 1L)`
+# is 0 for a searchable one (M07 hit this), and no tool path is ever a
+# directory. That exclusion is a deliberate tightening, not a measured claim
+# about `Sys.which()`.
+fake_is_executable <- function(path, os = Sys.info()[["sysname"]]) {
+  if (!nzchar(path) || !file.exists(path) || dir.exists(path)) {
+    return(FALSE)
+  }
+  if (identical(os, "Windows")) {
+    nzchar(tools::file_ext(path)) || file.exists(paste0(path, ".exe"))
+  } else if (.Platform$OS.type == "windows") {
+    TRUE
+  } else {
+    file.access(path, 1L) == 0L
+  }
+}
+
+# The one `Sys.which` fake both scoped helpers install. `resolve` names the
+# programs that appear installed, served from `bindir`; anything else is
+# decided by the predicate above, so the two helpers can no longer drift apart
+# (they carried separate, disagreeing copies until M09).
+fake_sys_which <- function(resolve = character(), bindir = NULL) {
+  function(names) {
+    out <- vapply(
+      names,
+      function(n) {
+        if (n %in% resolve) {
+          file.path(bindir, fake_program_file(n))
+        } else if (fake_is_executable(n)) {
+          n
+        } else {
+          ""
+        }
+      },
+      character(1)
+    )
+    stats::setNames(out, names)
+  }
+}
+
 # Install fakes for the tool boundary, scoped to the calling test.
 #
 # `results` is a queue of return values, one per `system2()` call, consumed in
@@ -94,22 +166,6 @@ openac_stack <- function() {
 #
 # `resolve` names the programs that appear installed; anything else resolves to
 # "" so the not-found paths of `find_program()` are reachable.
-# Would a real `Sys.which()` resolve this path? It reports "" for a file that
-# exists but is not executable, which on Unix is `file.access(mode = 1)`.
-# Windows has no execute bit: executability there comes from the extension
-# (.exe/.bat/.cmd), and `file.access(mode = 1)` is documented as not really
-# meaningful, returning -1 for an extensionless file whatever `Sys.chmod()`
-# did. So the fixture binaries this harness creates -- extensionless, chmod
-# 0755 -- resolve on Unix and never on Windows unless executability degrades
-# to existence there (M08: two CI failures in test-programs-resolve.R).
-fake_is_executable <- function(path) {
-  if (.Platform$OS.type == "windows") {
-    file.exists(path)
-  } else {
-    file.access(path, 1L) == 0L
-  }
-}
-
 local_fake_tools <- function(results = list(),
                              resolve = fake_programs(),
                              .env = parent.frame()) {
@@ -136,7 +192,7 @@ local_fake_tools <- function(results = list(),
   # on what it resolves, which errors on a path that does not exist, and
   # `Sys.which()` reports "" for a file that exists but is not executable.
   for (p in resolve) {
-    bin <- file.path(bindir, p)
+    bin <- file.path(bindir, fake_program_file(p))
     file.create(bin)
     Sys.chmod(bin, "0755")
   }
@@ -161,7 +217,7 @@ local_fake_tools <- function(results = list(),
     stack <- openac_stack()
     state$i <- state$i + 1L
     state$calls[[state$i]] <- list(
-      tool = basename(as.character(command)[[1]]),
+      tool = fake_program_name(basename(as.character(command)[[1]])),
       command = as.character(command)[[1]],
       args = args,
       stack = stack
@@ -187,26 +243,9 @@ local_fake_tools <- function(results = list(),
     if (is.function(res)) res(command, args) else res
   }
 
-  fake_sys_which <- function(names) {
-    out <- vapply(
-      names,
-      function(n) {
-        if (n %in% resolve) {
-          file.path(bindir, n)
-        } else if (nzchar(n) && file.exists(n) && fake_is_executable(n)) {
-          n
-        } else {
-          ""
-        }
-      },
-      character(1)
-    )
-    stats::setNames(out, names)
-  }
-
   testthat::local_mocked_bindings(
     system2 = fake_system2,
-    Sys.which = fake_sys_which,
+    Sys.which = fake_sys_which(resolve = resolve, bindir = bindir),
     .package = "base",
     .env = .env
   )
@@ -292,15 +331,6 @@ local_fake_downloads <- function(status = 0L,
     invisible(character())
   }
 
-  fake_sys_which <- function(names) {
-    out <- vapply(
-      names,
-      function(n) if (nzchar(n) && file.exists(n)) n else "",
-      character(1)
-    )
-    stats::setNames(out, names)
-  }
-
   testthat::local_mocked_bindings(
     download.file = fake_download, .package = "utils", .env = .env
   )
@@ -308,7 +338,7 @@ local_fake_downloads <- function(status = 0L,
     archive_extract = fake_extract, .package = "archive", .env = .env
   )
   testthat::local_mocked_bindings(
-    Sys.which = fake_sys_which, .package = "base", .env = .env
+    Sys.which = fake_sys_which(), .package = "base", .env = .env
   )
   invisible(state)
 }

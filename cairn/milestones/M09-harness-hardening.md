@@ -41,13 +41,17 @@ percentages remain a diagnostic, never a gate (PROFILE `test-doctrine`).
       `local_fake_os()` names, not the host's. Evidence:
       `grep -c "fake_is_executable <- function\|fake_sys_which <- function"
       tests/testthat/helper-openac.R` returns 2, both at top level.
-- [ ] AC2: driven with the platform argument set to Windows, the predicate
-      returns `FALSE` for an existing extensionless file and `TRUE` for an
-      existing file carrying each of `.exe`, `.bat`, `.cmd`, `.com`; driven with
-      Unix, `TRUE` for an existing mode-0755 file and `FALSE` for an existing
-      mode-0644 file. Both drives run wherever the suite runs, except the Unix
-      drive when the process is root (`file.access(path, 1L)` returns 0 there
-      whatever the mode), so a macOS run still exercises the Windows branch.
+- [ ] AC2: the predicate models what R's `Sys.which()` was measured to do (M09
+      probe, R 4.6.1, GitHub runners). Driven with the platform set to Windows it
+      returns `TRUE` for an existing file carrying any extension — `.exe`,
+      `.bat`, `.cmd`, `.com` and `.txt` all measured as resolving — `TRUE` for an
+      extensionless path whose `<path>.exe` sibling exists, and `FALSE` for an
+      extensionless path with no such sibling; file mode is irrelevant there.
+      Driven with Unix it returns `TRUE` for an existing mode-0755 file whatever
+      its extension and `FALSE` for an existing mode-0644 file, skipping that
+      drive as root (`file.access(path, 1L)` returns 0 there whatever the mode).
+      Both drives run wherever the suite runs, so a macOS run still exercises the
+      Windows branch.
 - [ ] AC3: `local_fake_tools()` creates fixture binaries carrying the extension
       the host platform requires (`.exe` on Windows, none elsewhere), the fake
       resolves a bare program name to that fixture on every platform, and
@@ -56,9 +60,10 @@ percentages remain a diagnostic, never a gate (PROFILE `test-doctrine`).
       all five CI platforms in this milestone's PR (macOS, Windows, Ubuntu
       devel/release/oldrel-1).
 - [ ] AC4: `local_fake_tools()` redirects every `rappdirs::` function openac's
-      package code calls. A test enumerates those call sites by grepping
-      `rappdirs::` over `R/`, and asserts each named function returns something
-      other than its real value inside `local_fake_tools()` scope — so a future
+      package code calls. A test enumerates those call sites by walking the
+      loaded `openac` namespace for `rappdirs::user_*_dir` calls — the source
+      tree is absent under `R CMD check` — and asserts each named function
+      returns something other than its real value inside scope — so a future
       call site to a third `rappdirs` dir fails the test rather than leaking.
 - [ ] AC5: `fake_system2()` fails the calling test when the `command` it
       receives is not absolute, tested as
@@ -98,14 +103,14 @@ percentages remain a diagnostic, never a gate (PROFILE `test-doctrine`).
 
 ## Tasks
 
-- [ ] T1: replace `fake_is_executable()` ([helper-openac.R:96](tests/testthat/helper-openac.R:96))
+- [x] T1: replace `fake_is_executable()` ([helper-openac.R:96](tests/testthat/helper-openac.R:96))
       with one predicate taking the platform explicitly; delete
       `local_fake_downloads()`'s second `Sys.which` fake
       ([:250](tests/testthat/helper-openac.R:250)) and point both helpers at one
       shared fake that reads the OS from `local_fake_os()`'s value.
-- [ ] T2: test both branches in `test-helper-boundary.R`, including the root
+- [x] T2: test both branches in `test-helper-boundary.R`, including the root
       skip on the Unix drive.
-- [ ] T3: give `local_fake_tools()` fixtures the host's required extension and
+- [x] T3: give `local_fake_tools()` fixtures the host's required extension and
       strip it in `boundary_tools()` ([:325](tests/testthat/helper-openac.R:325));
       run the suite on Windows CI before trusting it.
 - [x] T4: fold `local_fake_config()` and `local_fake_data_dir()` into
@@ -129,6 +134,12 @@ percentages remain a diagnostic, never a gate (PROFILE `test-doctrine`).
 - 2026-08-07: plan gate chose a Windows-faithful predicate over leaving it loose and documenting the divergence, because a fake asserting a resolution the real `Sys.which()` would refuse is the defect F6 named, not a note to keep; falsified by Windows CI going red on the fixture rename in a way that cannot be fixed inside the harness.
 - 2026-08-07: plan gate chose one milestone over cutting R12 and R3 to candidate rows, because all nine findings edit the same 341-line file and two milestones in it would collide; falsified by the task list outgrowing one working session each.
 - 2026-08-07: T4 done — `local_fake_tools()` now owns both rappdirs dirs and exposes them as `state$config`/`state$data`; 10 call sites in test-programs-resolve.R and test-commands-probe.R dropped their own `local_fake_config()`. The AC4 enumeration test walks `asNamespace("openac")` rather than `R/` so it still runs under `R CMD check`, where the source tree is gone; it finds `user_config_dir` and `user_data_dir`.
+- 2026-08-07: T2 probe measured R 4.6.1 `Sys.which()` on GitHub runners. Windows resolves an existing file with ANY extension (`.txt` resolved at 0755 while `file.access()` reported -1, so mode is irrelevant there) or an extensionless path with a `<path>.exe` sibling; Unix resolves iff `file.access(path, 1L) == 0`, extension irrelevant. Both the plan's four-extension list and the M08 "degrade to existence" rule were wrong.
+- 2026-08-07: AC2 amended at the implementation gate to the measured rule (any extension; `.exe`-sibling fallback; mode irrelevant on Windows) — the planned four-extension list was a guess and `.txt` falsified it.
+- 2026-08-07: AC4 amended at the implementation gate — the enumeration walks the loaded namespace, not `R/`, because the source tree is absent under `R CMD check` and the criterion's procedure would have skipped exactly there.
+- 2026-08-07: minor amendment — AC2's Unix drive skips on a Windows host as well as as root; the probe measured `file.access(<0755 extensionless>, 1L)` as -1 on Windows, so a Windows filesystem cannot represent the mode distinction the drive asserts. The predicate's unix branch degrades to existence there for the same reason.
+- 2026-08-07: T1–T3 done — one measured `fake_is_executable(path, os)` plus one shared `fake_sys_which()` factory; `local_fake_downloads()`'s divergent copy deleted; fixtures carry the host's extension via `fake_program_file()` and `boundary_tools()` strips it via `fake_program_name()`. Suite 450 pass / 0 fail on macOS; Windows is CI's to confirm.
+- 2026-08-07: the B1/P1 test was checked for falsifiability before being kept (M07's could-not-fail finding): for a 0644 file the old `file.exists()` rule returns TRUE where the new predicate returns FALSE, so the assertion discriminates.
 - 2026-08-07: 9 acceptance criteria exceeds the 7 tripwire deliberately — one per independent review finding plus the profile's verify slot, each separately fenceable at review; merging them would blur which finding a piece of evidence closes.
 
 ## Decisions
