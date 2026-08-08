@@ -44,14 +44,15 @@ ffp_count_streams <- function(infile) {
   # Validate inputs
   stopifnot(file.exists(infile))
   
-  # Get types for ALL streams
-  arg <- paste0(
-    '-v error',
-    ' -show_entries stream=codec_type', 
-    ' -of csv=p=0',
-    ' "', infile, '"'
+  # Get types for ALL streams. One element per CLI token: run_tool() quotes
+  # each one at the process boundary, so `infile` needs no quoting here.
+  arg <- c(
+    "-v", "error",
+    "-show_entries", "stream=codec_type",
+    "-of", "csv=p=0",
+    infile
   )
-  
+
   # Run ffprobe
   stream_types <- ffprobe(arg)
   

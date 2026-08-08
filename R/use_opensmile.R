@@ -108,11 +108,11 @@ os_check_audio <- function(infile, verbose = FALSE) {
   # Count streams
   streams <- ffp_count_streams(infile)
   # Create ffprobe command
-  arg <- paste0(
-    '-v error',
-    ' -show_entries stream=codec_name,sample_rate,channels',
-    ' -of default=noprint_wrappers=1:nokey=1',
-    ' "', infile, '"'
+  arg <- c(
+    "-v", "error",
+    "-show_entries", "stream=codec_name,sample_rate,channels",
+    "-of", "default=noprint_wrappers=1:nokey=1",
+    infile
   )
   # Run ffprobe command
   dat <- ffprobe(arg)

@@ -89,7 +89,7 @@ direct docs commit to the default branch, not a milestone.
       `fake_system2` (`helper-openac.R:596-638`), beside the existing
       absolute-path check, with the opt-out argument AC3 names; exempt
       `test-helper-boundary.R`'s raw fixtures.
-- [ ] T4 Convert `ffp_count_streams()` (`R/use_ffprobe.R:51`) and
+- [x] T4 Convert `ffp_count_streams()` (`R/use_ffprobe.R:51`) and
       `os_check_audio()` (`R/use_opensmile.R:114`) to token vectors; add the
       space-and-`$` regression test that fails against the old assembly.
 - [ ] T5 Convert `os_prep_audio()` (`R/use_opensmile.R:174`), `aw_check_audio()`
@@ -114,6 +114,8 @@ direct docs commit to the default branch, not a milestone.
 - 2026-08-08: T2 done. The no-break check held as planned: `test-commands-probe.R:13-40`'s forwarding and alias tests pass unedited. One test outside that range did have to change — `passthroughs reject a non-string argument` asserted `ffprobe(c("-a","-b"))` errors, which D-017 makes valid; its multi-element case moved to a new positive assertion rather than being dropped.
 - 2026-08-08: T3 done. The check is armed in `fake_system2` and tested positively — a guard never observed to fire cannot be told from one silently disarmed, and no real assembler trips it yet (they still pass length-1 glued strings, which are exempt), so nothing else would notice. Exactly one opt-out in the suite, at `test-helper-boundary.R:336`.
 - 2026-08-08: T3's quote character is derived from `shQuote("x")` rather than written out, so the check stays strict per platform: a permissive both-quote-characters test would accept a hand-written `"..."` on unix, which is the form that still expands `$` — the measured bug itself, not a variant.
+- 2026-08-08: T4 done. `ffp_count_streams()` and `os_check_audio()` now emit token vectors. AC2's regression uses a path carrying BOTH a space and a `$`: measured against the old form, a space alone still passed, so a space-only fixture would have pinned nothing — the `$` is the discriminating character.
+- 2026-08-08: T4 mutation, both clauses. Restoring `ffp_count_streams()`'s concatenated assembly reds 5 assertions (via the command tests; the harness guard stays quiet there, because a length-1 glued string is the exempt legacy form). Breaking `run_tool()`'s quoting instead reds 7 and DOES trip the guard on real assemblers, naming the offending path. So the guard's live scope is a call site that reaches `system2()` without going through `run_tool()` — narrower than a reader of AC3 alone might assume, and worth saying plainly.
 - 2026-08-08: plan chose to arm the unquoted-whitespace invariant in the harness over asserting it per command test, because the harness already carries the sibling absolute-path invariant (helper-openac.R:605) and a per-test assertion is skipped by omission; falsified by a legitimate boundary call the invariant cannot express, requiring more opt-outs than the one test-helper-boundary.R needs.
 
 ## Decisions
