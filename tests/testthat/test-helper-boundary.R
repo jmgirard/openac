@@ -329,7 +329,11 @@ test_that("boundary_argv() preserves argument boundaries that collapse erases", 
   # containing a space. `boundary_args()` renders them identically, so an
   # assertion built on it cannot tell a correctly quoted path from a wrapper
   # that split on whitespace.
-  state <- local_fake_tools(results = list("a", "b"))
+  # `check_quoting = FALSE` because this test drives the fake with a
+  # deliberately RAW argv -- `c("-i", "a b")` is the unquoted token form the
+  # armed check exists to reject, and it is the fixture here rather than a
+  # defect. It is the only opt-out in the suite.
+  state <- local_fake_tools(results = list("a", "b"), check_quoting = FALSE)
   bin <- file.path(state$bindir, fake_program_file("ffmpeg"))
 
   system2(bin, c("-i", "a b"))
@@ -337,6 +341,37 @@ test_that("boundary_argv() preserves argument boundaries that collapse erases", 
 
   expect_identical(boundary_argv(state), list(c("-i", "a b"), "-i a b"))
   expect_identical(boundary_args(state)[[1]], boundary_args(state)[[2]])
+})
+
+test_that("the fake rejects unquoted whitespace in a token-form argument", {
+  # The check armed in fake_system2() at M13. Asserted positively here, because
+  # a guard that is never observed to FIRE is indistinguishable from one that
+  # was silently disarmed -- and it is currently satisfied by every call in the
+  # suite, so nothing else would notice.
+  state <- local_fake_tools(results = list("a"))
+  bin <- file.path(state$bindir, fake_program_file("ffmpeg"))
+
+  expect_error(
+    system2(bin, c("-i", "a b.mp4")),
+    "unquoted whitespace"
+  )
+  # The message names the offending token, so the failure points at the call
+  # site rather than merely reporting that one exists.
+  expect_error(system2(bin, c("-i", "a b.mp4")), "a b.mp4", fixed = TRUE)
+})
+
+test_that("the check exempts the two forms that are not loose tokens", {
+  state <- local_fake_tools(results = list("a", "b", "c"))
+  bin <- file.path(state$bindir, fake_program_file("ffmpeg"))
+
+  # A length-1 argument is the legacy raw string (D-017): whitespace in it is
+  # the caller's own command line, not a split token.
+  expect_no_error(system2(bin, "-i a b.mp4 -c copy"))
+  # A properly quoted token is what run_tool() produces, and must pass.
+  expect_no_error(system2(bin, shQuote(c("-i", "a b.mp4"))))
+  # Whitespace is what the check is about; a multi-token argv without any is
+  # fine unquoted, so the check cannot be a blanket "everything must be quoted".
+  expect_no_error(system2(bin, c("-i", "a.mp4")))
 })
 
 test_that("openac_name_of() picks the primary name for every alias class", {

@@ -547,6 +547,7 @@ fake_sys_which <- function(resolve = character(), bindir = NULL, os = NULL) {
 local_fake_tools <- function(results = list(),
                              resolve = fake_programs(),
                              os = Sys.info()[["sysname"]],
+                             check_quoting = TRUE,
                              .env = parent.frame()) {
   dir <- withr::local_tempdir(.local_envir = .env)
 
@@ -607,6 +608,41 @@ local_fake_tools <- function(results = list(),
         sprintf("fake system2: command is not an absolute path: %s", cmd),
         call. = FALSE
       )
+    }
+    # D-017 says a multi-element `args` is the token form, and run_tool()
+    # shQuote()s every element of it. So an element carrying whitespace that is
+    # NOT enclosed by the platform's quoting is a token the shell will split --
+    # the exact defect M13 removed, reappearing at some call site.
+    #
+    # Checked HERE rather than in a few chosen tests, for the same reason the
+    # absolute-path check above is: it then holds for every call any test routes
+    # through the harness, and the command-contract gate guarantees each function
+    # that can reach a tool routes at least one. A per-test assertion is skipped
+    # by omission, which is how the next assembler would slip through.
+    #
+    # The quote character is DERIVED from shQuote() rather than written out, so
+    # this stays strict per platform: a hand-written `"..."` on unix would pass a
+    # permissive both-characters test while still expanding `$`, which is the bug
+    # measured at M13 T1, not a variant of it.
+    if (isTRUE(check_quoting) && length(args) > 1L) {
+      qc <- substr(shQuote("x"), 1L, 1L)
+      bare <- vapply(as.character(args), function(el) {
+        if (!grepl("[[:space:]]", el)) return(FALSE)
+        !(nchar(el) >= 2L && startsWith(el, qc) && endsWith(el, qc))
+      }, logical(1), USE.NAMES = FALSE)
+      if (any(bare)) {
+        stop(
+          sprintf(
+            paste0(
+              "fake system2: unquoted whitespace in a token-form argument: %s. ",
+              "Build the command as a token vector and let run_tool() quote it; ",
+              "do not interpolate quotes at the call site."
+            ),
+            paste(sQuote(as.character(args)[bare]), collapse = ", ")
+          ),
+          call. = FALSE
+        )
+      }
     }
     stack <- openac_stack()
     state$i <- state$i + 1L

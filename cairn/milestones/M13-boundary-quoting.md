@@ -85,7 +85,7 @@ direct docs commit to the default branch, not a milestone.
       `R/use_openface.R:23`, `R/use_opensmile.R:23`) through it; the existing
       passthrough and alias tests in `test-commands-probe.R:13-40` must stay
       green unedited — that is the no-break check.
-- [ ] T3 Arm the unquoted-whitespace check in `local_fake_tools()`'s
+- [x] T3 Arm the unquoted-whitespace check in `local_fake_tools()`'s
       `fake_system2` (`helper-openac.R:596-638`), beside the existing
       absolute-path check, with the opt-out argument AC3 names; exempt
       `test-helper-boundary.R`'s raw fixtures.
@@ -112,6 +112,8 @@ direct docs commit to the default branch, not a milestone.
 - 2026-08-08: T1 done. MEASURED before writing anything: `system2()` does not quote `args` (a bare token vector reaches the tool split on spaces), and openac's current hand-quoted `paste0('-i "', path, '"')` loses a `$` in a path — `/tmp/a $b.mp4` was delivered as `/tmp/a .mp4`, a live bug M13 closes. `shQuote()` per token is correct on both axes and its default type is already platform-appropriate.
 - 2026-08-08: T1's shell-oracle test runs the real `system2()` against a script echoing its own argv, mocking only discovery — the only test in the file that observes what the tool RECEIVES rather than what `system2()` was handed; mutation-verified (removing the quoting reds 5 assertions, the oracle among them).
 - 2026-08-08: T2 done. The no-break check held as planned: `test-commands-probe.R:13-40`'s forwarding and alias tests pass unedited. One test outside that range did have to change — `passthroughs reject a non-string argument` asserted `ffprobe(c("-a","-b"))` errors, which D-017 makes valid; its multi-element case moved to a new positive assertion rather than being dropped.
+- 2026-08-08: T3 done. The check is armed in `fake_system2` and tested positively — a guard never observed to fire cannot be told from one silently disarmed, and no real assembler trips it yet (they still pass length-1 glued strings, which are exempt), so nothing else would notice. Exactly one opt-out in the suite, at `test-helper-boundary.R:336`.
+- 2026-08-08: T3's quote character is derived from `shQuote("x")` rather than written out, so the check stays strict per platform: a permissive both-quote-characters test would accept a hand-written `"..."` on unix, which is the form that still expands `$` — the measured bug itself, not a variant.
 - 2026-08-08: plan chose to arm the unquoted-whitespace invariant in the harness over asserting it per command test, because the harness already carries the sibling absolute-path invariant (helper-openac.R:605) and a per-test assertion is skipped by omission; falsified by a legitimate boundary call the invariant cannot express, requiring more opt-outs than the one test-helper-boundary.R needs.
 
 ## Decisions
