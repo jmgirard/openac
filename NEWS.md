@@ -2,8 +2,8 @@
 
 * The low-level wrappers `ffmpeg()`, `ffprobe()`, `openface()` and `opensmile()`
   (and their aliases `ffm()`, `ffp()`, `of()` and `os()`) now fail with an error
-  when the program cannot be found. Previously the argument string was handed to
-  the system shell and run as a command.
+  naming the program when it cannot be found, instead of the low-level error
+  that previously surfaced from path resolution.
 
 * `find_program()` (and `find_ffmpeg()`, `find_ffprobe()`, `find_openface()` and
   `find_opensmile()`) now warn and return `NULL` when a program cannot be found,

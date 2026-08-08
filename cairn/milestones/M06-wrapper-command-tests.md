@@ -230,6 +230,10 @@ defers it to submission time). CRAN submission → user-declared release window.
   word. (T8 quoted 56 from the built tarball's `spelling.Rout`; the two counts
   are different surfaces, and the branch-vs-main comparison is the claim.)
 
+- 2026-08-07: review 2 — supersedes the T14 line's claim that each NEWS bullet
+  "is enforced by a named test in this branch": bullet 4 (`set_program()`'s
+  documented return) is a doc-only change and no test enforces it (R18).
+
 ## Decisions
 
 ### 2026-08-07 — A missing tool aborts the low-level wrappers
@@ -405,3 +409,69 @@ no new top-level files, so no `.Rbuildignore` entries owed; `check()` clean at
 The repo has no `.github/workflows`, so the never-merge-red-CI rule has no CI to
 read; the local `check()` above is the evidence in its place, and CI setup is
 now a candidate row.
+
+Independent review: three fresh-context lenses (diff [O], blame-history [S],
+prior-PR [S]) plus a fresh [S] scorer that did not generate the findings. The
+blame-history lens found no conflict — every change traces to D-010, D-011, a
+logged task, or a review-1 finding, and the one regression the branch created
+mid-flight (`system2(NULL, args)` shell execution) was caught and closed inside
+the same milestone. The prior-PR lens confirmed all five of review 1's actioned
+findings are genuinely fixed rather than papered over, and found the GitHub
+inline-comment surface empty. The diff lens reported 24 findings; one scored
+≥80.
+
+Actioned (≥80) — **R1 (85), triaged fix now.** Verbatim:
+
+> **R1 — `NEWS.md` bullet 1 misstates the previous behavior (user-facing,
+> wrong).** File: `NEWS.md:3-6`. "Previously the argument string was handed to
+> the system shell and run as a command." This is false with respect to the last
+> release. On `origin/main`, `find_program()` ends in
+> `tools::file_path_as_absolute(location)` with `location = NULL`, which
+> **throws** (`'x' must be a character string`) — so `ffmpeg("-version")` with
+> ffmpeg absent errored; it never reached `system2(NULL, args)`. The
+> shell-execution behavior existed only in an intermediate state *created on
+> this branch* by T2 and then closed by T10. NEWS describes a branch-internal
+> regression as if it were shipped. Failure scenario: a 0.1.0 user reads NEWS,
+> concludes their installed version silently shell-executed argument strings
+> when a tool was missing, and audits over a vulnerability that never shipped.
+
+Confirmed independently against `origin/main:R/programs_find.R`: both not-found
+paths set `location <- NULL` and fall through to `file_path_as_absolute()`, so
+0.1.0 errored on an absent tool. The bullet now reads "now fail with an error
+naming the program when it cannot be found, instead of the low-level error that
+previously surfaced from path resolution" — a claim two tests enforce (the
+wrappers error, and nothing reaches the boundary). Return floor: R1 scored 85,
+below the 90 bar, and demonstrates no acceptance criterion failing, so it took
+triage rather than a send-back.
+
+Logged below 80, not actioned (23): R7 75 — `DESCRIPTION` declares
+`testthat (>= 3.0.0)` but the suite needs ≈3.1.9 for
+`local_mocked_bindings(.package=)`; R2 72 — one helper test omits
+`local_fake_config()` and reads the real config dir (review 1's F5, reconfirmed
+by probe); R10 68 — PATH-hit test asserts only `basename()`; R19 65 —
+`os_prep_audio()`/`aw_prep_audio()` `@return` omits the `"Skipped"` sentinel;
+R17 62 — DESIGN Architecture and Known-issues stale; R16 60 — the harness
+increments its queue index before the record can fail; R3 55 — a
+`do.call()`-dispatched alias attributes to its primary; R22 55 — a config line
+with trailing whitespace is not trimmed before `Sys.which()`; R20 52 —
+`os_extract_wav()` pins a no-output invocation `os_extract()`'s docs call
+invalid; R15 48 — the fake `Sys.which()` accepts a directory; R13 45 —
+assertions see only `basename(command)`; R4 42 — the closure sees only symbolic
+`system2`; R11 42 — four members assert a partial argument sequence; R12 42 —
+`boundary_args()` flattens `args` to one string; R14 42 — guard assertions match
+`stopifnot()` source text; R6 40 — the registry credits a recorded call, not an
+asserted one; R9 40 — AC2 names `test-command-contract.R`, shipped as
+`test-zzz-command-contract.R`; R18 38 — a work-log line overstates test
+enforcement for the doc-only NEWS bullet; R5 35 — the gate skips rather than
+fails if the registry is empty; R8 32 — `withr` Suggests-only with no
+`skip_if_not_installed()`; R21 30 — a fixture records "ffmpeg" under
+`opensmile_location.txt`; R23 22 — `check_*()` resolves twice (pre-existing);
+R24 18 — `aw_prep_audio()` leans on `ifelse()` lazy indexing.
+
+Two records this branch itself falsified were corrected in place, independently
+of the finding threshold, under the tracking rules' correct-a-false-record rule:
+DESIGN's Architecture paragraph (the passthroughs now route through
+`require_program()`) and its Known-issues line claiming the binary-dependent
+wrappers have no tests. Both marked; git holds the originals.
+
+Defect-return count for M06: 1 (unchanged — review 2 returned nothing).
