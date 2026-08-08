@@ -13,8 +13,18 @@
 # so coverage is never a hand-maintained list of names (D-010).
 openac_registry <- new.env(parent = emptyenv())
 openac_registry$owners <- character()
+# How many times the harness was INSTALLED, tracked separately from what it
+# attributed. The two answer different questions, and conflating them is what
+# let the coverage gate skip itself: an empty `owners` means either "no test
+# file that uses the harness ran" (a single-file run -- skip) or "they ran and
+# attribution recorded nothing" (broken -- must fail), and `owners` alone
+# cannot tell those apart.
+openac_registry$runs <- 0L
 
 registered_owners <- function() sort(unique(openac_registry$owners))
+
+# Whether any test in this run installed the boundary harness at all.
+harness_runs <- function() openac_registry$runs
 
 # Programs `find_program()` knows about; the fake resolver serves these.
 fake_programs <- function() c("ffmpeg", "ffprobe", "openface", "opensmile")
@@ -135,6 +145,16 @@ fake_is_executable <- function(path, os = Sys.info()[["sysname"]]) {
   }
 }
 
+# Is this an absolute path? NOT `identical(p, normalizePath(p, mustWork =
+# FALSE))`, which was tried and is silently wrong: normalizePath() returns a
+# path it cannot resolve unchanged, so every relative path that does not exist
+# -- i.e. exactly the regression this guards against -- compared equal and
+# passed. Matched instead against the three absolute forms: POSIX `/x`, UNC
+# `\\\\server\\share`, and a Windows drive `C:/x` or `C:\\x`.
+is_absolute_path <- function(path) {
+  grepl("^(/|\\\\\\\\|[A-Za-z]:[/\\\\])", path)
+}
+
 # The one `Sys.which` fake both scoped helpers install. `resolve` names the
 # programs that appear installed, served from `bindir`; anything else is
 # decided by the predicate above, so the two helpers can no longer drift apart
@@ -205,6 +225,8 @@ local_fake_tools <- function(results = list(),
     writeLines("// placeholder openSMILE config", path)
   }
 
+  openac_registry$runs <- openac_registry$runs + 1L
+
   state <- new.env(parent = emptyenv())
   state$calls <- list()
   state$i <- 0L
@@ -214,11 +236,25 @@ local_fake_tools <- function(results = list(),
   state$data <- data_dir
 
   fake_system2 <- function(command, args = character(), ...) {
+    cmd <- as.character(command)[[1]]
+    # IP1 says a tool location is always discovered or user-configured and
+    # comes back absolute (`find_program()` ends in file_path_as_absolute()).
+    # Checked HERE rather than in a few chosen tests, so it holds for every
+    # call any test routes through the harness: a regression handing system2()
+    # a bare name would otherwise pass every command assertion, since those
+    # compare basenames and args. normalizePath, not a "/" prefix, so a
+    # Windows `C:\...` counts as absolute too.
+    if (!is_absolute_path(cmd)) {
+      stop(
+        sprintf("fake system2: command is not an absolute path: %s", cmd),
+        call. = FALSE
+      )
+    }
     stack <- openac_stack()
     state$i <- state$i + 1L
     state$calls[[state$i]] <- list(
-      tool = fake_program_name(basename(as.character(command)[[1]])),
-      command = as.character(command)[[1]],
+      tool = fake_program_name(basename(cmd)),
+      command = cmd,
       args = args,
       stack = stack
     )
@@ -230,7 +266,7 @@ local_fake_tools <- function(results = list(),
       stop(
         sprintf(
           "fake system2: result queue exhausted on call %d (tool %s)",
-          state$i, basename(as.character(command)[[1]])
+          state$i, basename(cmd)
         ),
         call. = FALSE
       )
@@ -369,9 +405,20 @@ boundary_tools <- function(state) {
   vapply(state$calls, function(x) x$tool, character(1))
 }
 
+# The raw `args` of each call, exactly as `system2()` received it.
+#
+# `boundary_args()` below collapses each call's args to one string, which is
+# lossless only while every wrapper passes a single space-separated string --
+# the shape openac uses today. The moment one passes a vector, the collapse
+# erases the difference between `c("-i", "a b")` and `"-i a b"`, which are not
+# the same command. Assertions that care about argument boundaries read this.
+boundary_argv <- function(state) {
+  lapply(state$calls, function(x) as.character(x$args))
+}
+
 # Just the argument strings, in call order.
 boundary_args <- function(state) {
-  vapply(state$calls, function(x) paste(x$args, collapse = " "), character(1))
+  vapply(boundary_argv(state), paste, character(1), collapse = " ")
 }
 
 # The outermost openac function responsible for each boundary call.

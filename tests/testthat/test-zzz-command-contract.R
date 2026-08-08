@@ -76,8 +76,22 @@ test_that("every tool-calling function has a command test", {
   covered <- registered_owners()
 
   # Running this file alone leaves nothing for it to count; the invariant is
-  # about the whole suite. A full devtools::test() never takes this branch.
-  skip_if(length(covered) == 0, "command contract needs the full test suite")
+  # about the whole suite. The signal for that is whether the harness was ever
+  # INSTALLED this run -- not whether it attributed anything. Gating on an
+  # empty `covered` (as this did until M09) made the gate skip itself the
+  # moment attribution broke, which is precisely when it needed to fail: an
+  # advisory-only outcome is what D-010 rejected.
+  skip_if(harness_runs() == 0L, "command contract needs the full test suite")
+
+  # The harness ran, so something must have been attributed. Nothing means
+  # openac_stack() stopped identifying frames, and every assertion below would
+  # then pass over an empty set.
+  expect_gt(
+    length(covered), 0,
+    label = sprintf(
+      "owners recorded across %d harness installs", harness_runs()
+    )
+  )
 
   domain <- system2_closure()
   enforced <- setdiff(domain, names(deferred))

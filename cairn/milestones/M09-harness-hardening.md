@@ -115,12 +115,12 @@ percentages remain a diagnostic, never a gate (PROFILE `test-doctrine`).
       run the suite on Windows CI before trusting it.
 - [x] T4: fold `local_fake_config()` and `local_fake_data_dir()` into
       `local_fake_tools()`; add the `rappdirs::`-call-site enumeration test.
-- [ ] T5: add the absolute-command assertion inside `fake_system2()` and fix any
+- [x] T5: add the absolute-command assertion inside `fake_system2()` and fix any
       call site it trips.
-- [ ] T6: add `boundary_argv()`, redefine `boundary_args()` over it, test the
+- [x] T6: add `boundary_argv()`, redefine `boundary_args()` over it, test the
       discrimination.
-- [ ] T7: add the computed alias-class lock.
-- [ ] T8: replace `test-zzz-command-contract.R`'s `skip_if(length(covered) == 0)`
+- [x] T7: add the computed alias-class lock.
+- [x] T8: replace `test-zzz-command-contract.R`'s `skip_if(length(covered) == 0)`
       ([:80](tests/testthat/test-zzz-command-contract.R:80)) with a run-scope
       signal separate from attribution; record both runs.
 - [ ] T9: `devtools::document()` if roxygen changed, `devtools::test()`,
@@ -140,6 +140,9 @@ percentages remain a diagnostic, never a gate (PROFILE `test-doctrine`).
 - 2026-08-07: minor amendment — AC2's Unix drive skips on a Windows host as well as as root; the probe measured `file.access(<0755 extensionless>, 1L)` as -1 on Windows, so a Windows filesystem cannot represent the mode distinction the drive asserts. The predicate's unix branch degrades to existence there for the same reason.
 - 2026-08-07: T1–T3 done — one measured `fake_is_executable(path, os)` plus one shared `fake_sys_which()` factory; `local_fake_downloads()`'s divergent copy deleted; fixtures carry the host's extension via `fake_program_file()` and `boundary_tools()` strips it via `fake_program_name()`. Suite 450 pass / 0 fail on macOS; Windows is CI's to confirm.
 - 2026-08-07: the B1/P1 test was checked for falsifiability before being kept (M07's could-not-fail finding): for a 0644 file the old `file.exists()` rule returns TRUE where the new predicate returns FALSE, so the assertion discriminates.
+- 2026-08-07: T5 found AC5's named mechanism silently wrong — `normalizePath(p, mustWork = FALSE)` returns an unresolvable path unchanged, so `identical(p, normalizePath(p))` was TRUE for every relative path that does not exist, i.e. exactly the regression it guards against. Replaced with `is_absolute_path()` matching the three absolute forms (POSIX, UNC, Windows drive); AC5's wording still to amend.
+- 2026-08-07: T5-T8 done — absolute-command check inside the recorder (no existing call site tripped it), `boundary_argv()` preserving argument boundaries, computed alias-class lock over `openac_name_of()`, and a `runs` counter separating "the harness ran" from "the harness attributed".
+- 2026-08-07: AC8 evidence. Full suite with attribution disabled and the harness still recording installs: FAIL 2, `test-zzz-command-contract.R:89` — "Expected owners recorded across 22 harness installs > 0". Same file alone under `testthat::test_file()`: SKIP 1, `test-zzz-command-contract.R:84` — "command contract needs the full test suite". Helper restored and suite re-run clean afterwards.
 - 2026-08-07: 9 acceptance criteria exceeds the 7 tripwire deliberately — one per independent review finding plus the profile's verify slot, each separately fenceable at review; merging them would blur which finding a piece of evidence closes.
 
 ## Decisions

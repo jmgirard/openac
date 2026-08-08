@@ -48,6 +48,16 @@ test_that("a do.call()-dispatched frame is attributed to the outer function", {
   expect_identical(boundary_owners(state), "of_extract")
 })
 
+test_that("a relative command is refused at the boundary", {
+  # IP1: a tool location is discovered or user-configured and comes back
+  # absolute. Every command assertion in the suite compares basenames and
+  # args, so a regression handing system2() a bare name would pass all of
+  # them -- the check lives in the recorder instead, where it sees every call.
+  local_fake_tools(results = list())
+  expect_error(system2("ffmpeg", "-x"), "not an absolute path")
+  expect_error(system2(file.path("rel", "ffmpeg"), "-x"), "not an absolute path")
+})
+
 test_that("an exhausted result queue errors instead of recycling", {
   local_fake_tools(results = list("only one"))
   expect_identical(ffmpeg("-first"), "only one")
@@ -227,4 +237,69 @@ test_that("a program left out of `resolve` is not found", {
   local_fake_tools(results = list(), resolve = character())
   expect_warning(res <- find_program("ffmpeg"))
   expect_null(res)
+})
+
+test_that("boundary_argv() preserves argument boundaries that collapse erases", {
+  # Two different commands: one passes two arguments, the other one argument
+  # containing a space. `boundary_args()` renders them identically, so an
+  # assertion built on it cannot tell a correctly quoted path from a wrapper
+  # that split on whitespace.
+  state <- local_fake_tools(results = list("a", "b"))
+  bin <- file.path(state$bindir, fake_program_file("ffmpeg"))
+
+  system2(bin, c("-i", "a b"))
+  system2(bin, "-i a b")
+
+  expect_identical(boundary_argv(state), list(c("-i", "a b"), "-i a b"))
+  expect_identical(boundary_args(state)[[1]], boundary_args(state)[[2]])
+})
+
+test_that("openac_name_of() picks the primary name for every alias class", {
+  # The attribution rule is "longest name wins", which is correct only while
+  # every alias is shorter than its primary. The classes are COMPUTED from the
+  # namespace rather than listed, so a newly added alias appears here and fails
+  # this test until its primary is recorded -- rather than silently changing
+  # which function a do.call()-dispatched boundary call is credited to.
+  ns <- asNamespace("openac")
+  fns <- Filter(function(n) is.function(get(n, envir = ns)),
+                ls(ns, all.names = TRUE))
+  # Group names by the closure object they are bound to.
+  classes <- list()
+  for (n in fns) {
+    f <- get(n, envir = ns)
+    hit <- NA_integer_
+    for (i in seq_along(classes)) {
+      if (identical(get(classes[[i]][[1]], envir = ns), f)) {
+        hit <- i
+        break
+      }
+    }
+    if (is.na(hit)) classes[[length(classes) + 1L]] <- n else
+      classes[[hit]] <- c(classes[[hit]], n)
+  }
+  aliased <- Filter(function(x) length(x) > 1L, classes)
+
+  # The recorded answer for each class, keyed by the class's sorted names.
+  primary <- c(
+    "ffm,ffmpeg" = "ffmpeg",
+    "ffp,ffprobe" = "ffprobe",
+    "of,openface" = "openface",
+    "opensmile,os" = "opensmile"
+  )
+
+  found <- vapply(aliased, function(x) paste(sort(x), collapse = ","),
+                  character(1))
+  expect_setequal(found, names(primary))
+
+  for (cls in aliased) {
+    key <- paste(sort(cls), collapse = ",")
+    # Asked via every binding in the class: attribution must not depend on
+    # which name the caller happened to use.
+    for (n in cls) {
+      expect_identical(
+        openac_name_of(get(n, envir = ns), ns), unname(primary[[key]]),
+        label = paste0(n, " (class ", key, ")")
+      )
+    }
+  }
 })
