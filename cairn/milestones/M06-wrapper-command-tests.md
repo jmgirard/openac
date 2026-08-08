@@ -115,7 +115,7 @@ defers it to submission time). CRAN submission → user-declared release window.
       whose calls it counts.)
 - [x] T8 Run `document()`, `test()`, `check()`; record the NOTE baseline from
       `00check.log`; fix fallout.
-- [ ] T9 (review F1, AC4) `find_program()` must use the resolved
+- [x] T9 (review F1, AC4) `find_program()` must use the resolved
       `Sys.which(lines[[1]])`, not the raw recorded string, so a config naming a
       bare program name returns a path instead of erroring. Test that path.
 - [ ] T10 (review H1) Decide and implement the tool-absent contract for the four
@@ -133,6 +133,9 @@ defers it to submission time). CRAN submission → user-declared release window.
 - [ ] T14 (review G1, toolchain gate) Add a `NEWS.md` development-version entry
       for the user-visible contract changes, with no milestone numbers in the
       user-facing text.
+- [ ] T15 (review AC2, discovered) Make `openac_stack()` name a frame whose call
+      head is a function value, so a `do.call()`-dispatched frame is attributed
+      to the outer function and not to the inner passthrough. Test that path.
 
 ## Work log
 
@@ -163,6 +166,19 @@ defers it to submission time). CRAN submission → user-declared release window.
 - 2026-08-07: T8 — baseline established by measurement, not assumption: `check()` was run against `main` in a worktree and the spelling word lists diffed. Both sides list exactly 56 words with an empty diff in both directions, so this branch adds no NOTE and no new word. The worktree run also reported a second NOTE (`checking for hidden files and directories … .git`); that is an artifact of checking inside a git worktree, where `.git` is a regular file, and not a property of `main`.
 - 2026-08-07: T8 fallout — the first draft of `set_program()`'s `@return` wrote "openac's user config directory", which added the token `openac's` to the spelling NOTE; reworded to drop the possessive, restoring the word list to the baseline exactly.
 - 2026-08-07: review 1 returned M06 to `in-progress`. Failed: AC4 (a config file recording a bare program name still reaches `tools::file_path_as_absolute()` and errors, so `check_*()` propagates the very error class AC4 closes); AC3 (the four `check_*` members record a call but assert no command; the `afilters` chain omits `afftdn`/`compand`/`dynaudnorm`; `os_extract()`'s default `wavfile = NULL` branch is untested); AC2 (outermost-frame attribution is false for `do.call()`-dispatched frames, verified inside this suite); and the profile's consistency-gate changelog check (`NEWS.md` has no development-version entry). AC1, AC5, AC6 met; `cairn_validate` exit 0. Also found and verified: with the tool absent, `system2(NULL, args)` executes the argument string as a shell command, so this branch turned a hard error into silent shell execution. Tasks T9–T14 added; defect-return count 1.
+- 2026-08-07: minor amendment — T15 added. Review 1 records AC2 as failing on
+  `do.call()` frame attribution but actioned no task for it (F6 scored 78), so
+  the criterion could not pass as written; T15 carries the fix.
+- 2026-08-07: implement gate chose one shared internal guard over a per-wrapper
+  copy for the tool-absent contract (T10), and chose keeping `find_program()`'s
+  warning ahead of the new error over suppressing it, so the "use `set_program()`"
+  hint survives.
+- 2026-08-07: T9 — `find_program()` now returns `Sys.which(lines[[1]])` rather
+  than the recorded string, so a config naming a bare program name resolves
+  instead of erroring. Verified pre-fix by reverting the source: the new test
+  errored at `programs_find.R:52` with "file 'ffmpeg' does not exist" from
+  `tools::file_path_as_absolute()` — the failure the task names. Suite 240 pass,
+  0 fail, 0 skip.
 
 ## Decisions
 

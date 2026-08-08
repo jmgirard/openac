@@ -37,8 +37,13 @@ find_program <- function(program) {
     # Read the recorded location, ignoring blank lines
     lines <- readLines(config, warn = FALSE)
     lines <- lines[nzchar(trimws(lines))]
+    # Resolve what was recorded. set_program() accepts anything Sys.which()
+    # resolves, which includes a bare program name on the PATH -- so the
+    # RESOLVED path is what gets returned, never the recorded string, which
+    # file_path_as_absolute() would reject.
+    resolved <- if (length(lines) == 0L) "" else Sys.which(lines[[1]])
     # An empty config file and one naming a vanished binary fail the same way
-    if (length(lines) == 0L || Sys.which(lines[[1]]) == "") {
+    if (!nzchar(resolved)) {
       cli::cli_warn(c(
         "!" = "{.pkg {program}} was recorded as being at {.file {config}}, but
                that location no longer resolves to a runnable program.",
@@ -46,7 +51,7 @@ find_program <- function(program) {
       ))
       return(NULL)
     }
-    location <- lines[[1]]
+    location <- resolved
   }
   # Names come from Sys.which(); drop them so the return is a bare string
   unname(tools::file_path_as_absolute(location))

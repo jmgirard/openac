@@ -35,6 +35,23 @@ test_that("find_program() resolves a program recorded in the config file", {
   expect_identical(find_program("opensmile"), recorded)
 })
 
+test_that("find_program() resolves a config entry naming a bare program name", {
+  # set_program()'s guard is Sys.which(location) != "", which a bare name on
+  # the PATH passes -- so the config can legitimately hold "ffmpeg" rather than
+  # a path. Before this fix find_program() handed that raw string to
+  # tools::file_path_as_absolute(), which errored, and check_*() propagated it.
+  state <- local_fake_tools(results = list("v"), resolve = "ffmpeg")
+  config_dir <- local_fake_config()
+  writeLines("ffmpeg", file.path(config_dir, "opensmile_location.txt"))
+
+  expect_identical(
+    find_program("opensmile"),
+    tools::file_path_as_absolute(file.path(state$bindir, "ffmpeg"))
+  )
+  # And the check_* contract holds on that path instead of erroring.
+  expect_true(check_opensmile())
+})
+
 test_that("set_program() writes a location find_program() reads back", {
   local_fake_tools(resolve = character())
   local_fake_config()
