@@ -208,11 +208,12 @@ fix-now.
 ### Consistency gate
 
 - CI on PR #12: pass on all five jobs — ubuntu release / devel / oldrel-1,
-  macos-latest, windows-latest. These are the runs in which `R CMD check`
-  declares a full suite, so the contract gate enforced rather than skipped.
+  macos-latest, windows-latest — re-run after the review fixes (run
+  31277448344). These are the runs in which `R CMD check` declares a full
+  suite, so the contract gate enforced rather than skipped.
 - `cairn_validate.py`: all checks passed, exit 0.
 - `cairn_impact.py`: not run — no DESIGN.md principle changed.
-- `devtools::check()`: 0 errors, 0 warnings, 1 NOTE — the standing spelling
+- `devtools::check()` (re-run after the review fixes): 0 errors, 0 warnings, 1 NOTE — the standing spelling
   NOTE (its own ROADMAP candidate). Every hit it lists is in an `.Rd`,
   `NEWS.md`, `README.md` or a vignette; `git diff --name-only main..HEAD` shows
   this branch touches no such path, so the NOTE is unchanged from the default
