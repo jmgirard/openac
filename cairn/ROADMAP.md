@@ -8,7 +8,7 @@ _Released 0.1.0 (GitHub) 2026-07-11._
 
 | ID | Title | Status | Depends on | Priority | File/Archive |
 |---|---|---|---|---|---|
-| M08 | GitHub Actions CI — R CMD check across platforms | planned | — | high | milestones/M08-github-actions-ci.md |
+| M08 | GitHub Actions CI — R CMD check across platforms | review | — | high | milestones/M08-github-actions-ci.md |
 | M06 | Wrapper testing contract — system2-boundary command tests | done | — | high | milestones/archive/M06-wrapper-command-tests.md |
 | M07 | Wrapper testing contract — remainder and gated real invocations | planned | M06 | normal | milestones/M07-wrapper-tests-remainder.md |
 | M02 | OpenFace tidy reader (`of_read`) | done | M01 | normal | milestones/archive/M02-openface-reader.md |
@@ -31,4 +31,4 @@ _Released 0.1.0 (GitHub) 2026-07-11._
 - Run-time tool-version capture (surface tool versions in outputs/attributes for methods reporting and drift debugging) — added 2026-07-11 — design interview
 - Add the `test-coverage` / Codecov workflow (usethis `use_github_action("test-coverage")`); needs a `CODECOV_TOKEN` repository secret only the maintainer can add, so an unauthenticated job would block every later merge — added 2026-08-07 — M06 review 2; the check-standard half became M08 on 2026-08-07
 - Turn on branch protection with the CI checks required on the default branch — GitHub repository settings, not files, so no milestone can land it — added 2026-08-07 — M08
-- Harden the system2 test harness: redirect config in every test, assert absolute command paths, keep `args` unflattened, alias-safe `do.call` attribution, fail rather than skip when the coverage registry is empty — added 2026-08-07 — M06 review 2 (R2, R13, R12, R3, R5)
+- Harden the system2 test harness: redirect config in every test, assert absolute command paths, keep `args` unflattened, alias-safe `do.call` attribution, fail rather than skip when the coverage registry is empty; plus `fake_is_executable()`'s Windows branch resolving any existing path where real `Sys.which()` resolves by extension, and neither of its branches being covered in `test-helper-boundary.R` — added 2026-08-07 — M06 review 2 (R2, R13, R12, R3, R5); M08 review (F6, F7)

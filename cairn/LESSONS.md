@@ -14,6 +14,6 @@ graduates whole into a doctrine module; pruning the stalest is the last resort
 rather than the first (D-051, D-055).
 
 - 2026-08-07 (M06): `tools::file_path_as_absolute()` resolves the macOS `/var` → `/private/var` symlink, so a test comparing a returned path against a bare `tempdir()` path fails — canonicalize the expectation, not the code.
-- 2026-08-07 (M06): `Sys.which()` returns `""` for a file that exists but is not executable, so a fake binary in a test fixture must be created mode 0755 or resolution silently fails.
+- 2026-08-07 (M06, corrected M08): `Sys.which()` returns `""` for a file that exists but is not executable, so a fake binary in a test fixture must be created mode 0755 — but that holds on Unix only: Windows has no execute bit, `file.access(mode = 1)` returns -1 there for an extensionless file whatever `Sys.chmod()` did, so a fixture's executability predicate must degrade to plain existence on Windows.
 - 2026-08-07 (M06): testthat runs test files in sorted filename order, so a test that counts what other files did must sort last (this repo uses a `test-zzz-` prefix) and must skip rather than fail when run in isolation.
 - 2026-08-07 (M06): the spelling NOTE's word list differs between `spelling::spell_check_package()` on the source and the tarball's `spelling.Rout` diff — compare branch against the default branch with one method rather than matching a remembered count, and check new roxygen/NEWS prose before committing.

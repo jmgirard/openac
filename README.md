@@ -5,6 +5,7 @@
 
 <!-- badges: start -->
 
+[![R-CMD-check](https://github.com/jmgirard/openac/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/jmgirard/openac/actions/workflows/R-CMD-check.yaml)
 <!-- badges: end -->
 
 openac provides R wrappers around external, open-source
