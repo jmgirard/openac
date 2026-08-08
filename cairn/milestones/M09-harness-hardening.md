@@ -35,7 +35,7 @@ percentages remain a diagnostic, never a gate (PROFILE `test-doctrine`).
 
 ## Acceptance criteria
 
-- [ ] AC1: `helper-openac.R` defines exactly one executability predicate —
+- [x] AC1: `helper-openac.R` defines exactly one executability predicate —
       "would a real `Sys.which()` resolve this path" — taking the platform as an
       explicit argument rather than reading `.Platform$OS.type` internally, and
       both `local_fake_tools()` and `local_fake_downloads()` install one shared
@@ -43,24 +43,31 @@ percentages remain a diagnostic, never a gate (PROFILE `test-doctrine`).
       `local_fake_os()` names, not the host's. Evidence:
       `grep -c "fake_is_executable <- function\|fake_sys_which <- function"
       tests/testthat/helper-openac.R` returns 2, both at top level.
-- [ ] AC2: the predicate models what R's `Sys.which()` was measured to do (M09
-      probe, R 4.6.1, GitHub runners). Driven with the platform set to Windows it
-      returns `TRUE` for an existing file carrying any extension — `.exe`,
-      `.bat`, `.cmd`, `.com` and `.txt` all measured as resolving — `TRUE` for an
-      extensionless path whose `<path>.exe` sibling exists, and `FALSE` for an
-      extensionless path with no such sibling; file mode is irrelevant there.
-      Driven with Unix it returns `TRUE` for an existing mode-0755 file whatever
-      its extension and `FALSE` for an existing mode-0644 file, skipping that
-      drive as root (`file.access(path, 1L)` returns 0 there whatever the mode).
-      Both drives run wherever the suite runs, so a macOS run still exercises the
-      Windows branch.
-- [ ] AC3: `local_fake_tools()` creates fixture binaries carrying the extension
-      the host platform requires (`.exe` on Windows, none elsewhere), the fake
-      resolves a bare program name to that fixture on every platform, and
-      `boundary_tools()` records the extension-stripped program name so every
-      existing tool assertion holds unchanged. Evidence: `R CMD check` green on
-      all five CI platforms in this milestone's PR (macOS, Windows, Ubuntu
-      devel/release/oldrel-1).
+- [x] AC2: the predicate models what R's `Sys.which()` was MEASURED to do (M09
+      probes, R 4.6.1, GitHub runners). Driven with the platform set to Windows
+      it returns `TRUE` for an existing file carrying any extension — `.exe`,
+      `.bat`, `.cmd`, `.com` and `.txt` all measured as resolving — and, for an
+      extensionless path, `TRUE` iff a sibling carrying `.exe`, `.bat`, `.cmd`
+      or `.com` exists, whether or not the extensionless path itself does; a
+      `.txt` sibling and no sibling both measured as not resolving. File mode is
+      irrelevant there, and `fake_sys_which_path()` returns that sibling rather
+      than the name asked for. Driven with Unix it returns `TRUE` for an existing
+      mode-0755 file whatever its extension and `FALSE` for an existing mode-0644
+      file. The Windows drives run wherever the suite runs, so a macOS run still
+      exercises them; the Unix drive is skipped as root (`file.access(path, 1L)`
+      returns 0 there whatever the mode) and on a Windows host, which has no mode
+      bit for it to read. One measured divergence is deliberate and tested: the
+      real Windows `Sys.which()` returned a DIRECTORY named `tool.exe` when asked
+      for it, and the predicate refuses it, because openac would hand that
+      straight to `system2()`.
+- [x] AC3: `local_fake_tools()` creates fixture binaries carrying the extension
+      the SIMULATED platform requires (`.exe` when the test's `local_fake_os()`
+      names Windows, or when nothing is faked and the host is Windows; none
+      otherwise), the fake resolves a bare program name to that fixture on every
+      platform, and `boundary_tools()` records the extension-stripped program
+      name so every existing tool assertion holds unchanged. Evidence:
+      `R CMD check` green on all five CI platforms in this milestone's PR
+      (macOS, Windows, Ubuntu devel/release/oldrel-1).
 - [x] AC4: `local_fake_tools()` redirects every `rappdirs::` function openac's
       package code calls. A test enumerates those call sites by walking the
       loaded `openac` namespace for `rappdirs::user_*_dir` calls — the source
@@ -87,7 +94,7 @@ percentages remain a diagnostic, never a gate (PROFILE `test-doctrine`).
       primary for each; an alias class absent from the recorded table fails the
       test naming it. The four classes today are `ffm`/`ffmpeg`, `ffp`/`ffprobe`,
       `of`/`openface`, `opensmile`/`os`.
-- [ ] AC8: `test-zzz-command-contract.R` decides whether to enforce from whether
+- [x] AC8: `test-zzz-command-contract.R` decides whether to enforce from whether
       the run was complete, not from whether anything was recorded. With owner
       *attribution* disabled while the harness still records that it ran, a full
       suite run makes the file FAIL rather than skip; `testthat::test_file()` on
@@ -162,6 +169,16 @@ percentages remain a diagnostic, never a gate (PROFILE `test-doctrine`).
 - 2026-08-07: T9 done; all criteria met. Status → review.
 - 2026-08-07: return gate — AC8 amended to name the partial-run case O15 found: the gate must decide from run completeness, not from what was recorded, so `devtools::test(filter = "helper-boundary|zzz")` skips instead of failing. Scope "In:" amended to name `test-programs-resolve.R` and `test-commands-probe.R`, which the diff rewrote (O24).
 - 2026-08-07: return gate chose to MEASURE AC2's `<path>.exe` sibling rule on Windows CI rather than accept it as inferred — the first probe created `tool` and `tool.exe` together, so the sibling-only case it asserts was never observed. Second probe workflow pushed; AC2's text waits on its output.
+- 2026-08-07: AC1 met (O3) — `fake_program_file()` reads the simulated platform, the same source the predicate reads, and `local_fake_tools()` captures it once (`os` argument, `state$os`) and hands it to both the fixture namer and the resolver, so the tree and its resolver cannot disagree. New test drives `local_fake_os("Windows")` on a Unix host: fixtures carry `.exe`, `Sys.which()` returns them, `boundary_tools()` still reads `ffmpeg`. Falsified against the old host-reading namer: 3 failures.
+- 2026-08-07: AC2 met (O1) — second Windows probe, one file per directory, always asking for the extensionless name. `.exe`/`.bat`/`.cmd`/`.com` siblings resolve and return the SIBLING's path; `.txt` sibling and no sibling do not; a 0644 `.exe` still resolves. The predicate is now `fake_sys_which_path()` with `fake_is_executable()` defined over it, so the resolver returns what the platform would return instead of the name asked for. Falsified against the reinstated `!file.exists()` guard: 2 failures.
+- 2026-08-07: probe measured one divergence to keep — real Windows `Sys.which()` RETURNS a directory named `tool.exe`. The predicate refuses directories, now recorded in AC2 and tested, because openac would hand that to `system2()`.
+- 2026-08-07: amendment return: AC2 — "The Windows drives run wherever the suite runs, so a macOS run still exercises them; the Unix drive is skipped as root (`file.access(path, 1L)` returns 0 there whatever the mode) and on a Windows host, which has no mode bit for it to read."
+- 2026-08-07: AC8 met (O15) — the gate now reads run COMPLETENESS, not install count: `local_fake_tools()` records the test file it was called from (call-stack srcref), and `harness_test_files()` reads the expected set off the test directory by searching for the helper's name, assembled at runtime so the contract file does not match itself. Three runs on a healthy tree — full suite: FAIL 0, PASS 504, the contract enforcing; `filter = "helper-boundary|zzz"`: FAIL 0, SKIP 1 at `test-zzz-command-contract.R:129` — "command contract needs the full test suite (1 of 7 harness files ran; missing test-batch-dirs.R, test-commands-extract.R, test-commands-prep.R, test-commands-probe.R, test-programs-resolve.R, test-whisper-transcribe.R)"; that file alone under `test_file()`: FAIL 0, SKIP 1 at `:117`. The broken-attribution case is unchanged and still fails.
+- 2026-08-07: sub-threshold findings fixed in passing, all inside code this return already touched — O2 (the sibling rule returned the requested name, not the sibling), O4/B1 (`local_fake_downloads()` docstring still claimed it resolved any existing file), O5 (recorder comment still named `normalizePath`), O18 (queue-exhausted message used the unstripped basename). The remaining logged findings stand.
+- 2026-08-07: LESSONS — the executability entry rewritten to the measured sibling set (`.com`/`.exe`/`.bat`/`.cmd`, returning the sibling's path); added the probe-design lesson that one directory per case is what makes a probe able to say which file answered.
+- 2026-08-08: AC3 amended at the return gate — "the SIMULATED platform requires", not the host's, which the O3 fix made false. Behavior is identical wherever no platform is faked, which is every pre-existing test.
+- 2026-08-08: AC1 note for review — the executability RULE now lives in exactly one function, `fake_sys_which_path()`, and `fake_is_executable()` is a one-line view over it rather than a second copy. AC1's evidence grep still returns 2, both at top level (helper-openac.R:184 and :230).
+- 2026-08-08: local `devtools::check()` clean after the return work — 0 errors, 0 warnings, 1 NOTE, the standing spelling NOTE. Suite 504 pass / 0 fail, 2 skips (both `test-real-tools.R` binary gates). Second probe workflow deleted; its measurements survive in the comment on `fake_sys_which_path()` and the M09 LESSONS entries.
 - 2026-08-07: 9 acceptance criteria exceeds the 7 tripwire deliberately — one per independent review finding plus the profile's verify slot, each separately fenceable at review; merging them would blur which finding a piece of evidence closes.
 
 ## Decisions

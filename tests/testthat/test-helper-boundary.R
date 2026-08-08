@@ -124,19 +124,52 @@ test_that("the Windows rule resolves any extension, and mode is irrelevant", {
   expect_true(fake_is_executable(make("mode.exe", "0644"), os = "Windows"))
 })
 
-test_that("the Windows rule refuses an extensionless path unless .exe exists", {
-  dir <- withr::local_tempdir()
-  bare <- file.path(dir, "tool")
-  file.create(bare)
+test_that("the Windows rule resolves an extensionless path through a sibling", {
+  # Each case gets its OWN directory holding exactly ONE file, mirroring the
+  # second M09 probe. The first probe created `tool` and `tool.exe` together,
+  # so the extensionless file answered every question and the sibling rule was
+  # never exercised -- the harness then shipped a sibling branch that an
+  # earlier `!file.exists(path)` guard made unreachable (M09 review, O1).
+  only <- function(ext) {
+    dir <- withr::local_tempdir(.local_envir = parent.frame())
+    p <- file.path(dir, paste0("tool", ext))
+    file.create(p)
+    Sys.chmod(p, "0644")  # measured: a 0644 .exe still resolved
+    file.path(dir, "tool")
+  }
+
+  # Measured: .exe, .bat, .cmd and .com siblings all resolved.
+  for (ext in c(".exe", ".bat", ".cmd", ".com")) {
+    bare <- only(ext)
+    expect_true(fake_is_executable(bare, os = "Windows"), label = ext)
+    # And it resolves TO the sibling, not to the name that was asked for --
+    # which does not exist, and which find_program() would then choke on.
+    expect_identical(
+      fake_sys_which_path(bare, os = "Windows"), paste0(bare, ext),
+      label = ext
+    )
+  }
+
+  # Measured: a .txt sibling did NOT resolve, though a .txt file named directly
+  # does. The two rules are different, and reading one off the other is what
+  # made the criterion claim `.exe` alone.
+  expect_false(fake_is_executable(only(".txt"), os = "Windows"))
+
+  # Measured: extensionless with no sibling is <empty>, mode notwithstanding.
+  bare <- only("")
   Sys.chmod(bare, "0755")
-
-  # No sibling: measured as <empty> on the runner, mode notwithstanding.
   expect_false(fake_is_executable(bare, os = "Windows"))
+})
 
-  # With the sibling: measured as resolving TO the sibling. This is how a
-  # recorded `SMILExtract` finds `SMILExtract.exe`.
-  file.create(paste0(bare, ".exe"))
-  expect_true(fake_is_executable(bare, os = "Windows"))
+test_that("the predicate refuses a directory the real Sys.which() would return", {
+  # A measured divergence, not an untested assumption: the Windows probe
+  # returned a DIRECTORY named `tool.exe` when asked for it. openac would hand
+  # that straight to system2(), so the fake is deliberately stricter.
+  dir <- withr::local_tempdir()
+  d <- file.path(dir, "tool.exe")
+  dir.create(d)
+  expect_false(fake_is_executable(d, os = "Windows"))
+  expect_identical(fake_sys_which_path(d, os = "Windows"), "")
 })
 
 test_that("the Unix rule is the execute bit, whatever the extension", {
@@ -174,6 +207,38 @@ test_that("the predicate refuses what no Sys.which() would return", {
     # for a searchable one, so both branches would otherwise let it through.
     expect_false(fake_is_executable(dir, os = os), label = os)
   }
+})
+
+test_that("the fake tree is built for the platform the predicate reads", {
+  # The fixture namer decides what the tree CONTAINS and the predicate decides
+  # what resolves out of it, so the two must read the same platform. They did
+  # not: the namer read the HOST while the predicate read the simulated OS, so
+  # under local_fake_os("Windows") on a Unix host the tree served an
+  # extensionless file its own resolver refuses (M09 review, O3).
+  local_fake_os("Windows")
+  state <- local_fake_tools(results = list("ok"))
+
+  # Built Windows-shaped on whatever host this is running on.
+  expect_true(file.exists(file.path(state$bindir, "ffmpeg.exe")))
+  expect_identical(state$os, "Windows")
+
+  # And the resolver agrees with what was built, rather than refusing it.
+  resolved <- unname(Sys.which("ffmpeg"))
+  expect_identical(basename(resolved), "ffmpeg.exe")
+  expect_true(fake_is_executable(resolved, os = "Windows"))
+
+  # Assertions still read the bare name, so nothing downstream sees the .exe.
+  ffmpeg("-x")
+  expect_identical(boundary_tools(state), "ffmpeg")
+})
+
+test_that("the harness records which test file installed it", {
+  # The coverage gate decides whether to enforce from whether the whole suite
+  # ran, and it reads that off this record. If it stopped naming files, the
+  # gate would skip every run -- so the mechanism is asserted here rather than
+  # trusted (M09 review, O15).
+  local_fake_tools()
+  expect_true("test-helper-boundary.R" %in% harness_files())
 })
 
 test_that("both scoped helpers resolve by the same rule", {

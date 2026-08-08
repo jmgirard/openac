@@ -20,21 +20,51 @@ openac_registry$owners <- character()
 # attribution recorded nothing" (broken -- must fail), and `owners` alone
 # cannot tell those apart.
 openac_registry$runs <- 0L
+# WHICH test files installed it, which is a third question again. "The harness
+# ran" does not mean "the whole suite ran": a filtered run installs the harness
+# from some files and not others, and the coverage invariant is only decidable
+# over the whole suite. Counting installs cannot tell a filtered run from a
+# complete one; naming the files can.
+openac_registry$files <- character()
 
 registered_owners <- function() sort(unique(openac_registry$owners))
 
-# Whether any test in this run installed the boundary harness at all.
+# How many times the boundary harness was installed in this run.
 harness_runs <- function() openac_registry$runs
+
+# The test files that installed it, in sorted order.
+harness_files <- function() sort(unique(openac_registry$files))
+
+# The test file the current call came from, read off the call stack's srcrefs
+# (testthat sources test files with source refs kept). Innermost first, so a
+# call made from inside a helper still lands on the test file that drove it.
+harness_caller_file <- function() {
+  calls <- sys.calls()
+  for (i in rev(seq_along(calls))) {
+    src <- attr(calls[[i]], "srcref")
+    if (is.null(src)) next
+    file <- basename(utils::getSrcFilename(calls[[i]], full.names = TRUE))
+    if (grepl("^test-.*\\.[Rr]$", file)) return(file)
+  }
+  NA_character_
+}
 
 # Programs `find_program()` knows about; the fake resolver serves these.
 fake_programs <- function() c("ffmpeg", "ffprobe", "openface", "opensmile")
 
-# The file name a fixture binary must carry for the HOST's real `Sys.which()`
-# to resolve it. Windows needs an extension (see `fake_is_executable()`); an
-# extensionless fixture there is what a real Windows install would never have,
-# and testing against one asserts a resolution the platform refuses.
-fake_program_file <- function(name) {
-  paste0(name, if (.Platform$OS.type == "windows") ".exe" else "")
+# The file name a fixture binary must carry for `Sys.which()` to resolve it on
+# the platform being SIMULATED. Windows needs an extension (see
+# `fake_is_executable()`); an extensionless fixture there is what a real Windows
+# install would never have, and testing against one asserts a resolution the
+# platform refuses.
+#
+# `os` reads the simulated platform, the same source `fake_is_executable()`
+# reads, because the two must agree: this function decides what the fake tree
+# CONTAINS and the predicate decides what resolves out of it, so one reading the
+# host while the other reads `local_fake_os()`'s value would build a tree its
+# own resolver refuses.
+fake_program_file <- function(name, os = Sys.info()[["sysname"]]) {
+  paste0(name, if (identical(os, "Windows")) ".exe" else "")
 }
 
 # Drop that extension again, so assertions read the same on every platform.
@@ -118,9 +148,19 @@ openac_stack <- function() {
 #   Windows  resolves an existing file iff it carries ANY extension -- `.exe`,
 #            `.bat`, `.cmd`, `.com` and `.txt` all resolved, and `.txt` did so
 #            at 0755 while `file.access()` reported -1, so the mode is
-#            irrelevant there -- or, for an extensionless path, iff a
-#            `<path>.exe` sibling exists. That last case is how a recorded
-#            `SMILExtract` resolves to `SMILExtract.exe`.
+#            irrelevant there -- or, for an extensionless path, iff a sibling
+#            carrying an EXECUTABLE extension exists. That last case is how a
+#            recorded `SMILExtract` resolves to `SMILExtract.exe`.
+#
+# The sibling set is measured, not assumed, and it is not just `.exe`: a second
+# probe gave each case its own directory holding exactly ONE file and always
+# asked for the extensionless name. `.exe`, `.bat`, `.cmd` and `.com` siblings
+# all resolved; a `.txt` sibling did not, and neither did an extensionless file
+# with no sibling. (The first probe created `tool` and `tool.exe` together, so
+# it could not see any of this -- it was the extensionless file answering.)
+# Which sibling wins when several exist was NOT measured, since no case
+# presented two; `fake_sys_which_path()` takes them in PATHEXT's documented
+# default order, and the harness only ever creates `.exe` anyway.
 #
 # `os` is the platform being SIMULATED and defaults to what `Sys.info()`
 # reports, so `local_fake_os()` drives it and a macOS run still exercises the
@@ -130,19 +170,47 @@ openac_stack <- function() {
 # branch degrades to existence when the host is Windows. Directories are
 # excluded outright: `file.exists()` is TRUE for one and `file.access(dir, 1L)`
 # is 0 for a searchable one (M07 hit this), and no tool path is ever a
-# directory. That exclusion is a deliberate tightening, not a measured claim
-# about `Sys.which()`.
+# directory. That exclusion is a deliberate tightening and a MEASURED
+# divergence: the real Windows `Sys.which()` returned a directory named
+# `tool.exe` when asked for it. openac would then hand that directory to
+# `system2()`, so the fake refuses what the platform would allow.
+
+# The sibling extensions an extensionless Windows path resolves through, in
+# PATHEXT's documented default order. `.txt` is deliberately absent: it resolves
+# when named directly and does NOT resolve as a sibling, and the probe measured
+# both halves of that.
+fake_win_exts <- function() c(".com", ".exe", ".bat", ".cmd")
+
 fake_is_executable <- function(path, os = Sys.info()[["sysname"]]) {
-  if (!nzchar(path) || !file.exists(path) || dir.exists(path)) {
-    return(FALSE)
-  }
+  !identical(fake_sys_which_path(path, os), "")
+}
+
+# What a real `Sys.which()` RETURNS for this path -- the resolved file, or "" --
+# rather than merely whether it resolves. On Windows an extensionless path
+# resolves TO its sibling, and handing back the name that was asked for instead
+# hands back a path that does not exist, which `find_program()`'s
+# `file_path_as_absolute()` then errors on.
+fake_sys_which_path <- function(path, os = Sys.info()[["sysname"]]) {
+  if (!nzchar(path)) return("")
+  is_file <- function(p) file.exists(p) && !dir.exists(p)
   if (identical(os, "Windows")) {
-    nzchar(tools::file_ext(path)) || file.exists(paste0(path, ".exe"))
-  } else if (.Platform$OS.type == "windows") {
-    TRUE
-  } else {
-    file.access(path, 1L) == 0L
+    if (nzchar(tools::file_ext(path))) {
+      return(if (is_file(path)) path else "")
+    }
+    # The sibling search is NOT gated on the extensionless path existing. It
+    # was, until M09's review: an `!file.exists(path)` guard ran first and made
+    # this whole branch dead code, so a recorded `SMILExtract` sitting beside a
+    # real `SMILExtract.exe` -- the only arrangement a Windows install ever has
+    # -- came back unresolved.
+    for (ext in fake_win_exts()) {
+      sibling <- paste0(path, ext)
+      if (is_file(sibling)) return(sibling)
+    }
+    return("")
   }
+  if (!is_file(path)) return("")
+  if (.Platform$OS.type == "windows") return(path)
+  if (file.access(path, 1L) == 0L) path else ""
 }
 
 # Is this an absolute path? NOT `identical(p, normalizePath(p, mustWork =
@@ -159,17 +227,16 @@ is_absolute_path <- function(path) {
 # programs that appear installed, served from `bindir`; anything else is
 # decided by the predicate above, so the two helpers can no longer drift apart
 # (they carried separate, disagreeing copies until M09).
-fake_sys_which <- function(resolve = character(), bindir = NULL) {
+fake_sys_which <- function(resolve = character(), bindir = NULL,
+                           os = Sys.info()[["sysname"]]) {
   function(names) {
     out <- vapply(
       names,
       function(n) {
         if (n %in% resolve) {
-          file.path(bindir, fake_program_file(n))
-        } else if (fake_is_executable(n)) {
-          n
+          file.path(bindir, fake_program_file(n, os))
         } else {
-          ""
+          fake_sys_which_path(n, os)
         }
       },
       character(1)
@@ -186,8 +253,15 @@ fake_sys_which <- function(resolve = character(), bindir = NULL) {
 #
 # `resolve` names the programs that appear installed; anything else resolves to
 # "" so the not-found paths of `find_program()` are reachable.
+# `os` is the platform to build the fake tree for, captured ONCE here and handed
+# to both the fixture namer and the resolver so they cannot disagree. It reads
+# the simulated platform, so `local_fake_os("Windows")` before this call gives a
+# Windows-shaped tree on any host; calling `local_fake_os()` after this one
+# leaves the tree built for the earlier platform, which is why the argument
+# exists as an override.
 local_fake_tools <- function(results = list(),
                              resolve = fake_programs(),
+                             os = Sys.info()[["sysname"]],
                              .env = parent.frame()) {
   dir <- withr::local_tempdir(.local_envir = .env)
 
@@ -212,7 +286,7 @@ local_fake_tools <- function(results = list(),
   # on what it resolves, which errors on a path that does not exist, and
   # `Sys.which()` reports "" for a file that exists but is not executable.
   for (p in resolve) {
-    bin <- file.path(bindir, fake_program_file(p))
+    bin <- file.path(bindir, fake_program_file(p, os))
     file.create(bin)
     Sys.chmod(bin, "0755")
   }
@@ -226,12 +300,17 @@ local_fake_tools <- function(results = list(),
   }
 
   openac_registry$runs <- openac_registry$runs + 1L
+  caller <- harness_caller_file()
+  if (!is.na(caller)) {
+    openac_registry$files <- c(openac_registry$files, caller)
+  }
 
   state <- new.env(parent = emptyenv())
   state$calls <- list()
   state$i <- 0L
   state$dir <- dir
   state$bindir <- bindir
+  state$os <- os
   state$config <- config_dir
   state$data <- data_dir
 
@@ -242,8 +321,8 @@ local_fake_tools <- function(results = list(),
     # Checked HERE rather than in a few chosen tests, so it holds for every
     # call any test routes through the harness: a regression handing system2()
     # a bare name would otherwise pass every command assertion, since those
-    # compare basenames and args. normalizePath, not a "/" prefix, so a
-    # Windows `C:\...` counts as absolute too.
+    # compare basenames and args. Decided by `is_absolute_path()`, which counts
+    # a Windows `C:\...` and a UNC `\\server\share` as absolute too.
     if (!is_absolute_path(cmd)) {
       stop(
         sprintf("fake system2: command is not an absolute path: %s", cmd),
@@ -266,7 +345,7 @@ local_fake_tools <- function(results = list(),
       stop(
         sprintf(
           "fake system2: result queue exhausted on call %d (tool %s)",
-          state$i, basename(cmd)
+          state$i, fake_program_name(basename(cmd))
         ),
         call. = FALSE
       )
@@ -281,7 +360,7 @@ local_fake_tools <- function(results = list(),
 
   testthat::local_mocked_bindings(
     system2 = fake_system2,
-    Sys.which = fake_sys_which(resolve = resolve, bindir = bindir),
+    Sys.which = fake_sys_which(resolve = resolve, bindir = bindir, os = os),
     .package = "base",
     .env = .env
   )
@@ -336,10 +415,12 @@ local_fake_os <- function(sysname, .env = parent.frame()) {
 # installers hand those to `set_*()`, which refuses a location that is not
 # there.
 #
-# `Sys.which()` is faked to resolve any existing file so an installer under a
-# mocked OS behaves the same on every host: a real `Sys.which()` resolves
-# `SMILExtract` on Unix and `SMILExtract.exe` on Windows, which would otherwise
-# make the macOS installer's test fail on Windows CI and vice versa (M08).
+# `Sys.which()` is faked with the SAME shared resolver `local_fake_tools()`
+# installs -- it once resolved any existing file, which is a rule no platform
+# implements and which made the install tests assert against a fake nothing
+# could reproduce (M07 B1/P1). It carries no `resolve` list here: the installers
+# look for the files the fake extractor just wrote, so the predicate answers for
+# them, reading the platform `local_fake_os()` names rather than the host's.
 local_fake_downloads <- function(status = 0L,
                                  extract_creates = character(),
                                  .env = parent.frame()) {

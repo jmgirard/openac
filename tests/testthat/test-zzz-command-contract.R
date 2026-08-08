@@ -72,18 +72,70 @@ test_that("no deferral has gone stale", {
   )
 })
 
+# The test files that drive the boundary harness, read off the test directory
+# rather than listed by hand -- the same rule the domain above follows. A new
+# command-test file joins the expected set the moment it exists, so it cannot be
+# forgotten, and the gate below cannot be quietly narrowed by deleting a name.
+harness_test_files <- function() {
+  # Assembled rather than written out, so THIS file does not match its own
+  # search and count itself among the files that drive the harness.
+  needle <- paste0("local_fake_", "tools(")
+  dir <- testthat::test_path(".")
+  files <- list.files(dir, pattern = "^test-.*\\.[Rr]$")
+  drives <- vapply(
+    files,
+    function(f) {
+      any(grepl(needle, readLines(file.path(dir, f), warn = FALSE), fixed = TRUE))
+    },
+    logical(1)
+  )
+  sort(files[drives])
+}
+
 test_that("every tool-calling function has a command test", {
   covered <- registered_owners()
+  expected <- harness_test_files()
+  ran <- harness_files()
 
-  # Running this file alone leaves nothing for it to count; the invariant is
-  # about the whole suite. The signal for that is whether the harness was ever
-  # INSTALLED this run -- not whether it attributed anything. Gating on an
-  # empty `covered` (as this did until M09) made the gate skip itself the
-  # moment attribution broke, which is precisely when it needed to fail: an
-  # advisory-only outcome is what D-010 rejected.
+  # The walk itself must not silently find nothing: an empty `expected` would
+  # make every run below look complete.
+  expect_gt(length(expected), 0)
+
+  # Which run is this? Three states, and the gate needs all three apart.
+  #
+  #   nothing installed          -- this file alone. Nothing to count; skip.
+  #   some harness files ran     -- a filtered run. The invariant is about the
+  #                                 whole suite, so a partial answer is not a
+  #                                 violation; skip. Counting INSTALLS could not
+  #                                 see this case and reported every unrun
+  #                                 file's functions as uncovered (M09 review).
+  #   all of them ran            -- enforce, below.
+  #
+  # What this must never do is skip because nothing was RECORDED: that is the
+  # broken-attribution case, and gating on an empty `covered` (as this did
+  # until M09) made the gate skip itself exactly when it needed to fail.
   skip_if(harness_runs() == 0L, "command contract needs the full test suite")
 
-  # The harness ran, so something must have been attributed. Nothing means
+  # Installs happened, so the files that made them must have been recorded.
+  # None means `harness_caller_file()` stopped identifying test files, and the
+  # completeness check below would then skip every run.
+  expect_gt(
+    length(ran), 0,
+    label = sprintf("test files recorded across %d harness installs",
+                    harness_runs())
+  )
+
+  missing <- setdiff(expected, ran)
+  skip_if(
+    length(missing) > 0,
+    sprintf(
+      "command contract needs the full test suite (%d of %d harness files ran; missing %s)",
+      length(expected) - length(missing), length(expected),
+      paste(missing, collapse = ", ")
+    )
+  )
+
+  # The whole suite ran, so something must have been attributed. Nothing means
   # openac_stack() stopped identifying frames, and every assertion below would
   # then pass over an empty set.
   expect_gt(
