@@ -87,6 +87,83 @@ test_that("expected_test_files() reads no file content", {
   expect_setequal(heads, c("sort", "list.files"))
 })
 
+# --- no test file may skip before its tests run -----------------------------
+
+# The recorded set is execution-driven, which leaves one hole: a file that skips
+# at TOP LEVEL executes no `test_that()` at all, so nothing records it and a
+# declared-full run reads it as a file that never ran (M10 review D20). M11
+# closes the hole at the door rather than widening the observation -- such a file
+# may not exist here, and `top_level_skips()` is what says so.
+#
+# Asserted over a CONTENT directory: static, never executed, so it can hold both
+# a member that does not parse and members that would abort a real run.
+#
+# The fixture set is chosen to kill the wrong implementations, not merely to
+# exercise the right one. A column-anchored text scan (`^skip`) passes a naive
+# fixture set and is exactly the proxy shape D-013 retired, so `test-top-indented.R`
+# (a top-level skip that is NOT at column 0) and `test-skipname.R` (a column-0
+# line beginning `skip` that is not a skip) are both here. A scanner whose domain
+# is `^test-` rather than testthat's own pattern is the hole M10's review closed,
+# so `test_underscore.R` and `testbare.R` carry top-level skips too.
+skip_fixture_contents <- function() {
+  list(
+    # Reported: the top level skips, so the file never reaches its tests.
+    "test-top-bare.R" = c('skip("nope")',
+                          'test_that("a", { expect_true(TRUE) })'),
+    "test-top-qualified.R" = c('testthat::skip_on_cran()',
+                               'test_that("b", { expect_true(TRUE) })'),
+    "test-top-indented.R" = c('  skip("indented but still top level")',
+                              'test_that("c", { expect_true(TRUE) })'),
+    "test-top-guarded.R" = c('if (TRUE) skip("conditional")',
+                             'test_that("d", { expect_true(TRUE) })'),
+    "test-top-local.R" = c('local({ skip("wrapped") })',
+                           'test_that("e", { expect_true(TRUE) })'),
+    "test_underscore.R" = c('skip("nope")',
+                            'test_that("u", { expect_true(TRUE) })'),
+    "testbare.R" = c('skip("nope")',
+                     'test_that("v", { expect_true(TRUE) })'),
+    # Not reported: each file still runs its tests.
+    "test-inner.R" = 'test_that("f", { skip("fine here"); expect_true(TRUE) })',
+    "test-clean.R" = 'test_that("g", { expect_true(TRUE) })',
+    # A column-0 line starting `skip` that is not a skip call.
+    "test-skipname.R" = c('skipper <- function() NULL',
+                          'test_that("h", { expect_true(TRUE) })'),
+    # DEFINING a skip is not skipping -- the body never runs at top level.
+    "test-fn-def.R" = c('gate <- function() skip("only if called")',
+                        'test_that("i", { expect_true(TRUE) })'),
+    # Not a test file, so not in the domain however it skips.
+    "helper-top-skip.R" = 'skip("helpers are not the gate\'s business")'
+  )
+}
+
+# Sorted here rather than written out sorted: `sort()` collates by locale, and
+# hyphen-vs-underscore ordering differs between them, so a hand-sorted literal
+# would assert this machine's collation on every CI platform.
+skip_fixture_expected <- function() {
+  sort(c("test-top-bare.R", "test-top-qualified.R", "test-top-indented.R",
+         "test-top-guarded.R", "test-top-local.R", "test_underscore.R",
+         "testbare.R"))
+}
+
+test_that("top_level_skips() reports the files that skip before their tests run", {
+  dir <- write_fixture_dir(skip_fixture_contents())
+  expect_identical(top_level_skips(dir), skip_fixture_expected())
+})
+
+test_that("top_level_skips() survives a member that does not parse", {
+  # A non-parsing member aborts a real run outright (measured above), so it can
+  # never hide a top-level skip from a suite that executes. What it must not do
+  # is take the scanner down with it -- the scanner runs over the same directory
+  # the parse error lives in.
+  contents <- skip_fixture_contents()
+  contents[["test-garbage.R"]] <- 'test_that("unclosed", { expect_true(TRUE'
+  dir <- write_fixture_dir(contents)
+
+  expect_no_error(result <- top_level_skips(dir))
+  expect_no_warning(top_level_skips(dir))
+  expect_identical(result, skip_fixture_expected())
+})
+
 # --- the recorded set is execution-driven ----------------------------------
 
 # Run an EXECUTABLE fixture suite and return the registry it recorded into.

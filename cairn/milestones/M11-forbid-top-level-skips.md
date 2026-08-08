@@ -1,11 +1,11 @@
 # M11: A wholly-skipped test file cannot exist — the coverage gate's blind spot, closed at the door
 
-- **Status:** planned
+- **Status:** in-progress
 - **Priority:** normal
 - **Depends on:** M10
 - **Driving RR:** —
 - **Principles touched:** GP7
-- **Branch/PR:** —
+- **Branch/PR:** `m11-forbid-top-level-skips`
 
 ## Goal
 
@@ -79,7 +79,7 @@ completeness itself is observed (D-013 stands unamended).
 
 ## Tasks
 
-- [ ] T1: Add the fixture-directory test to `tests/testthat/test-harness-recording.R`,
+- [x] T1: Add the fixture-directory test to `tests/testthat/test-harness-recording.R`,
       building the twelve members of AC1 via the existing `write_fixture_dir()`
       (test-harness-recording.R:23) and asserting the expected vector. Fails
       until T2.
@@ -108,6 +108,7 @@ completeness itself is observed (D-013 stands unamended).
 - 2026-08-08: created by /milestone-plan.
 - 2026-08-08: criteria audit ([O], fresh context) ran three rounds — 6 findings on the first draft, 6 on the second, 5 on the third, all disposed before commit; decisive ones were a canary pair whose second member had no independent failure mode, fixtures that a column-anchored text grep and a `^test-`-only domain both satisfied, and a declaration guard keyed on an undocumented check internal that failed open.
 - 2026-08-08: plan gate chose forbidding top-level skips over a source-time run observer because the observer needed R6 in Suggests, a fix for the runner-before-helper sourcing order, and a widening of D-013's observation rule, while every skip in this suite is already written inside a test; falsified by a real need for a whole-file skip that per-test gating cannot express.
+- 2026-08-08 (T1): fixture test added to `test-harness-recording.R`; all three assertions fail with `could not find function "top_level_skips"`, the pre-implementation red T1 plans for.
 - 2026-08-08: plan chose a parse walk excluding `test_that()` and `function` subtrees over a top-level call-head match, because the head match misses `if (cond) skip()`, `local({ skip() })` and `suppressWarnings(skip_on_cran())`, each of which aborts a file identically; falsified by a skip form that aborts a file while sitting inside one of the two excluded subtrees.
 
 ## Decisions
