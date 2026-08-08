@@ -75,7 +75,7 @@ command-display surface → existing candidate.
 
 ## Tasks
 
-- [ ] T1 Write the hostile-name table and its per-entry tests; confirm on macOS
+- [x] T1 Write the hostile-name table and its per-entry tests; confirm on macOS
       that every entry passes (M13 fixed the unix side) and that the file still
       clears `test-zzz-command-contract.R`'s top-level-skip gate.
 - [ ] T2 **[Windows host]** With ffmpeg and ffprobe present, run the full suite
@@ -96,6 +96,8 @@ command-display surface → existing candidate.
 
 - 2026-08-08: created by /milestone-plan.
 - 2026-08-08: implement started on m15-windows-quoting-oracle.
+- 2026-08-08: T1 done — `hostile_names()` in helper-openac.R holds 8 entries (space, `$`, `%TEMP%`, `^`, `&`, `!`, apostrophe, backtick), each also carrying a space; test-real-tools.R loops one bare `test_that()` per entry. All 8 pass on macOS; full suite 623 pass, 0 fail, 2 expected skips, contract gate clean.
+- 2026-08-08: T1 mutation check — replacing `shQuote(arg)` at R/run_tool.R:58 with literal `paste0('"', arg, '"')` reddens exactly the `dollar` and `backtick` entries (plus M13's own oracle at :55), the two characters sh expands inside double quotes; the other six are inert under sh and carry their weight only on the Windows run. So the table discriminates here rather than passing vacuously. Mutation reverted, `git status` clean.
 - 2026-08-08: plan gate chose two milestones (M15 quoting, M16 installers) over one Windows branch, because a combined goal needs an "and" and the two cross the acceptance-criteria and task tripwires together; falsified by the installer run proving to depend on M15's quoting change.
 - 2026-08-08: plan gate chose composing `shQuote("cmd")` with `"cmd2"` as the fallback fix over hand-rolling a quoter, because `?shQuote` documents that composition as the intended Windows form and a hand-rolled quoter has no local test loop on a platform this session cannot run; falsified by the composed form measuring mangled on the host.
 - 2026-08-08: plan chose a real-ffmpeg round-trip oracle over asserting `shQuote()` output alone, because the open question is whether `system2()` puts `cmd.exe` in the loop at all — `?system2` says it "allows redirection of output without needing to invoke a shell on Windows" — which no assertion over quoting output can answer; falsified by the round trip proving unable to distinguish an expanded name from an absent tool.
