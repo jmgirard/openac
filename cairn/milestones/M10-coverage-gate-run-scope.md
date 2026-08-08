@@ -136,7 +136,7 @@ are no projection-vs-outcome pairs to carry to the merge gate.
 - [x] T1: replace the install-site file recording with a `test_that` shadow in
       `helper-openac.R` that forwards the unevaluated call; keep `owners`,
       `openac_stack()` and `harness_caller_file()`, rehomed into the shadow.
-- [ ] T2: compute `expected` from the test directory with no file read; add the
+- [x] T2: compute `expected` from the test directory with no file read; add the
       runtime fixture-suite tests (content invariance, unparseable member,
       skip-still-records) on a separate registry.
 - [ ] T3: factor the skip/fail/enforce decision into a pure function; declare
@@ -154,6 +154,7 @@ are no projection-vs-outcome pairs to carry to the merge gate.
 - 2026-08-08: criteria audit ran before the criteria were committed — an [O] reader that authored none of them returned 8 findings, all fixed at the gate: the no-file-read clause was a four-token blacklist, i.e. the same proxy shape this milestone exists to retire, defeated by one level of delegation (now a behavioral invariance guarantee with the structural check demoted to hygiene); one fixture suite could not both hold an unparseable member and be executed (`test_dir()` errors — measured; now two directories); nothing required the contract test to CALL the pure decision function or wired `declared_full` to the env var; the deletion grep is evaded by the very rename RR02 recommends (now paired with a behavioral assertion); mutation evidence was honour-system prose (now a specified artifact); the declared-full happy path — what CI and CRAN take — was unwitnessed by any criterion (added); the fifth decision return was unnamed (`fail_broken_attribution`); the five CI platforms were unnamed. Its item 10 was stale: it read M09 before the narrowing commit.
 - 2026-08-08: implement gate chose the milestone work log as the home for the mutation evidence (one line per mutation, all four fields) and a scratchpad copy of the tree as the isolation mechanism, over a committed evidence page and a git worktree.
 - 2026-08-08: T1 — `test_that` shadow in `helper-openac.R` records each file at execution time into `openac_registry$ran`, forwarding the unevaluated call; `harness_caller_file()` reads the srcref testthat attaches (measured: `getSrcFilename()` returns the test file name) with a `source_file()` frame-walk fallback, both failing closed. Observed 13/13 files recorded on a full run; `devtools::test()` FAIL 0 | WARN 0 | SKIP 2 | PASS 502, and skip locations still report file:line so srcrefs survive the forward.
+- 2026-08-08: T2 — `expected_test_files(dir)` lists names only; `test-harness-recording.R` holds it to the behavioral guarantee over a runtime CONTENT fixture (identical to `sort(list.files())` under append/truncate/garbage mutation of every member, including an unparseable `test-garbage.R`), measures that `test_dir()` errors on that directory, demotes the call-head whitelist to hygiene, and runs an EXECUTABLE fixture suite on its own registry via a verbatim copy of `helper-openac.R` with only the registry binding overridden — skip-only and failing files both join `ran`, and the real registry is untouched. `devtools::test()` FAIL 0 | WARN 0 | SKIP 2 | PASS 511.
 
 ## Decisions
 

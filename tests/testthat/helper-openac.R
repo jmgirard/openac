@@ -21,6 +21,24 @@ registered_owners <- function() sort(unique(openac_registry$owners))
 # The test files observed to have executed at least one test.
 recorded_test_files <- function() sort(unique(openac_registry$ran))
 
+# The test files a complete run of `dir` is expected to execute.
+#
+# Content-free BY CONSTRUCTION: it lists names and never opens a file, so
+# nothing any contributor writes INSIDE a test file can add to or remove from
+# this set. That is the guarantee, and it is behavioral -- the set is identical
+# to `sort(list.files(dir, pattern = "^test-.*\\.[Rr]$"))` under arbitrary
+# mutation of every member's contents. The two proxies this replaces derived
+# the expected set from what the files SAID (an install count, then a text
+# search), and both diverged from what the suite DID, each time leaving the
+# coverage gate silently disarmed (D-013).
+#
+# Parameterized by directory so the fixture suites can hold it to that
+# guarantee over deliberately hostile contents -- including a member that does
+# not parse, which no content-reading implementation survives.
+expected_test_files <- function(dir) {
+  sort(list.files(dir, pattern = "^test-.*\\.[Rr]$"))
+}
+
 # The test file whose `test_that()` call is currently being set up, or NA.
 #
 # Read from the srcref testthat attaches when it parses a test file, which names
