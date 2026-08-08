@@ -8,7 +8,7 @@ _Released 0.1.0 (GitHub) 2026-07-11._
 
 | ID | Title | Status | Depends on | Priority | File/Archive |
 |---|---|---|---|---|---|
-| M09 | Test-harness hardening — fake fidelity at the tool boundary | in-progress | — | normal | milestones/M09-harness-hardening.md |
+| M09 | Test-harness hardening — fake fidelity at the tool boundary | review | — | normal | milestones/M09-harness-hardening.md |
 | M10 | Command-contract coverage gate — completeness observed, not inferred | planned | M09 | high | milestones/M10-coverage-gate-run-scope.md |
 | M08 | GitHub Actions CI — R CMD check across platforms | done | — | high | milestones/archive/M08-github-actions-ci.md |
 | M06 | Wrapper testing contract — system2-boundary command tests | done | — | high | milestones/archive/M06-wrapper-command-tests.md |

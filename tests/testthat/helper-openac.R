@@ -13,41 +13,8 @@
 # so coverage is never a hand-maintained list of names (D-010).
 openac_registry <- new.env(parent = emptyenv())
 openac_registry$owners <- character()
-# How many times the harness was INSTALLED, tracked separately from what it
-# attributed. The two answer different questions, and conflating them is what
-# let the coverage gate skip itself: an empty `owners` means either "no test
-# file that uses the harness ran" (a single-file run -- skip) or "they ran and
-# attribution recorded nothing" (broken -- must fail), and `owners` alone
-# cannot tell those apart.
-openac_registry$runs <- 0L
-# WHICH test files installed it, which is a third question again. "The harness
-# ran" does not mean "the whole suite ran": a filtered run installs the harness
-# from some files and not others, and the coverage invariant is only decidable
-# over the whole suite. Counting installs cannot tell a filtered run from a
-# complete one; naming the files can.
-openac_registry$files <- character()
 
 registered_owners <- function() sort(unique(openac_registry$owners))
-
-# How many times the boundary harness was installed in this run.
-harness_runs <- function() openac_registry$runs
-
-# The test files that installed it, in sorted order.
-harness_files <- function() sort(unique(openac_registry$files))
-
-# The test file the current call came from, read off the call stack's srcrefs
-# (testthat sources test files with source refs kept). Innermost first, so a
-# call made from inside a helper still lands on the test file that drove it.
-harness_caller_file <- function() {
-  calls <- sys.calls()
-  for (i in rev(seq_along(calls))) {
-    src <- attr(calls[[i]], "srcref")
-    if (is.null(src)) next
-    file <- basename(utils::getSrcFilename(calls[[i]], full.names = TRUE))
-    if (grepl("^test-.*\\.[Rr]$", file)) return(file)
-  }
-  NA_character_
-}
 
 # Programs `find_program()` knows about; the fake resolver serves these.
 fake_programs <- function() c("ffmpeg", "ffprobe", "openface", "opensmile")
@@ -232,16 +199,23 @@ is_absolute_path <- function(path) {
 # programs that appear installed, served from `bindir`; anything else is
 # decided by the predicate above, so the two helpers can no longer drift apart
 # (they carried separate, disagreeing copies until M09).
-fake_sys_which <- function(resolve = character(), bindir = NULL,
-                           os = Sys.info()[["sysname"]]) {
+#
+# `os` defaults to NULL and is resolved on EVERY call rather than defaulting to
+# `Sys.info()[["sysname"]]` in the signature. A default argument is a promise
+# forced once, on first use, and cached: a fake built before `local_fake_os()`
+# runs would then pin whichever platform happened to be current at its first
+# `Sys.which()` call and silently ignore the faked one from there on. Callers
+# that know the platform (`local_fake_tools()`) still pass it explicitly.
+fake_sys_which <- function(resolve = character(), bindir = NULL, os = NULL) {
   function(names) {
+    platform <- if (is.null(os)) Sys.info()[["sysname"]] else os
     out <- vapply(
       names,
       function(n) {
         if (n %in% resolve) {
-          file.path(bindir, fake_program_file(n, os))
+          file.path(bindir, fake_program_file(n, platform))
         } else {
-          fake_sys_which_path(n, os)
+          fake_sys_which_path(n, platform)
         }
       },
       character(1)
@@ -302,12 +276,6 @@ local_fake_tools <- function(results = list(),
     path <- file.path(dir, "config", paste0(conf, ".conf"))
     dir.create(dirname(path), recursive = TRUE, showWarnings = FALSE)
     writeLines("// placeholder openSMILE config", path)
-  }
-
-  openac_registry$runs <- openac_registry$runs + 1L
-  caller <- harness_caller_file()
-  if (!is.na(caller)) {
-    openac_registry$files <- c(openac_registry$files, caller)
   }
 
   state <- new.env(parent = emptyenv())

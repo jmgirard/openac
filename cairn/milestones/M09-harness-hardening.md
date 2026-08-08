@@ -1,6 +1,6 @@
 # M09: Test-harness hardening — fake fidelity at the tool boundary
 
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** normal
 - **Depends on:** —
 - **Driving RR:** —
@@ -36,7 +36,7 @@ percentages remain a diagnostic, never a gate (PROFILE `test-doctrine`).
 
 ## Acceptance criteria
 
-- [ ] AC1: `helper-openac.R` has exactly one executability rule,
+- [x] AC1: `helper-openac.R` has exactly one executability rule,
       `fake_sys_which_path()`, taking the platform as an explicit argument rather
       than reading `.Platform$OS.type`; `fake_is_executable()` is a single call to
       it, not a second copy; both `local_fake_tools()` and
@@ -111,7 +111,7 @@ percentages remain a diagnostic, never a gate (PROFILE `test-doctrine`).
 - [x] T6: add `boundary_argv()`, redefine `boundary_args()` over it, test the
       discrimination.
 - [x] T7: add the computed alias-class lock.
-- [ ] T14: revert `test-zzz-command-contract.R` and its support machinery (`openac_registry$runs`/`$files`, `harness_runs()`, `harness_files()`, `harness_caller_file()`, the install-site recording, and `test-helper-boundary.R`'s recording test) to the default branch's state — the gate is M10's.
+- [x] T14: revert `test-zzz-command-contract.R` and its support machinery (`openac_registry$runs`/`$files`, `harness_runs()`, `harness_files()`, `harness_caller_file()`, the install-site recording, and `test-helper-boundary.R`'s recording test) to the default branch's state — the gate is M10's.
 - [x] T9: `devtools::document()` if roxygen changed, `devtools::test()`,
       `devtools::check()`; retire the M08 executability lesson from LESSONS.md
       and write its replacement.
@@ -166,6 +166,11 @@ percentages remain a diagnostic, never a gate (PROFILE `test-doctrine`).
 - 2026-08-08: RE-CUT by /milestone-plan — the coverage gate and everything RR02 binds moved to M10 (planned, high, depends on M09). M09 keeps the fake-fidelity work and is retitled. The re-cut was forced by three agreeing sizing signals after RR02's ingestion: 12 acceptance criteria against a 7 tripwire, 13 tasks against 10, and 202 plan-owned lines against a 150 cap that survived the one mandated compression pass.
 - 2026-08-08: thrash rule — a re-cut increments the defect-return count and never resets it, so M09 stands at 3 and trigger (a) is at its threshold. The split IS the prescribed remedy and is being applied now; what it means going forward is that a further return on M09 may NOT be answered with another re-plan — the remaining moves are `/milestone-brief` escalation, parking as `blocked` with the blocker named, or dropping at the user's explicit decision.
 - 2026-08-08: re-cut gate chose reverting the gate to the default branch's state over merging the current one as an interim, because the current gate carries the reproduced comment hole and M10 replaces it wholesale; merging it would ship a defect review has already confirmed and named. Falsified if the revert turns out to regress something the fidelity work depends on, which T14 must check.
+- 2026-08-08: T14 done — `test-zzz-command-contract.R` restored to the default branch byte-for-byte (`git diff origin/main` on it is empty), and its support machinery removed from the harness: `openac_registry$runs`/`$files`, `harness_runs()`, `harness_files()`, `harness_caller_file()`, the install-site recording inside `local_fake_tools()`, and `test-helper-boundary.R`'s recording test. `grep -rn` over `tests/` finds no surviving reference to any of them. Nothing the fidelity work depends on regressed: the suite is 502 pass / 0 fail, 2 skips (both `test-real-tools.R` binary gates).
+- 2026-08-08: question gate chose to fix review finding O15 (93, DEFECT) here rather than defer it — M10's plan does not mention it, so deferring would have dropped a reproduced defect in a file this milestone rewrote, and AC1's own clause about `local_fake_downloads()` reading the platform `local_fake_os()` names was only order-dependently true while the bug stood. `fake_sys_which()`'s `os` is now `NULL`-defaulted and resolved per call instead of by a signature default, which R forces once and caches. Falsified by reinstating the cached default: `test-helper-boundary.R:257` fails, `ask("Windows")` returning `""` instead of the `.exe` sibling.
+- 2026-08-08: AC1 met — `grep -c "^fake_sys_which_path <- function\|^fake_is_executable <- function" tests/testthat/helper-openac.R` returns 2 (`:156`, `:165`, both top level), and the body of `fake_is_executable()` is the single line `!identical(fake_sys_which_path(path, os), "")`. No other function in the file decides executability: `file.access()` and `fake_win_exts()` appear inside `fake_sys_which_path()` and in comments only, plus `fake_program_name()`'s strip pattern, which is a namer, not a predicate. Both helpers install `fake_sys_which()`, which reads the simulated platform on every call.
+- 2026-08-08: LESSONS — added the R default-argument lesson O15 taught (a default is a promise forced once and cached, so a factory defaulting to mutable global state pins it at the closure's first call).
+- 2026-08-08: all criteria met after the re-cut; status -> review. `devtools::test()` 502 pass / 0 fail / 2 skips, `devtools::check()` 0 errors / 0 warnings / 1 NOTE (the standing spelling NOTE). The `## Review` section below predates the re-cut and is stale throughout — the criteria it annotates were renumbered (its "AC8" is the removed coverage gate; its "AC8 (was AC9)" is today's AC8) — so review regathers every line rather than reading it.
 - 2026-08-07: 9 acceptance criteria exceeds the 7 tripwire deliberately — one per independent review finding plus the profile's verify slot, each separately fenceable at review; merging them would blur which finding a piece of evidence closes.
 
 ## Decisions

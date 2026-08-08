@@ -232,13 +232,29 @@ test_that("the fake tree is built for the platform the predicate reads", {
   expect_identical(boundary_tools(state), "ffmpeg")
 })
 
-test_that("the harness records which test file installed it", {
-  # The coverage gate decides whether to enforce from whether the whole suite
-  # ran, and it reads that off this record. If it stopped naming files, the
-  # gate would skip every run -- so the mechanism is asserted here rather than
-  # trusted (M09 review, O15).
-  local_fake_tools()
-  expect_true("test-helper-boundary.R" %in% harness_files())
+test_that("the shared Sys.which fake reads the platform at call time", {
+  # `os` used to be a default ARGUMENT -- a promise forced once, on first use,
+  # and cached ever after. A fake built before local_fake_os() ran therefore
+  # pinned whatever platform was current at its first Sys.which() call and
+  # silently ignored the faked one from then on (M09 review, O15).
+  # local_fake_downloads() builds exactly such a fake and its docstring
+  # promises no ordering constraint, so the platform must be read per call.
+  dir <- withr::local_tempdir()
+  file.create(file.path(dir, "tool.exe"))
+  bare <- file.path(dir, "tool")
+
+  which_fake <- fake_sys_which()
+  # Each ask fakes the OS inside its own frame, so the mock unwinds on return
+  # and one closure is genuinely asked twice under two platforms.
+  ask <- function(sysname) {
+    local_fake_os(sysname)
+    unname(which_fake(bare))
+  }
+
+  # Asking as Unix first is what forced and cached the promise.
+  expect_identical(ask("Linux"), "")
+  # Same closure, new platform: the .exe sibling resolves now.
+  expect_identical(ask("Windows"), file.path(dir, "tool.exe"))
 })
 
 test_that("both scoped helpers resolve by the same rule", {
