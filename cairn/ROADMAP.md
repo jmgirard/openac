@@ -1,7 +1,7 @@
 # Roadmap
 
 _The only authority on milestone status. Grouped by status, not ID._
-_Last hygiene check: 2026-08-08 (M13 and M14 planned from M12's harvest; their two candidate rows graduated, two deferrals added in their place; the collision-note row stays pending its docs commit)_
+_Last hygiene check: 2026-08-08 (M13 and M14 planned from M12's harvest; their two candidate rows graduated, two deferrals added in their place; the collision note shipped to README, its row narrowed to the 1.0 rename half)_
 _Released 0.1.0 (GitHub) 2026-07-11._
 
 ## Milestones
@@ -34,5 +34,5 @@ _Released 0.1.0 (GitHub) 2026-07-11._
 - Turn on branch protection with the CI checks required on the default branch — GitHub repository settings, not files, so no milestone can land it — added 2026-08-07 — M08
 - Show the constructed command — GP5's remaining half; once M13 makes commands token vectors, a display/return surface is cheap (tidymedia renders both from one structure via ffm_compile/ffm_args, R/ffm.R:1152,1164) — added 2026-08-08 — M13 Out; D-017
 - Extend M14's per-file-outcome treatment to the other probe-and-abort guards (os_check_config, the stopifnot(file.exists()) guards in of_extract/os_extract) — added 2026-08-08 — M14 Out
-- Document that openac and tidymedia share 8 exported names of which 6 disagree (ffm most sharply: passthrough alias vs. job constructor), so attaching both masks silently — a README/vignette note, or a rename at the 1.0 API freeze — added 2026-08-08 — M12 (cairn/references/tidymedia-fit.md, C1-C8)
+- Revisit the 8 names openac and tidymedia both export at the 1.0 API freeze — the README now warns users (2026-08-08); renaming is the other half and only makes sense once the API is frozen — added 2026-08-08 — M12 (cairn/references/tidymedia-fit.md, C1-C8)
 - Restore GP6 for output-path collisions — drop colliding files into the `*_dir` outcome table as per-file failures instead of aborting the batch pre-flight; needs plumbing the derivation result through `dir_walk` — added 2026-08-07 — hotfix batch-extension-case, PR #9

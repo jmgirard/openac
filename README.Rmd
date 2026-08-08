@@ -60,6 +60,32 @@ os_extract_dir(
 feats <- os_read("features/clip01_agg.csv")
 ```
 
+## Using openac alongside tidymedia
+
+openac and [tidymedia](https://github.com/jmgirard/tidymedia) both wrap
+ffmpeg/ffprobe, and both export these eight names:
+
+`ffm`, `ffmpeg`, `ffprobe`, `find_ffmpeg`, `find_ffprobe`, `set_ffmpeg`,
+`set_ffprobe`, `set_program`
+
+Attaching both packages masks one set with the other, decided by attach order,
+with no warning beyond R's masking message. Six of the eight behave differently
+between the packages, so a masked call can succeed and do the wrong thing:
+
+- **`ffm` is the sharpest.** In openac it is an alias for `ffmpeg()` and returns
+  the tool's output. In tidymedia it constructs a command object and runs
+  nothing.
+- **The `find_*` and `set_*` pairs read and write different configuration
+  directories.** A tool location recorded with `openac::set_ffmpeg()` is
+  invisible to `tidymedia::find_ffmpeg()`, and the reverse. Register each tool
+  in each package you use it from.
+- **`set_program()` accepts different program names** in each package.
+
+If you need both, qualify the calls — `openac::ffmpeg()`, `tidymedia::ffm()` —
+rather than relying on attach order. (Observed against tidymedia at commit
+`b99f7e8`, 2026-08-08; the two name sets are compared in full in
+`cairn/references/tidymedia-fit.md` in this repository.)
+
 ## Code of Conduct
 
 Please note that the openac project is released with a [Contributor Code of Conduct](https://contributor-covenant.org/version/2/1/CODE_OF_CONDUCT.html). By contributing to this project, you agree to abide by its terms.
