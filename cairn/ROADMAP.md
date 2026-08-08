@@ -1,17 +1,16 @@
 # Roadmap
 
 _The only authority on milestone status. Grouped by status, not ID._
-_Last hygiene check: 2026-08-07 (M08 planned; the CI candidate row split — check-standard graduated, test-coverage retained; branch-protection candidate added)_
+_Last hygiene check: 2026-08-07 (M08 merged and archived; M02 row pruned under terminal-row retention; harness-hardening candidate absorbed M08 review F6/F7)_
 _Released 0.1.0 (GitHub) 2026-07-11._
 
 ## Milestones
 
 | ID | Title | Status | Depends on | Priority | File/Archive |
 |---|---|---|---|---|---|
-| M08 | GitHub Actions CI — R CMD check across platforms | review | — | high | milestones/M08-github-actions-ci.md |
+| M08 | GitHub Actions CI — R CMD check across platforms | done | — | high | milestones/archive/M08-github-actions-ci.md |
 | M06 | Wrapper testing contract — system2-boundary command tests | done | — | high | milestones/archive/M06-wrapper-command-tests.md |
 | M07 | Wrapper testing contract — remainder and gated real invocations | planned | M06 | normal | milestones/M07-wrapper-tests-remainder.md |
-| M02 | OpenFace tidy reader (`of_read`) | done | M01 | normal | milestones/archive/M02-openface-reader.md |
 | M03 | whisper tidy reader (`aw_read`) | done | M01 | normal | milestones/archive/M03-whisper-reader.md |
 | M04 | R CMD check hygiene (docs, namespace, build) | done | — | high | milestones/archive/M04-check-hygiene.md |
 | M05 | Rewrite stale vignettes | done | M04 | normal | milestones/archive/M05-vignette-rewrite.md |
