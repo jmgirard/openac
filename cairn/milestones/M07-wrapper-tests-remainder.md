@@ -35,11 +35,12 @@ submission → user-declared release window (D-050).
       every openac function that can reach `system2` records a command
       assertion, with no name exempted.
 - [ ] AC2 Each of `install_ffmpeg_win`, `install_openface_win`,
-      `install_openface_mac`, `install_opensmile_win`, `install_opensmile_mac`
-      and `install_whisper` has tests asserting the download URL and install
-      path it constructs, with `utils::download.file` and
+      `install_opensmile_win` and `install_opensmile_mac` has tests asserting the
+      download URL and install path it constructs, with `utils::download.file` and
       `archive::archive_extract` mocked to record their arguments and to fail
-      the test if called with an unexpected URL or destination. The mocks are
+      the test if called with an unexpected URL or destination. `install_whisper`,
+      which downloads nothing, is tested for the one thing it does: delegating to
+      `rlang::check_installed("audio.whisper")`. The mocks are
       the procedure that establishes no test performs a real network request or
       writes outside a per-test temporary directory.
 - [ ] AC3 Every installer whose name carries a `_win` or `_mac` suffix — the
@@ -99,6 +100,8 @@ submission → user-declared release window (D-050).
 
 - 2026-08-07: created by /milestone-plan alongside M06.
 - 2026-08-07: criteria audit [O] ran on M06's criteria block, which fixed this milestone's domain boundary; M07's criteria inherit its two structural repairs — literal deferral names with a staleness assertion, and a symbol-occurrence closure, since `os_extract_dir` and `aw_transcribe_dir` reach their tools via `do.call(what = …)` and are invisible to a call-head walk, which would let AC1's "deferral list empty" gate pass with them outside the domain.
+- 2026-08-07: amendment (substantive, gated) — AC2 dropped `install_openface_mac` and re-scoped `install_whisper`: read against `R/programs_install.R`, `install_whisper()` is `rlang::check_installed("audio.whisper")` and constructs no URL or install path, and `install_openface_mac()` is unexported and assigns a bash script to a local variable it never runs, so the URL/install-path assertion was unmeetable for both. AC2 now names the four installers that download, and pins `install_whisper` to its delegation.
+- 2026-08-07: implementation gate — user chose to delete the inert `install_openface_mac()` (unexported, no caller reachable), with a real macOS OpenFace installer captured as a ROADMAP candidate; `*_dir` GP6 skip-and-report returns an invisible per-file outcome table (D-002 permits the return-shape change); real-tool media is generated at run time by ffmpeg's lavfi sources rather than committed as a fixture, and whisper's gate requires both `audio.whisper` and an already-cached model so no test downloads one.
 - 2026-08-07: plan gate chose OS guards here over installer dispatchers because guards are a correctness fix for a verified defect (no `Sys.info()` or `.Platform` check exists anywhere in `R/programs_install.R`, so `install_opensmile_win()` on macOS extracts Windows binaries and reports success) while dispatchers add exports and amend a stated DESIGN convention; falsified by the user preferring a single platform-aware entry point over the suffixed family.
 
 ## Decisions
