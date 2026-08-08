@@ -46,6 +46,67 @@ expected_test_files <- function(dir) {
   sort(list.files(dir, pattern = "^test.*\\.[rR]$"))
 }
 
+# Does this expression skip, in a position that aborts the file it sits in?
+#
+# TRUE for a call to anything named `skip*` -- `skip()`, `skip_on_cran()`,
+# `skip_if_not_installed()`, qualified or bare -- occurring anywhere in the
+# expression, EXCEPT inside the two subtrees where a skip cannot abort a file:
+#
+#   test_that(...)   a skip there ends that one test, which is the whole point
+#                    of a skip and the placement GP7 asks for.
+#   function(...)    defining a skip is not performing one; the body runs only
+#                    if something calls it.
+#
+# Matching the call ANYWHERE rather than at the top-level call head is
+# deliberate: `if (cond) skip()`, `local({ skip() })` and
+# `suppressWarnings(skip_on_cran())` each abort a file exactly as a bare
+# `skip()` does, and a head-only match reports none of them. The residual hole
+# is the mirror of the `function` exclusion -- a top-level call to a locally
+# defined wrapper that itself skips -- and is disclosed rather than closed,
+# because closing it means resolving values, which a static scan cannot do.
+skip_call_present <- function(x) {
+  if (!is.call(x)) return(FALSE)
+  head <- x[[1L]]
+  name <- if (is.symbol(head)) {
+    as.character(head)
+  } else if (is.call(head) &&
+             as.character(head[[1L]])[[1L]] %in% c("::", ":::")) {
+    as.character(head[[3L]])
+  } else {
+    ""
+  }
+  if (name %in% c("test_that", "function")) return(FALSE)
+  if (grepl("^skip", name)) return(TRUE)
+  any(vapply(as.list(x)[-1L], skip_call_present, logical(1)))
+}
+
+# The test files that skip before their tests can run.
+#
+# A file whose top level skips executes no `test_that()`, so the execution-time
+# recorder never sees it and a declared-full run reports it as a file that never
+# ran -- the coverage gate's one blind spot (M10 review D20). Rather than widen
+# what counts as "ran", M11 forbids the shape: `test-zzz-command-contract.R`
+# fails while this returns anything.
+#
+# The domain is `expected_test_files()`, not a narrower name pattern -- the same
+# set testthat itself discovers, for the reason recorded above it. A member that
+# does not parse is NOT reported: it cannot hide a top-level skip from a suite
+# that executes, because a parse error aborts the whole run first (measured in
+# `test-harness-recording.R`), and reporting it here would blame this rule for a
+# different defect.
+top_level_skips <- function(dir) {
+  files <- expected_test_files(dir)
+  hits <- vapply(files, function(f) {
+    exprs <- tryCatch(
+      parse(file.path(dir, f), keep.source = FALSE),
+      error = function(e) NULL
+    )
+    if (is.null(exprs)) return(FALSE)
+    any(vapply(as.list(exprs), skip_call_present, logical(1)))
+  }, logical(1))
+  unname(files[hits])
+}
+
 # Did the runner DECLARE this an unfiltered run of the whole suite?
 #
 # `tests/testthat.R` sets the variable and is the only thing that can honestly
