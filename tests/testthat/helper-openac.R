@@ -117,6 +117,43 @@ declared_full_run <- function() {
   isTRUE(as.logical(Sys.getenv("OPENAC_FULL_SUITE", "false")))
 }
 
+# Does the runner file at `path` still DECLARE a full run?
+#
+# `declared_full_run()` above reads an environment variable, and exactly one
+# line in the package sets it: `Sys.setenv(OPENAC_FULL_SUITE = "true")` in
+# `tests/testthat.R`. Delete that line and every incompleteness downgrades from
+# a failure to a skip -- silently, because the suite then PASSES: the files that
+# would have been missing are missing only under conditions the declaration is
+# what makes fatal.
+#
+# Checked by parsing the runner rather than by reading the environment, because
+# an environment check can only ask "are we under R CMD check?", and every
+# answer to that is an undocumented internal that fails OPEN when it changes
+# (the failure mode D-013 rejected internals for). The file either contains the
+# declaration or it does not, in every run mode, with nothing to go stale.
+declaration_present <- function(path) {
+  exprs <- tryCatch(parse(path, keep.source = FALSE), error = function(e) NULL)
+  if (is.null(exprs)) return(FALSE)
+  sets_flag <- function(x) {
+    if (!is.call(x)) return(FALSE)
+    head <- x[[1L]]
+    name <- if (is.symbol(head)) {
+      as.character(head)
+    } else if (is.call(head) &&
+               as.character(head[[1L]])[[1L]] %in% c("::", ":::")) {
+      as.character(head[[3L]])
+    } else {
+      ""
+    }
+    if (!identical(name, "Sys.setenv")) return(FALSE)
+    value <- as.list(x)[-1L][["OPENAC_FULL_SUITE"]]
+    # Read the literal the same way `declared_full_run()` reads the variable, so
+    # a value that sets the flag without turning it on cannot satisfy this.
+    !is.null(value) && isTRUE(as.logical(value))
+  }
+  any(vapply(as.list(exprs), sets_flag, logical(1)))
+}
+
 # The skip/fail/enforce decision, as a PURE function of the six facts the
 # contract test can observe. Pure so that every branch -- including the ones a
 # healthy suite must never take -- is reachable from a unit test with ordinary

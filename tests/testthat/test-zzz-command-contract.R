@@ -141,6 +141,25 @@ test_that("no test file reaches past the recording shadow", {
   expect_identical(bypassing_forms(test_path(".")), character())
 })
 
+test_that("the runner still declares a full run", {
+  # The gate FAILS on an incompleteness only because `tests/testthat.R` declares
+  # the run complete. Without that declaration every incompleteness becomes a
+  # skip, and nothing anywhere notices -- which is why this is asserted rather
+  # than trusted to a comment in the runner.
+  runner <- test_path("..", "testthat.R")
+  expect_true(file.exists(runner))
+  expect_true(declaration_present(runner))
+
+  # And the belt to that braces: under `R CMD check` the declaration must
+  # actually have taken effect. Secondary on purpose -- `_R_CHECK_PACKAGE_NAME_`
+  # is an undocumented internal (measured: `R CMD check` sets it to the package
+  # name for the test process), so if a future R stops setting it this half goes
+  # quiet while the static check above carries on.
+  if (nzchar(Sys.getenv("_R_CHECK_PACKAGE_NAME_"))) {
+    expect_true(declared_full_run())
+  }
+})
+
 test_that("no test file skips before its tests run", {
   # The recorder records a file when one of its tests RUNS, so a file whose top
   # level skips is recorded by nothing and a declared-full run reports it as a
