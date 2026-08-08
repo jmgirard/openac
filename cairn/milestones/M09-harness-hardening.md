@@ -5,7 +5,7 @@
 - **Depends on:** —
 - **Driving RR:** —
 - **Principles touched:** GP7, IP1
-- **Branch/PR:** `m09-harness-hardening`
+- **Branch/PR:** `m09-harness-hardening` · https://github.com/jmgirard/openac/pull/10
 
 ## Goal
 
@@ -159,3 +159,19 @@ percentages remain a diagnostic, never a gate (PROFILE `test-doctrine`).
 ## Decisions
 
 ## Review
+
+**Evidence gathered 2026-08-07 on branch `m09-harness-hardening`, PR #10.**
+
+Process note: the criterion checkboxes were ticked at implement-completion, before this Review section existed — AC fencing puts that tick here, against recorded evidence. The evidence below was gathered fresh at review and backs every tick, but the ordering was wrong and is recorded rather than papered over.
+
+- AC1 — `grep -c "fake_is_executable <- function\|fake_sys_which <- function" tests/testthat/helper-openac.R` returns **2**, both at top level (helper-openac.R:125 and :142). `local_fake_downloads()` installs `fake_sys_which()` with no arguments; `local_fake_tools()` installs it with `resolve`/`bindir`. Neither defines a fake of its own.
+- AC2 — `test-helper-boundary.R` drives both branches by argument: Windows accepts `.exe`/`.bat`/`.cmd`/`.com`/`.txt` and a 0644 file with an extension, refuses an extensionless path, and accepts it once a `<path>.exe` sibling exists; Unix accepts 0755 and refuses 0644 whatever the extension. 58 pass / 0 fail on macOS, so the Windows drives ran off-platform as intended. The Unix drives skipped on the Windows runner (`test-helper-boundary.R:143`, `:182` reported "On Windows") and ran everywhere else.
+- AC3 — fixtures carry `fake_program_file()`; `boundary_tools()` normalizes via `fake_program_name()`. Branch CI run 31238766612: **green on all five platforms** (macOS release, Windows release, Ubuntu devel/release/oldrel-1). The preceding run caught one un-normalized read (`test-helper-boundary.R:71`), which was fixed.
+- AC4 — the enumeration walks `asNamespace("openac")` and finds `user_config_dir` and `user_data_dir`, asserting each differs from its real value inside `local_fake_tools()` scope. `expect_gt(length(used), 0)` guards the walk against silently matching nothing.
+- AC5 — `is_absolute_path()` verified against `/usr/bin/ffmpeg`, `C:/x/ffmpeg.exe`, `C:\x\ffmpeg.exe`, `\\srv\share\t.exe` (all TRUE) and `ffmpeg`, `rel/ffmpeg`, `./ffmpeg` (all FALSE). The check sits in `fake_system2()` before the queue index advances; no existing call site tripped it. A test asserts it fires for a bare name and for a relative path.
+- AC6 — `boundary_argv()` returns `list(c("-i", "a b"), "-i a b")` for two calls that `boundary_args()` renders identically; the test asserts both halves.
+- AC7 — the alias classes are computed by grouping namespace names on closure identity, yielding exactly the four expected; `expect_setequal()` against the recorded table fails by name on an unrecorded class, and `openac_name_of()` is asked via every binding in each class.
+- AC8 — with attribution disabled and installs still recorded: full suite FAILS at `test-zzz-command-contract.R:89` — "Expected owners recorded across 22 harness installs > 0" (FAIL 2). The same file alone SKIPS at `:84` — "command contract needs the full test suite" (FAIL 0, SKIP 1). Helper restored, suite re-run clean.
+- AC9 — `devtools::test()`: **486 pass, 0 fail**, 2 skips (both `test-real-tools.R` binary gates). `devtools::check()`: **0 errors, 0 warnings, 1 NOTE** — the standing spelling NOTE, which carries its own ROADMAP candidate row.
+
+**Consistency gate.** `cairn_validate.py` exit 0, all checks passed (1 advisory: the deliberate 9-criteria sizing tripwire, justified in the work log). `devtools::document()` produces no diff. No `_pkgdown.yml` in this repo. README.Rmd/README.md unchanged by this milestone. No principle changed, so `cairn_impact` does not apply. No `Driving RR`, so no projection-vs-outcome pairs.
