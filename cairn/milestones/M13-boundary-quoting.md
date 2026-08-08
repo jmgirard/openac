@@ -100,7 +100,7 @@ direct docs commit to the default branch, not a milestone.
       (`R/use_opensmile.R:331`).
 - [x] T7 Move the three `test-commands-*.R` files' assertions to
       `boundary_argv()`; drop `boundary_args()` from them.
-- [ ] T8 Add the real-`ffprobe` case in `test-real-tools.R` for AC2's shell half.
+- [x] T8 Add the real-`ffprobe` case in `test-real-tools.R` for AC2's shell half.
 - [ ] T9 Update DESIGN's Architecture paragraph and the roxygen `@param`/
       `@examples`; `devtools::document()`, `devtools::check()`, `inst/WORDLIST`.
 
@@ -123,6 +123,8 @@ direct docs commit to the default branch, not a milestone.
 - 2026-08-08: T6 replaced the substring assertions (`expect_match(args, ' -I "path"')`) with a `boundary_value(argv, flag)` accessor reading the token AFTER a flag. Strictly stronger than what it replaced: it fails on a wrapper that emits flag and value in the wrong order or glued into one token, which a substring match passed.
 - 2026-08-08: T6 mutations both red — gluing `-multi_view 1` into one token reds 2, dropping the `-lldcsvoutput` pair reds 2. Also fixed a latent looseness in `test-batch-dirs.R`: its `(?<=csvoutput ")` lookbehind matched `-lldcsvoutput` by suffix as well; the two flags are now matched exactly.
 - 2026-08-08: T7 done. Most of the conversion landed with T4-T6; T7 finished the two passthrough assertions that still read the collapsing accessor. They assert the legacy single-string form, where collapsing IS lossless — which is precisely why the collapsing accessor proves nothing there, so they moved too rather than being excepted. `grep -n 'boundary_args' tests/testthat/test-commands-*.R` now hits only the comment saying so.
+- 2026-08-08: T8 done, and it RAN rather than skipped (ffmpeg and ffprobe are installed here). Real ffmpeg writes to a path carrying a space and a `$`, real ffprobe reads the same one back. Also converted `real_wav()`/`real_video()` to the token form — they were the last hand-quoted assemblers in the repo, in the one file that had never mocked anything.
+- 2026-08-08: T8 mutation is the milestone's strongest evidence. Reverting `ffp_count_streams()` to the hand-quoted form makes real ffprobe exit status 1 and report 0 audio streams where 1 was expected: the shell expanded `$dollar` away, so the tool was asked for a file that does not exist. The failure identity is verified against the real tool, not inferred from a mock.
 - 2026-08-08: plan chose to arm the unquoted-whitespace invariant in the harness over asserting it per command test, because the harness already carries the sibling absolute-path invariant (helper-openac.R:605) and a per-test assertion is skipped by omission; falsified by a legitimate boundary call the invariant cannot express, requiring more opt-outs than the one test-helper-boundary.R needs.
 
 ## Decisions
