@@ -336,8 +336,10 @@ dependencies lean and the guardrails require a question gate plus a decision for
 any dependency change.
 **Decision:** Do not depend on tidymedia. openac keeps its own `find_program` /
 `set_program` / `check_*` / `install_*` family and its own passthroughs. Three
-things drove it. Twelve of the 33 functions serve openface, opensmile, or
-whisper, which tidymedia's stated scope (its D001) excludes — so openac keeps a
+things drove it. Ten of the 33 symbols serve openface, opensmile, or whisper,
+which tidymedia's scope excludes — it is an FFmpeg/MediaInfo interface, and
+while its D001 rules out full ffmpeg coverage and realtime use rather than other
+tools by name, the exclusion follows from what the package is — so openac keeps a
 full discovery-and-install family under any disposition and the dependency would
 add a second mechanism beside the first, not replace it. The two packages read
 and write different `rappdirs` config directories, so substituting tidymedia's
@@ -352,15 +354,18 @@ tidymedia for the ffmpeg/ffprobe half only — rejected because it buys the
 better quoting at the price of two discovery mechanisms, the config-migration
 problem, and the `Remotes:` entry, when the quoting contract transfers as an
 idea for roughly forty lines; (c) adopting tidymedia's `install_on_win` —
-rejected as a regression, since it carries no OS guard and on macOS downloads
-the Windows `.7z` and records `bin/ffmpeg.exe` paths, which is exactly the
-silent wrong-install openac's `require_os()` (`R/programs_install.R:45`) exists
-to stop.
+rejected as a regression, since it carries no OS guard and on macOS downloads and
+extracts the Windows `.7z` before failing late when `set_program` refuses the
+unresolvable `.exe` (`R/program_management.R:243`, `:147-149`) — wasted work and a
+half-finished install where openac's `require_os()` (`R/programs_install.R:45`)
+aborts before the first network call.
 **Consequences:** `DESCRIPTION` is unchanged — no Imports, Suggests, or Remotes
-entry is added. openac's CRAN gate keeps its single existing blocker. The one
+entry is added. openac's CRAN gate gains no new blocker, keeping only the
+`audio.whisper` `Remotes:` entry it already carries. The one
 place tidymedia's design is ahead — quoting once at the process boundary rather
-than by hand at each call site — becomes a ROADMAP candidate, as do two smaller
-adaptations; `cairn/references/tidymedia-fit.md` is the standing record and
+than by hand at each call site — becomes a ROADMAP candidate, alongside a
+resilience adaptation and a row documenting the eight shared export names;
+`cairn/references/tidymedia-fit.md` is the standing record and
 should be re-read against tidymedia before any future session reopens this. This
 declines a dependency, not the package: openac may still adopt tidymedia's ideas,
 and a future reversal supersedes this entry rather than ignoring it.

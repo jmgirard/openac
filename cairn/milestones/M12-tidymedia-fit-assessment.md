@@ -34,7 +34,7 @@ ROADMAP rows for whatever the assessment surfaces and this milestone does not do
 
 ## Acceptance criteria
 
-- [ ] AC1. `cairn/references/tidymedia-fit.md` exists, authored from
+- [x] AC1. `cairn/references/tidymedia-fit.md` exists, authored from
   `templates/synthesis-note.md`, and `cairn_validate` reports no FAIL for its
   `references` check. Read directly from the file: its `**Provenance.**` block
   names the tidymedia commit SHA the assessment read, and its `Extraction:`
@@ -43,26 +43,26 @@ ROADMAP rows for whatever the assessment surfaces and this milestone does not do
   `nothing to re-verify` alternative, which would exempt the page from
   staleness permanently. The note states that it produced no rule and names no
   test file, because this milestone ships no code.
-- [ ] AC2. The note contains an overlap table with one row per member of set O,
+- [x] AC2. The note contains an overlap table with one row per member of set O,
   where O is enumerated by this procedure: every symbol assigned at top level in
   `R/use_ffmpeg.R`, `R/use_ffprobe.R`, `R/programs_find.R`, `R/programs_set.R`,
   `R/programs_check.R`, or `R/programs_install.R` — whether exported or not, and
   whether assigned a `function(` or an alias. Each row names the tidymedia
   export it pairs with, drawn from tidymedia's `NAMESPACE`, or records "no
   counterpart".
-- [ ] AC3. Every row of AC2's table naming a tidymedia counterpart carries a
+- [x] AC3. Every row of AC2's table naming a tidymedia counterpart carries a
   difference verdict citing `file:line` in both repos, and states three things:
   which `rappdirs` directory the function reads or writes, how it signals an
   unresolvable tool, and how it quotes arguments at the process boundary. Where
   the answer for a row is raised in a different function, the citation points at
   that function rather than the row saying the question does not apply.
-- [ ] AC4. The note records what a hard dependency would do to distribution, or
+- [x] AC4. The note records what a hard dependency would do to distribution, or
   records that it would do nothing: tidymedia's release status as read from its
   `DESCRIPTION` and `README.md` at the commit named in the Provenance block,
   whether a `Remotes:` entry would be required, and how that interacts with the
   CRAN gate stated in `cairn/DESIGN.md` "Purpose & Scope" and with the
   `Remotes:` entry `DESCRIPTION` already carries.
-- [ ] AC5. The note contains a name-collision ledger with one row per member of
+- [x] AC5. The note contains a name-collision ledger with one row per member of
   set C, where C is the intersection of the symbol sets appearing in `export()`
   lines of the two packages' `NAMESPACE` files — computed by intersecting the
   two files, never hand-listed. Each row states whether the two meanings agree,
@@ -70,11 +70,11 @@ ROADMAP rows for whatever the assessment surfaces and this milestone does not do
   tidymedia's ffmpeg-invocation layer against openac's, naming for each the
   function that assembles arguments and the function that reaches the process
   boundary.
-- [ ] AC6. `cairn/DECISIONS.md` gains an entry recording the dependency
+- [x] AC6. `cairn/DECISIONS.md` gains an entry recording the dependency
   disposition chosen by the user at this milestone's gate, naming the
   disposition, the alternative(s) considered and rejected, and the consequence
   for openac's `DESCRIPTION` — following D-005, D-006, D-011, D-012.
-- [ ] AC7. For every item in the note's "Disposition" section routed to the
+- [x] AC7. For every item in the note's "Disposition" section routed to the
   ROADMAP, the note quotes verbatim either the bullet text added under
   `## Candidates` or the existing bullet it was absorbed into, and that text is
   present in `cairn/ROADMAP.md`.
@@ -130,8 +130,114 @@ ROADMAP rows for whatever the assessment surfaces and this milestone does not do
 - 2026-08-08: T5 done — note assembled with Disposition and INDEX line; `cairn_validate` all-green (references staleness read the snapshot Extraction form rather than exempting the page); `devtools::test()` 0 fail / 557 pass / 2 skip, unchanged since no code was touched.
 - 2026-08-08: T6 done — user chose "decline the dependency; harvest the ideas" at the gate; recorded as D-016 with three rejected alternatives (full dep, ffmpeg/ffprobe-only dep, adopting `install_on_win`). Three candidate rows added, quoted verbatim in the note's Disposition; AC7's string match verified mechanically against `cairn/ROADMAP.md`.
 - 2026-08-08: `DESCRIPTION` deliberately unchanged — the decision adds no Imports/Suggests/Remotes entry, so the dependency surface this milestone touches is empty.
+- 2026-08-08: review — 3 lenses + scorer, 24 findings, 2 at/above 80 (R1 count error, R6 ambiguous cross-repo citation), both fixed in place; 12 sub-threshold findings fixed too, 3 rejected with reason. No criterion failed as written, so no return to implement. Full triage in the Review section.
 - 2026-08-08: plan chose a committed `references/` synthesis note over keeping the analysis in this milestone file because the CRAN-distribution question and the queued install/discovery candidates will re-read it after this milestone archives; falsified by the decision closing the question with no later reader.
 
 ## Decisions
 
 ## Review
+
+Reviewed 2026-08-08. PR #13. Evidence below is fresh, gathered by command.
+
+### Acceptance-criteria evidence
+
+- **AC1.** `cairn/references/tidymedia-fit.md` exists (24 KB) with its `INDEX.md`
+  line at `cairn/references/INDEX.md:7`. Provenance block names tidymedia
+  `b99f7e875a016201178a9be01ab672b7ee77fdd2`; `Extraction:` uses the snapshot
+  alternative with its own `— observed 2026-08-08` stamp, not the
+  `nothing to re-verify` form. "This page produced no rule, so it names no test
+  file" present. `cairn_validate`: `PASS references index<->disk`, no FAIL.
+- **AC2.** Re-ran the page's own Procedure script and compared its output against
+  the overlap table by set equality: 33 table rows, 33 members of set O, symmetric
+  difference empty in both directions. Independently reproduced by the [O] diff
+  reviewer, which also confirmed the E1–E33 row order and the 24-exported /
+  9-internal split.
+- **AC3.** All 10 counterpart-naming rows carry a difference verdict with
+  `file:line` on both sides and state the three facts (config dir, failure signal,
+  quoting), computed by extracting the tables and comparing row sets. The
+  difference table carries an 11th row, E7, whose analogue is internal — extra
+  coverage, not a gap; AC3 constrains counterpart-naming rows only. The [O]
+  reviewer read every citation in this table at the pinned SHA and confirmed them,
+  except the two corrected below (R11, R5).
+- **AC4.** The Distribution section records tidymedia `Version: 0.1.0.9000`,
+  `License: GPL-3` (`DESCRIPTION:4,14`), no `Remotes:` of its own, no git tags,
+  lifecycle-experimental (`README.md:9`), install only via `install_github`
+  (`README.md:29`) — all re-read at `b99f7e8`; that a hard dep needs
+  `Remotes: jmgirard/tidymedia`; and the interaction with DESIGN's gate and the
+  existing `DESCRIPTION:35-36` entry. Corrected at review to name both of DESIGN's
+  two stated gate conditions rather than describing the gate as having one blocker.
+- **AC5.** Collision ledger diffed against a freshly computed `NAMESPACE`
+  intersection: 8 rows, 8 members, `diff` empty — the ledger is exactly set C.
+  Each row states whether the meanings agree with `file:line` both sides; 6 of 8
+  disagree. The invocation-layer prose names the assembler and the boundary on
+  both sides — openac `R/use_ffmpeg.R:19` → `require_program` (`:68`) → `system2`
+  (`:23`); tidymedia `ffm_args` (`R/ffm.R:1164`) / `ffm_compile` (`:1152`) →
+  `run_program` (`R/program_management.R:108`) → `shQuote` + `system2` (`:119`).
+- **AC6.** `cairn/DECISIONS.md` gains D-016 (2026-08-08), naming the disposition
+  (decline), three rejected alternatives (a) full dependency, (b) ffmpeg/ffprobe
+  half only, (c) adopting `install_on_win`, and the `DESCRIPTION` consequence.
+  `git diff main..HEAD -- DESCRIPTION` is empty, so the stated consequence is
+  verified rather than asserted. The [S] blame reviewer confirmed D-016 follows
+  the house Context/Decision/Consequences shape and contradicts no prior entry.
+- **AC7.** All 3 Disposition items routed to the ROADMAP have their bullet text
+  quoted verbatim in the note and byte-identical in `cairn/ROADMAP.md`, checked by
+  substring match. E12 is not counted here: it routes to an existing DESIGN
+  convention, not the ROADMAP, which AC7's wording scopes out.
+
+### Consistency gate
+
+Universal: `cairn_validate` exit 0 — 16 PASS, 8 advisories OK. `cairn_impact`
+skipped, DESIGN.md untouched so no principle changed. Toolchain (`r-package`):
+`document()` no diff; no generated file (`NAMESPACE`, `man/`, `data/`) in the
+diff; README untouched; no `_pkgdown.yml` in the repo so the pkgdown condition
+does not fire; no NEWS entry required — the diff is `cairn/`-only with no
+user-visible change; no new top-level files outside the ignored `cairn/`;
+`devtools::check()` 0 errors, 0 warnings, 0 notes; `devtools::test()`
+0 fail / 557 pass / 2 skip. No defect returns on this milestone.
+
+### Independent review — three lenses, then a scorer
+
+Three fresh-context reviewers with distinct evidence bases, then a [S] scorer
+that generated none of the findings. 24 findings consolidated; 2 scored ≥80.
+The [S] prior-review lens noted the GitHub inline-comment probe returned `[]`, so
+it worked from archived `## Review` sections, recovering the pre-archive
+milestone files from git because archiving compresses them to ~25 lines.
+
+**Actioned (≥80), both fixed in place — neither failed a criterion as written:**
+
+- **R1 (85)** — "Twelve of the 33 functions serve openface, opensmile, or
+  whisper" is ten: E17/E18 are `check_ffmpeg`/`check_ffprobe`, which serve
+  ffmpeg/ffprobe. Found independently by all three lenses. Wrong in the note's
+  overlap prose, its Disposition, and flatly in D-016 where it is the first of
+  three load-bearing reasons. Fixed in all three places; E17/E18 now carry their
+  actual rejection reason (tidymedia has no `check_*` family).
+- **R6 (80)** — `cairn/DESIGN.md:9-16` cited for tidymedia's DESIGN while the
+  same bare path elsewhere on the page means openac's. Fixed by qualifying the
+  one cross-repo citation and stating the convention for the rest.
+
+**Sub-threshold, logged and also fixed** (cheap correctness in a page whose value
+is auditable citations): R5 (70) `install_on_win` "records `bin/ffmpeg.exe`
+paths" overstated — it fails late at `set_program` instead; R8 (68) D-016
+attributed to tidymedia's D001 a tool-exclusion D001 does not state; R11 (65)
+citation `:48` → `:47`, and the two failure cases were paired in reverse source
+order; R15 (65) DESIGN names two CRAN gate conditions, not one blocker; R9 (63)
+provenance pinned openac to a branch ref, now a commit; R20 (60) "They route to
+the ROADMAP" preceded a bullet routing to DESIGN; R4 (55) preamble said ten rows
+over an eleven-row table; R23 (55) "read read-only" typo; R18 (50) D-016
+miscategorized the third new row as an adaptation; R24 (45) open question tagged
+"resolved" where its text says "moot"; R13 (45) "all-`NA` row" overstated;
+R3 (45) ROADMAP hygiene stamp said "planned" against a `review` row — an exact
+repeat of M08's F13.
+
+**Rejected with reason:** R2 (40) claimed D-016 rejects alternative (b) for a
+benefit it lacks, on the premise that tidymedia's better quoting is unreachable —
+false: `ffm_run` is exported (`NAMESPACE:37`) and routes through `run_program`'s
+per-token `shQuote`, verified directly, so (b) would indeed buy it. R21 (8) and
+R22 (8) asserted that `templates/synthesis-note.md` and `cairn_validate` do not
+exist; both ship with the cairn plugin outside the repo and the reviewer searched
+only the repo. R7, R10, R12, R14, R16, R17, R19 (32–48) logged without action.
+
+D-016 was corrected in place rather than superseded: it is an unmerged draft
+under review in the change that created it, so the append-only rule for landed
+history does not reach it, and shipping a known-false load-bearing figure to
+append a correction on top of would be worse.

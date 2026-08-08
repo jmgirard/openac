@@ -1,7 +1,8 @@
 # Should openac depend on tidymedia for ffmpeg/ffprobe and program discovery? (M12)
 
-**Provenance.** Ingested 2026-08-08 by M12 from two sources read read-only: this
-repo at branch `m12-tidymedia-fit-assessment`, and the sibling repository
+**Provenance.** Ingested 2026-08-08 by M12 from two sources, both read only: this
+repo at commit `4d3403b` (branch `m12-tidymedia-fit-assessment`, the state the
+assessment was written against), and the sibling repository
 `/Users/jmgirard/GitHub/tidymedia` at commit `b99f7e875a016201178a9be01ab672b7ee77fdd2`
 (working tree clean at read time). Both function sets below were computed by
 script, not hand-listed; the script is reproduced under "Procedure" so any
@@ -23,7 +24,7 @@ in `DECISIONS.md`, architecture in `DESIGN.md`.
 **Evidence snapshot.** Each line is a claim about repository state at read time,
 not a standing fact.
 
-- openac `R/use_ffmpeg.R`, `R/use_ffprobe.R`, `R/programs_{find,set,check,install}.R`, `NAMESPACE` — branch `m12-tidymedia-fit-assessment` — observed 2026-08-08.
+- openac `R/use_ffmpeg.R`, `R/use_ffprobe.R`, `R/programs_{find,set,check,install}.R`, `NAMESPACE` — commit `4d3403b` — observed 2026-08-08.
 - tidymedia `R/ffmpeg.R`, `R/ffprobe.R`, `R/ffm.R`, `R/program_management.R`, `NAMESPACE`, `DESCRIPTION`, `README.md` — commit `b99f7e8` — observed 2026-08-08.
 - tidymedia advanced two commits (`ea4a9cf`, `b99f7e8`) during this milestone's own planning session — observed 2026-08-08.
 
@@ -72,8 +73,12 @@ A neutral characterization, before any verdict.
 
 tidymedia is an R interface to FFmpeg and MediaInfo for reproducible media
 preprocessing — batch trimming, cropping, format standardization, and metadata
-extraction as tibbles (`cairn/DESIGN.md:9-16`). It is deliberately not "all of
-ffmpeg in R" (its D001). It is organized in three layers: raw CLI passthroughs
+extraction as tibbles (**tidymedia's own** `cairn/DESIGN.md:9-16` — every
+unqualified `cairn/DESIGN.md` elsewhere on this page means openac's). It is
+deliberately not "all of ffmpeg in R" (its D001, which rules out full ffmpeg
+option coverage and realtime/streaming use; the exclusion of other *tools* is
+not stated there but follows from the package being an FFmpeg/MediaInfo
+interface). It is organized in three layers: raw CLI passthroughs
 (`ffmpeg()`, `ffprobe()`, `mediainfo()`), an `ffm_*` command builder, and task
 verbs on top.
 
@@ -134,15 +139,19 @@ it).
 | E32 | `install_opensmile_mac` | function, `R/programs_install.R:289` | yes | no counterpart — out of scope | Reject |
 | E33 | `install_whisper` | function, `R/programs_install.R:355` | yes | no counterpart — out of scope | Reject |
 
-Twelve of the 33 (E10, E11, E15, E16, E17–E20 in part, E30–E33) concern openface,
-opensmile, or whisper, which tidymedia's stated scope will never cover. openac
+Ten of the 33 (E10, E11, E15, E16, E19, E20, E30–E33) concern openface,
+opensmile, or whisper, which tidymedia's scope will never cover. (E17 and E18 —
+`check_ffmpeg`, `check_ffprobe` — serve ffmpeg and ffprobe, and are rejected for
+the different reason that tidymedia has no `check_*` family at all.) openac
 therefore keeps a discovery and installation mechanism under every disposition;
 a dependency would add a second one beside it, not remove the first.
 
 ## Paired-row differences
 
-The ten rows above that name a counterpart, each with the three facts a
-dependency decision turns on. "Config dir" is the `rappdirs` directory the
+The ten rows above that name a counterpart, plus E7 — whose counterpart is
+internal rather than exported, and which is included because it is where openac's
+failure signal for E1–E3 is actually raised — each with the three facts a
+dependency decision turns on. Eleven rows. "Config dir" is the `rappdirs` directory the
 function reads or writes; where a function reaches one only through a callee,
 the callee is named. "Failure signal" is what happens when the tool cannot be
 resolved. "Quoting" is how arguments reach the process boundary.
@@ -152,14 +161,14 @@ resolved. "Quoting" is how arguments reach the process boundary.
 | E1 `ffmpeg` | reads none directly; reaches `user_config_dir("openac","R")` via `require_program` → `find_program` (`R/programs_find.R:26`) → reaches `user_config_dir("tidymedia","R")` via `find_ffmpeg` (`R/program_management.R:29`) | `cli::cli_abort("Can't run …")` in `require_program` (`R/programs_find.R:71`) → `find_ffmpeg()` warns and returns `NULL`, `glue()` collapses to `character(0)`, and `system()` raises the base error "non-empty character argument expected" (`R/ffmpeg.R:28`; observed 2026-08-08) | one caller-assembled string to `system2()` with the resolved path as `command`, so the path is never shell-parsed (`R/use_ffmpeg.R:23`) → the path is interpolated **unquoted** into a `system()` string (`R/ffmpeg.R:28`), so an ffmpeg under a path containing a space fails (observed 2026-08-08) | openac's is safer on both axes |
 | E2 `ffm` | n/a — openac's is an alias of `ffmpeg`; tidymedia's is an alias of `ffm_files`, a pipeline constructor that touches no binary (`R/ffm.R:63`) | as E1 → n/a, constructs an object | as E1 → n/a | **name collision, incompatible meanings** |
 | E3 `ffprobe` | as E1 → as E1 (`R/program_management.R:29`) | `cli_abort` via `require_program` (`R/programs_find.R:71`) → base error as E1 (`R/ffprobe.R:21`) | one caller-assembled string to `system2()` (`R/use_ffprobe.R:23`) → path **is** quoted here (`R/ffprobe.R:21`), unlike `ffmpeg()` — an asymmetry internal to tidymedia | equivalent; tidymedia's quoting is inconsistent between its own two passthroughs |
-| E5 `ffp_count_streams` | none directly → none directly | `stopifnot(file.exists(infile))` (`R/use_ffprobe.R:48`), then the E3 signal → `probe_all()` returns an all-`NA` row and warns rather than aborting (`R/ffprobe.R:119-124`) | caller hand-quotes the path with literal `"` inside the arg string (`R/use_ffprobe.R:51-56`) → token vector through `run_program`'s `shQuote` (`R/program_management.R:119`) | tidymedia's is structurally better: typed tibble out, per-token quoting, resilient to bad files |
+| E5 `ffp_count_streams` | none directly → none directly | `stopifnot(file.exists(infile))` (`R/use_ffprobe.R:48`), then the E3 signal → `probe_all()` emits a `file`-only row for the bad input and warns rather than aborting, the remaining columns filling with `NA` only where successful rows supply them (`R/ffprobe.R:107-108,119-124`) | caller hand-quotes the path with literal `"` inside the arg string (`R/use_ffprobe.R:51-56`) → token vector through `run_program`'s `shQuote` (`R/program_management.R:119`) | tidymedia's is structurally better: typed tibble out, per-token quoting, resilient to bad files |
 | E7 `require_program` | via `find_program` (`R/programs_find.R:26`) → via the `location` argument its caller resolved (`R/program_management.R:108`) | `cli_abort` naming the tool (`R/programs_find.R:71`) → `cli_abort("Could not locate {program}.")` (`R/program_management.R:110-112`) | n/a — resolves, does not invoke → applies `shQuote` per token and calls `system2` (`R/program_management.R:119`) | same guard; tidymedia's also owns quoting, openac's does not |
-| E8 `find_ffmpeg` | `user_config_dir("openac","R")` (`R/programs_find.R:26`) → `user_config_dir("tidymedia","R")` (`R/program_management.R:29`) | `cli_warn` + `NULL`, twice — absent, and recorded-but-vanished (`R/programs_find.R:31,47`) → `cli_warn` + `NULL`, same two cases (`R/program_management.R:37,48`) | n/a — resolves, does not invoke → n/a | **different config directories**; openac additionally returns an absolutized, unnamed path (`R/programs_find.R:57`) where tidymedia returns `Sys.which()`'s named result or the raw config line |
+| E8 `find_ffmpeg` | `user_config_dir("openac","R")` (`R/programs_find.R:26`) → `user_config_dir("tidymedia","R")` (`R/program_management.R:29`) | `cli_warn` + `NULL` in two cases — absent (`R/programs_find.R:31`), recorded-but-vanished (`:47`) → `cli_warn` + `NULL` in the same two cases, in the opposite source order — recorded-but-vanished (`R/program_management.R:37`), absent (`:47`) | n/a — resolves, does not invoke → n/a | **different config directories**; openac additionally returns an absolutized, unnamed path (`R/programs_find.R:57`) where tidymedia returns `Sys.which()`'s named result or the raw config line |
 | E9 `find_ffprobe` | as E8 | as E8 | n/a | as E8 |
 | E12 `set_program` | writes `user_config_dir("openac","R")` (`R/programs_set.R:17`) → writes `user_config_dir("tidymedia","R")` (`R/program_management.R:152`) | base `stopifnot()` on all three arguments (`R/programs_set.R:13-15`) → `rlang::arg_match` + `check_string` + `cli_abort("Can't find an executable at …")` (`R/program_management.R:145-149`) | n/a → n/a | tidymedia's conditions are better (cli, per DESIGN Conventions); openac's `stopifnot` is the legacy style DESIGN marks for opportunistic migration |
 | E13 `set_ffmpeg` | as E12 | as E12 | n/a | as E12 |
 | E14 `set_ffprobe` | as E12 | as E12 | n/a | as E12 |
-| E29 `install_ffmpeg_win` | writes `user_data_dir("openac","R")/ffmpeg` (`R/programs_install.R:98`) → writes `user_data_dir("tidymedia","R")/ffmpeg` (`R/program_management.R:220`) | `require_os()` aborts with class `openac_wrong_os` **before any network call** (`R/programs_install.R:62-70`) → **no OS guard**: on macOS or Linux it downloads the Windows `.7z` and records `bin/ffmpeg.exe` paths (`R/program_management.R:213-248`) | n/a → n/a | openac's is strictly safer; this is the exact silent wrong-install openac's guard was added to stop |
+| E29 `install_ffmpeg_win` | writes `user_data_dir("openac","R")/ffmpeg` (`R/programs_install.R:98`) → writes `user_data_dir("tidymedia","R")/ffmpeg` (`R/program_management.R:220`) | `require_os()` aborts with class `openac_wrong_os` **before any network call** (`R/programs_install.R:62-70`) → **no OS guard**: on macOS or Linux it proceeds to download and extract the Windows `.7z` before failing late — `set_ffmpeg(<dir>/bin/ffmpeg.exe)` (`R/program_management.R:243`) reaches `set_program`, which aborts because the `.exe` does not resolve (`:147-149`), so the download is wasted and the install half-done rather than recorded (`R/program_management.R:213-248`) | n/a → n/a | openac's is strictly safer; this is the exact silent wrong-install openac's guard was added to stop |
 
 Two findings dominate this table.
 
@@ -252,10 +261,13 @@ gate plainly: submission is blocked until there is "a CRAN-legal resolution for
 `audio.whisper` (the `Remotes:` field cannot ship …)".
 
 The honest reading is narrower than "this blocks CRAN": the gate is *already*
-closed by `audio.whisper`, so a tidymedia dependency does not close a gate that
-is open. What it does is **add a second, independent blocker to a gate that
-currently has one**, each needing its own CRAN-legal resolution before
-submission. The `audio.whisper` blocker has at least two known exits already
+closed, so a tidymedia dependency does not close a gate that is open. DESIGN
+states two conditions — "(1) a testing contract for the binary-dependent
+wrappers, and (2) a CRAN-legal resolution for `audio.whisper`". Condition (1) is
+plausibly discharged by M06–M11's testing work, though DESIGN has not been
+updated to say so; condition (2) is open and is the `Remotes:` entry openac
+carries today. What a tidymedia dependency does is **add a further independent
+`Remotes:` blocker**, needing its own CRAN-legal resolution before submission. The `audio.whisper` blocker has at least two known exits already
 under consideration (Additional_repositories, or wrapping whisper.cpp directly);
 a tidymedia blocker's only exits are tidymedia reaching CRAN, or openac vendoring
 what it needs. Both are outside openac's control in a way the current blocker is
@@ -276,10 +288,11 @@ Where every row above lands. The dependency decision itself is not this page's
 to make — it is recorded as **D-016** (2026-08-08): decline the dependency,
 harvest the boundary-quoting idea.
 
-**Rows tagged `Reject` (28 of 33), with their reason.** E10, E11, E15–E20,
-E30–E33 concern openface, opensmile, or whisper, which tidymedia's stated scope
-excludes — a dependency cannot serve them and openac keeps its own machinery.
-E21–E28 are internal helpers of openac's installer guard with no tidymedia
+**Rows tagged `Reject` (28 of 33), with their reason.** E10, E11, E15, E16, E19,
+E20, E30–E33 — ten rows — concern openface, opensmile, or whisper, which
+tidymedia's scope excludes: a dependency cannot serve them and openac keeps its
+own machinery. E17 and E18 (`check_ffmpeg`, `check_ffprobe`) are rejected
+separately, because tidymedia has no `check_*` family. E21–E28 are internal helpers of openac's installer guard with no tidymedia
 analogue; E28 (`require_os`) is rejected in the strong sense that tidymedia's
 `install_on_win` has no OS guard at all and adopting it would be a regression.
 E1, E2, E6, E8, E9, E13, E14, E29 are rejected because the config-directory
@@ -287,7 +300,8 @@ divergence and the unexported `find_program` make them non-substitutable without
 user-visible breakage.
 
 **Rows tagged `Adapt` (3): E5, E7, E12.** These are ideas worth having, none of
-which requires the dependency. They route to the ROADMAP:
+which requires the dependency. They route as follows — two to the ROADMAP, one to
+an existing DESIGN convention:
 
 - E7 and the invocation-layer finding → a new candidate row, verbatim:
   `- Quote at the process boundary, not at the call site — adopt a token-vector + shQuote contract in the passthroughs (the pattern tidymedia centralizes in run_program) so a forgotten literal quote at one call site cannot ship a broken command; today every caller hand-quotes paths (R/use_ffprobe.R:51-56) — added 2026-08-08 — M12 (cairn/references/tidymedia-fit.md, E7)`
@@ -312,8 +326,8 @@ This page produced no rule, so it names no test file.
 - Whether openac and tidymedia should share one config directory (C4–C7) was
   open when this page was drafted; D-016 declined the dependency, which makes it
   moot for now — the two families stay independent, and a user of both records
-  each tool twice. Re-opens only if the dependency question re-opens — resolved
-  and re-checked 2026-08-08.
+  each tool twice. Moot rather than answered: it re-opens if the dependency
+  question re-opens — re-checked 2026-08-08.
 - This page's verdicts rest on tidymedia at `b99f7e8`, which advanced twice
   during M12 itself; any future session reopening D-016 re-reads tidymedia
   before relying on the ledgers above — observed 2026-08-08.

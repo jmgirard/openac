@@ -1,7 +1,7 @@
 # Roadmap
 
 _The only authority on milestone status. Grouped by status, not ID._
-_Last hygiene check: 2026-08-08 (M12 planned from the tidymedia candidate, which is retired into it; the spelling-NOTE candidate retired by a direct wordlist commit; five terminal rows, at retention)_
+_Last hygiene check: 2026-08-08 (M12 at review; the tidymedia candidate retired into it and the spelling-NOTE candidate retired by a direct wordlist commit; three rows added from M12's assessment; five terminal rows, at retention)_
 _Released 0.1.0 (GitHub) 2026-07-11._
 
 ## Milestones
