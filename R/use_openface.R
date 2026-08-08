@@ -116,13 +116,16 @@ of_extract <- function(
 #' @param recursive (logical, default=FALSE) Should files in subdirectories
 #'  within `indir` be included?
 #' @inheritDotParams of_extract fp2D fp3D pdm pose gaze aus wild multiview
-#' @return `NULL`
+#' @return (Invisibly) a data frame with one row per input file, giving the
+#'   `infile` and `outfile` it was called with, whether it `success`ed, and the
+#'   `error` message if it did not. A file that fails is skipped with a warning
+#'   rather than aborting the batch.
 #' @export
-#' 
+#'
 of_extract_dir <- function(
-  indir, 
-  inext, 
-  outdir, 
+  indir,
+  inext,
+  outdir,
   recursive = FALSE,
   ...
 ) {
@@ -131,28 +134,17 @@ of_extract_dir <- function(
   stopifnot(rlang::is_string(inext))
   stopifnot(rlang::is_string(outdir))
   stopifnot(rlang::is_bool(recursive))
-  # Find input filepaths
-  infiles <- list.files(
-    path = indir,
-    pattern = paste0(inext, "$"),
-    full.names = TRUE,
-    recursive = recursive
+  # Find input filepaths and derive matching output paths
+  infiles <- dir_inputs(indir, inext, recursive)
+  df <- data.frame(
+    infile = as.character(fs::path_abs(infiles)),
+    outfile = dir_outputs(infiles, indir, outdir, "csv"),
+    stringsAsFactors = FALSE
   )
-  # Build output filepaths
-  outfiles <- gsub(indir, outdir, infiles)
-  outfiles <- gsub(inext, "csv", outfiles)
-  # Iterate of_extract() over infiles
-  p <- progressr::progressor(along = infiles)
-  furrr::future_pwalk(
-    .l = data.frame(
-      infile = infiles,
-      outfile = outfiles
-    ),
-    .f = function(infile, outfile) {
-      of_extract(infile, outfile, ...)
-      p() # update progress
-    }
-  )
+  # Iterate of_extract() over infiles, surviving per-file failures
+  invisible(dir_walk(df, function(infile, outfile) {
+    of_extract(infile, outfile, ...)
+  }))
 }
 
 

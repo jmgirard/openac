@@ -41,18 +41,15 @@ system2_closure <- function() {
 }
 
 # Literal function names, never globs: a pattern like "*_dir" would be a
-# permanent escape hatch that any future batch wrapper slips through.
-# Each is annotated with the milestone that will cover it; M07's acceptance is
-# that this list becomes empty.
-deferred <- c(
-  aw_prep_audio_dir = "M07",
-  aw_transcribe     = "M07",
-  aw_transcribe_dir = "M07",
-  aw_transcribe_wav = "M07",
-  of_extract_dir    = "M07",
-  os_extract_dir    = "M07",
-  os_prep_audio_dir = "M07"
-)
+# permanent escape hatch that any future batch wrapper slips through. Each entry
+# is annotated with the milestone that will cover it.
+#
+# Empty as of M07: every function that can reach an external tool has a command
+# test. A new wrapper fails the suite until it has one, or until it is deferred
+# here to a named milestone. Written with names so the empty vector has the same
+# shape a populated one does -- a bare `character()` carries `names() == NULL`,
+# and the staleness check below compares against `character()`.
+deferred <- stats::setNames(character(), character())
 
 test_that("the computed domain is non-empty and includes the passthroughs", {
   domain <- system2_closure()

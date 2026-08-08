@@ -212,6 +212,108 @@ local_fake_config <- function(.env = parent.frame()) {
   dir
 }
 
+# Redirect openac's rappdirs data dir -- where install_* places tools by
+# default -- to a temp dir for the calling test.
+local_fake_data_dir <- function(.env = parent.frame()) {
+  dir <- withr::local_tempdir(.local_envir = .env)
+  testthat::local_mocked_bindings(
+    user_data_dir = function(...) dir,
+    .package = "rappdirs",
+    .env = .env
+  )
+  dir
+}
+
+# Pretend the session runs on `sysname` -- a `Sys.info()[["sysname"]]` value such
+# as "Windows", "Darwin" or "Linux" -- for the calling test. The rest of
+# Sys.info() is left as this machine reports it, so only the platform varies.
+local_fake_os <- function(sysname, .env = parent.frame()) {
+  info <- Sys.info()
+  info[["sysname"]] <- sysname
+  testthat::local_mocked_bindings(
+    Sys.info = function() info,
+    .package = "base",
+    .env = .env
+  )
+  invisible(sysname)
+}
+
+# Install fakes for the install-time boundary, scoped to the calling test.
+#
+# The install_* family is the only one that reaches the network, so its tests
+# never let a real fetch or extraction run: both fakes record their arguments
+# instead. `status` is what the download reports (0 is success, as
+# `utils::download.file()` defines it); `extract_creates` names paths, relative
+# to the extraction directory, that the fake archive materializes -- the
+# installers hand those to `set_*()`, which refuses a location that is not
+# there.
+#
+# `Sys.which()` is faked to resolve any existing file so an installer under a
+# mocked OS behaves the same on every host: a real `Sys.which()` resolves
+# `SMILExtract` on Unix and `SMILExtract.exe` on Windows, which would otherwise
+# make the macOS installer's test fail on Windows CI and vice versa (M08).
+local_fake_downloads <- function(status = 0L,
+                                 extract_creates = character(),
+                                 .env = parent.frame()) {
+  state <- new.env(parent = emptyenv())
+  state$downloads <- list()
+  state$extracts <- list()
+
+  fake_download <- function(url, destfile, ...) {
+    state$downloads[[length(state$downloads) + 1L]] <-
+      list(url = url, destfile = destfile, args = list(...))
+    dir.create(dirname(destfile), recursive = TRUE, showWarnings = FALSE)
+    writeLines("fake archive", destfile)
+    status
+  }
+
+  fake_extract <- function(archive, dir = ".", ...) {
+    state$extracts[[length(state$extracts) + 1L]] <-
+      list(archive = archive, dir = dir, args = list(...))
+    for (rel in extract_creates) {
+      path <- file.path(dir, rel)
+      dir.create(dirname(path), recursive = TRUE, showWarnings = FALSE)
+      file.create(path)
+      Sys.chmod(path, "0755")
+    }
+    invisible(character())
+  }
+
+  fake_sys_which <- function(names) {
+    out <- vapply(
+      names,
+      function(n) if (nzchar(n) && file.exists(n)) n else "",
+      character(1)
+    )
+    stats::setNames(out, names)
+  }
+
+  testthat::local_mocked_bindings(
+    download.file = fake_download, .package = "utils", .env = .env
+  )
+  testthat::local_mocked_bindings(
+    archive_extract = fake_extract, .package = "archive", .env = .env
+  )
+  testthat::local_mocked_bindings(
+    Sys.which = fake_sys_which, .package = "base", .env = .env
+  )
+  invisible(state)
+}
+
+# --- accessors over a recorder returned by local_fake_downloads() ------------
+
+download_urls <- function(state) {
+  vapply(state$downloads, function(x) x$url, character(1))
+}
+
+download_dests <- function(state) {
+  vapply(state$downloads, function(x) x$destfile, character(1))
+}
+
+extract_dirs <- function(state) {
+  vapply(state$extracts, function(x) as.character(x$dir), character(1))
+}
+
 # --- accessors over a recorder returned by local_fake_tools() ----------------
 
 # The ordered (tool, args) pairs seen at the boundary.

@@ -67,7 +67,9 @@ future_walk2(
 ```
 
 For the whole-directory case, `of_extract_dir()` finds and processes every
-matching file for you:
+matching file for you. A file that fails is skipped with a warning rather than
+stopping the run, and the returned data frame records the outcome of every file,
+so you can find and re-run just the failures:
 
 ```{r}
 of_extract_dir(

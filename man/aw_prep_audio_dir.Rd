@@ -48,7 +48,10 @@ be silently skipped otherwise. Defaults to TRUE.}
   }}
 }
 \value{
-\code{NULL}
+(Invisibly) a data frame with one row per input file, giving the
+\code{infile} and \code{outfile} it was called with, whether it \code{success}ed, and the
+\code{error} message if it did not. A file that fails is skipped with a warning
+rather than aborting the batch.
 }
 \description{
 Find all media files with a specified extension in a specified directory and

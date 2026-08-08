@@ -10,7 +10,7 @@ _Released 0.1.0 (GitHub) 2026-07-11._
 |---|---|---|---|---|---|
 | M08 | GitHub Actions CI — R CMD check across platforms | done | — | high | milestones/archive/M08-github-actions-ci.md |
 | M06 | Wrapper testing contract — system2-boundary command tests | done | — | high | milestones/archive/M06-wrapper-command-tests.md |
-| M07 | Wrapper testing contract — remainder and gated real invocations | planned | M06 | normal | milestones/M07-wrapper-tests-remainder.md |
+| M07 | Wrapper testing contract — remainder and gated real invocations | review | M06 | normal | milestones/M07-wrapper-tests-remainder.md |
 | M03 | whisper tidy reader (`aw_read`) | done | M01 | normal | milestones/archive/M03-whisper-reader.md |
 | M04 | R CMD check hygiene (docs, namespace, build) | done | — | high | milestones/archive/M04-check-hygiene.md |
 | M05 | Rewrite stale vignettes | done | M04 | normal | milestones/archive/M05-vignette-rewrite.md |
@@ -24,6 +24,7 @@ _Released 0.1.0 (GitHub) 2026-07-11._
 - Let `aw_read` also accept a bare `$data` data.frame (convenience) — added 2026-07-11 — RR01 R6
 - Multi-file reading idiom / `id`-column convention for readers (GP2 capability) — added 2026-07-11 — RR01 R7
 - CRAN readiness: `audio.whisper` distribution decided (`Remotes:` must go; Additional_repositories vs. wrapping whisper.cpp — deferred to submission time; the two audio.whisper-expanding candidates above are on hold behind it) — added 2026-07-11 — design interview; the wrapper-testing-contract half became M06+M07 on 2026-08-07
+- A working macOS OpenFace installer (`install_openface_mac()` was an inert stub and was deleted; the Homebrew/cmake build it sketched is the starting point) — added 2026-08-07 — M07
 - Platform-aware installer dispatchers (`install_openface()` detecting the OS and delegating), amending DESIGN's `_win`/`_mac` convention — needs a D-entry — added 2026-08-07 — M07 (guards only)
 - Replace the hard-coded OneDrive model URLs with embedded authkeys in `install_openface_win` — added 2026-08-07 — DESIGN Known issues; M07
 - Scout OpenFace successors (LibreFace / py-feat / OpenFace 3.0) against the add-tool bar — added 2026-07-11 — design interview

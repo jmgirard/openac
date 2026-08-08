@@ -63,6 +63,27 @@ test_that("resolution is deterministic and independent of the real machine", {
   expect_false(startsWith(state$calls[[1]]$command, "/usr"))
 })
 
+test_that("the install-time mock intercepts the network and the extractor", {
+  # AC2's no-real-network claim rests entirely on these two bindings being the
+  # ones the installers reach. Asserted here rather than assumed, because a
+  # miss would let an install test hit gyan.dev or GitHub for real.
+  dest <- withr::local_tempfile()
+  target <- withr::local_tempdir()
+  state <- local_fake_downloads(extract_creates = "bin/tool")
+
+  expect_identical(
+    utils::download.file(url = "https://example.invalid/x.zip", destfile = dest),
+    0L
+  )
+  archive::archive_extract("ignored", dir = target)
+
+  expect_identical(download_urls(state), "https://example.invalid/x.zip")
+  expect_identical(download_dests(state), dest)
+  expect_identical(extract_dirs(state), target)
+  # The fake writes the placeholder the real extractor would have unpacked.
+  expect_true(file.exists(file.path(target, "bin", "tool")))
+})
+
 test_that("a program left out of `resolve` is not found", {
   local_fake_tools(results = list(), resolve = character())
   expect_warning(res <- find_program("ffmpeg"))
