@@ -1,12 +1,12 @@
 # M08: GitHub Actions CI — R CMD check across platforms
 
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** high
 - **Depends on:** —
 - **Driving RR:** —
 - **Principles touched:** GP3, GP7
 
-- **Branch/PR:** `m08-github-actions-ci`
+- **Branch/PR:** `m08-github-actions-ci` · https://github.com/jmgirard/openac/pull/7
 
 ## Goal
 
@@ -86,11 +86,11 @@ Platform breakage needing design work → its own follow-on milestone, per AC2.
       the local NOTE set and confirm no `.github` top-level NOTE.
 - [x] T4 Push the branch, open the PR, and watch the first full run with
       `gh pr checks <PR> --watch`; record the run URL and per-job outcome.
-- [ ] T5 Triage failures. Fix what is solvable inside this milestone; for
+- [x] T5 Triage failures. Fix what is solvable inside this milestone; for
       anything needing design work, drop that matrix entry, add a ROADMAP
       candidate row, and plan the follow-on milestone. Each `R/` change
       carries its AC5 failing-before evidence.
-- [ ] T6 Re-run to green; record the final `gh pr checks` output and each
+- [x] T6 Re-run to green; record the final `gh pr checks` output and each
       job's package listing showing `audio.whisper` absent.
 
 ## Work log
@@ -111,6 +111,10 @@ Platform breakage needing design work → its own follow-on milestone, per AC2.
 - 2026-08-07: T5 — both Windows failures are one harness defect, not package code. `fake_sys_which` gated its fallback on `file.access(n, 1L) == 0L`; Windows returns -1 there for the extensionless `Sys.chmod("0755")` fixture binaries, so `find_program()` returned NULL (test-programs-resolve.R:35) and `set_program()`'s `stopifnot(Sys.which(location) != "")` aborted at programs_set.R:15 (test-programs-resolve.R:60). Failure identity confirmed from the job log's named assertions and backtraces, not from the bare red job.
 - 2026-08-07: T5 — extracted `fake_is_executable()` in `helper-openac.R`, degrading executability to existence on Windows and keeping `file.access` on Unix. Verified no test depends on an existing-but-non-executable file failing to resolve — the stale-config test uses a nonexistent path, so it still fails `file.exists()`. Local `test()` after the fix: 252 pass, 0 fail.
 - 2026-08-07: corrected the M06 `Sys.which()` lesson in `LESSONS.md` in place and marked it `(M06, corrected M08)` — it was true on Unix and silently wrong on Windows, which is what cost this milestone a CI round. AC5's `R/` domain stays empty: the defect was in `tests/`, and no package code changed.
+
+- 2026-08-07: T6 — re-run 31233107112 all five declared jobs `success`; `gh run view --json jobs` enumerates exactly the five the matrix declares, so no entry was dropped and AC2's matrix-drop clause has nothing to record. The `audio.whisper` guard step passed on every job.
+- 2026-08-07: T6 — AC4 verified against the `installed.packages()` listing itself, not a grep over the step block: the first pass matched `audio.whisper` in the step's own name and echoed script, so the listing lines were isolated (19 lines) and re-checked — zero `audio.whisper` occurrences, all five named extras present.
+- 2026-08-07: completion — local `check()` after the harness fix: 0 errors, 0 warnings, 1 NOTE (unchanged pre-existing `spelling.R` output diff); `document()` no diff; `test()` 252 pass. `cairn_validate` all checks passed. Status → review.
 
 ## Decisions
 
