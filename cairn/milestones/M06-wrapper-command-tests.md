@@ -1,6 +1,6 @@
 # M06: Wrapper testing contract — system2-boundary command tests
 
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** high
 - **Depends on:** —
 - **Driving RR:** —
@@ -130,7 +130,7 @@ defers it to submission time). CRAN submission → user-declared release window.
       `expect_identical`, covering `afftdn`, `compand` and `dynaudnorm`.
 - [x] T13 (review F16, AC3) Cover `os_extract()`'s default `wavfile = NULL`
       branch — temp file created, used, and unlinked.
-- [ ] T14 (review G1, toolchain gate) Add a `NEWS.md` development-version entry
+- [x] T14 (review G1, toolchain gate) Add a `NEWS.md` development-version entry
       for the user-visible contract changes, with no milestone numbers in the
       user-facing text.
 - [x] T15 (review AC2, discovered) Make `openac_stack()` name a frame whose call
@@ -211,6 +211,24 @@ defers it to submission time). CRAN submission → user-declared release window.
   with the recovery replaced by `NA_character_` the new test reports owner
   "openface" instead of "of_extract" — the false attribution AC2 forbids.
   Suite 252 pass, 0 fail, 0 skip.
+
+- 2026-08-07: T14 — `NEWS.md` gains a development-version entry for the four
+  user-visible contract changes (wrappers error when a tool is absent;
+  `find_program()`/`check_*()` warn-and-return instead of erroring; a recorded
+  bare program name resolves; `set_program()`'s documented return corrected).
+  Each is enforced by a named test in this branch.
+- 2026-08-07: T14 fallout — the first draft wrote "shorthands", a word absent
+  from `main`'s spelling list; reworded to name the four `find_*` functions,
+  restoring the list exactly.
+- 2026-08-07: completion verification — `devtools::document()` no diff;
+  `devtools::test()` 252 pass, 0 fail, 0 skip; `devtools::check()`
+  `Status: 1 NOTE`, 0 errors, 0 warnings. The NOTE is the T8 baseline, quoted
+  from `00check.log`: `* checking tests ... NOTE / Running 'spelling.R' /
+  Comparing 'spelling.Rout' to 'spelling.Rout.save' ...`. Re-measured against
+  `main` in a worktree with `spelling::spell_check_package()` on both trees:
+  54 words each and a byte-identical list, so this branch adds no NOTE and no
+  word. (T8 quoted 56 from the built tarball's `spelling.Rout`; the two counts
+  are different surfaces, and the branch-vs-main comparison is the claim.)
 
 ## Decisions
 

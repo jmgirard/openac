@@ -1,5 +1,21 @@
 # openac (development version)
 
+* The low-level wrappers `ffmpeg()`, `ffprobe()`, `openface()` and `opensmile()`
+  (and their aliases `ffm()`, `ffp()`, `of()` and `os()`) now fail with an error
+  when the program cannot be found. Previously the argument string was handed to
+  the system shell and run as a command.
+
+* `find_program()` (and `find_ffmpeg()`, `find_ffprobe()`, `find_openface()` and
+  `find_opensmile()`) now warn and return `NULL` when a program cannot be found,
+  instead of failing with an error. `check_ffmpeg()`, `check_ffprobe()`,
+  `check_openface()` and
+  `check_opensmile()` correspondingly return `FALSE` in that case.
+
+* `find_program()` now resolves a location recorded by `set_program()` even when
+  that location is a bare program name found on the `PATH`.
+
+* The documented return value of `set_program()` now matches what it returns.
+
 # openac 0.1.0
 
 First public release. openac wraps open-source affective-computing tools —
