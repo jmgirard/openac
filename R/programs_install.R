@@ -1,3 +1,76 @@
+# Platform guards --------------------------------------------------------------
+
+# The `_win`/`_mac` naming convention (DESIGN "Conventions") is the only thing
+# that says which platform an installer is for, and nothing used to check it:
+# `install_opensmile_win()` on macOS downloaded the Windows archive, extracted
+# it, recorded `bin/SMILExtract.exe` as the openSMILE location, and returned
+# TRUE. The guards below turn that silent wrong install into an error.
+
+# The platform each name suffix declares, spelled as `Sys.info()[["sysname"]]`.
+installer_suffixes <- c(win = "Windows", mac = "Darwin")
+
+# Human names for the platforms and tools that appear in guard messages.
+sysname_labels <- c(Windows = "Windows", Darwin = "macOS", Linux = "Linux")
+tool_labels <- c(ffmpeg = "FFmpeg", openface = "OpenFace", opensmile = "openSMILE")
+
+# The running platform. Wrapped in a function so tests can mock `Sys.info()`;
+# `.Platform$OS.type` is data rather than a call and cannot be mocked.
+current_sysname <- function() unname(Sys.info()[["sysname"]])
+
+label_sysname <- function(sysname) {
+  if (sysname %in% names(sysname_labels)) sysname_labels[[sysname]] else sysname
+}
+
+label_tool <- function(tool) {
+  if (tool %in% names(tool_labels)) tool_labels[[tool]] else tool
+}
+
+# The exported installers for `tool`, as a named vector mapping each platform to
+# the function that installs there. Computed from the namespace's own exports,
+# so adding `install_<tool>_<suffix>()` registers it here with no edit.
+installers_for <- function(tool) {
+  pattern <- paste0(
+    "^install_", tool, "_(", paste(names(installer_suffixes), collapse = "|"), ")$"
+  )
+  found <- grep(pattern, getNamespaceExports("openac"), value = TRUE)
+  suffix <- sub(paste0("^install_", tool, "_"), "", found)
+  stats::setNames(found, unname(installer_suffixes[suffix]))
+}
+
+# Stop unless the running platform is the one this installer targets.
+#
+# The alternative branch matters as much as the guard itself: a user on Linux
+# calling `install_openface_win()` needs to be told openac has no OpenFace
+# installer for Linux, not merely that this one is for Windows.
+require_os <- function(tool, suffix, call = rlang::caller_env()) {
+  target <- installer_suffixes[[suffix]]
+  running <- current_sysname()
+  if (identical(running, target)) return(invisible(running))
+
+  fn <- paste0("install_", tool, "_", suffix)
+  here <- unname(installers_for(tool)[running])
+  hint <- if (length(here) && !is.na(here)) {
+    c("i" = "Use {.fn {here}} on {label_sysname(running)} instead.")
+  } else {
+    c(
+      "x" = "openac has no automated {label_tool(tool)} installer for
+             {label_sysname(running)}.",
+      "i" = "Install {label_tool(tool)} yourself, then record its location with
+             {.fn {paste0('set_', tool)}}."
+    )
+  }
+  cli::cli_abort(
+    c(
+      "{.fn {fn}} installs {label_tool(tool)} on {label_sysname(target)}, but
+       this machine is running {label_sysname(running)}.",
+      hint
+    ),
+    class = "openac_wrong_os",
+    call = call
+  )
+}
+
+
 # install_ffmpeg_win -----------------------------------------------------------
 
 #' Install FFmpeg on Windows
@@ -16,6 +89,7 @@
 #' 
 install_ffmpeg_win <- function(download_url = NULL, install_dir = NULL) {
 
+  require_os("ffmpeg", "win")
   if (is.null(download_url)) {
     download_url <-
       "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.7z"
@@ -67,6 +141,7 @@ install_ffmpeg_win <- function(download_url = NULL, install_dir = NULL) {
 #' 
 install_openface_win <- function(download_url = NULL, install_dir = NULL) {
 
+  require_os("openface", "win")
   options(timeout = max(300, getOption("timeout")))
 
   if (is.null(download_url)) {
@@ -132,43 +207,6 @@ install_openface_win <- function(download_url = NULL, install_dir = NULL) {
   return(TRUE)
 }
 
-# install_openface_mac ---------------------------------------------------------
-
-install_openface_mac <- function(install_dir = NULL) {
-  if (is.null(install_dir)) {
-    install_dir <- file.path(rappdirs::user_data_dir("openac", "R"), "openface")
-  }
-  if (!dir.exists(install_dir)) {
-    status <- dir.create(install_dir, recursive = TRUE)
-    if (status == FALSE) return(FALSE)
-  }
-
-  sh <- '
-    #!/bin/bash
-    # script to install openFace for mac 
-
-    brew update
-    brew install gcc 
-    brew install boost
-    brew install tbb
-    brew install openblas
-    brew install --build-from-source dlib
-    brew install wget
-    brew install opencv
-
-    git clone https://github.com/TadasBaltrusaitis/OpenFace.git
-
-    mkdir build
-    cd build
-    cmake -D WITH_OPENMP=ON CMAKE_BUILD_TYPE=RELEASE ..  
-    make
-
-    cd ..
-    bash download_models.sh 
-    cp lib/local/LandmarkDetector/model/patch_experts/*.dat build/bin/model/patch_experts/
-  '
-}
-
 # install_opensmile_win --------------------------------------------------------
 
 #' Install openSMILE on Windows
@@ -190,6 +228,7 @@ install_openface_mac <- function(install_dir = NULL) {
 #' @export
 install_opensmile_win <- function(download_url = NULL, install_dir = NULL) {
 
+  require_os("opensmile", "win")
   if (is.null(download_url)) {
     download_url <- paste0(
       "https://github.com/audeering/opensmile/releases/download/",
@@ -252,6 +291,7 @@ install_opensmile_mac <- function(
   install_dir = NULL,
   arch = c("armv8", "x86_64")
 ) {
+  require_os("opensmile", "mac")
   # Validate input
   stopifnot(is.null(download_url) || rlang::is_character(download_url, n = 1))
   stopifnot(is.null(install_dir) || rlang::is_character(install_dir, n = 1))

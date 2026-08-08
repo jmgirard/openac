@@ -1,5 +1,13 @@
 # openac (development version)
 
+* The platform-specific installers now check which platform they are running on
+  before doing anything. `install_ffmpeg_win()`, `install_openface_win()` and
+  `install_opensmile_win()` fail with an error unless they are run on Windows,
+  and `install_opensmile_mac()` unless it is run on macOS; previously none of
+  them checked, and the download and extraction ran regardless. The error points
+  at the installer for the platform you are on, or reports that openac has no
+  automated installer for that tool there.
+
 * The low-level wrappers `ffmpeg()`, `ffprobe()`, `openface()` and `opensmile()`
   (and their aliases `ffm()`, `ffp()`, `of()` and `os()`) now fail with an error
   naming the program when it cannot be found, instead of the low-level error
