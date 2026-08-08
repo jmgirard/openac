@@ -39,15 +39,22 @@ test_that("expected_test_files() returns the test files on disk, whatever they c
     "test-beta.r" = 'test_that("b", { expect_true(TRUE) })',
     "test-empty.R" = character(),
     "test-garbage.R" = 'test_that("unclosed", { expect_true(TRUE',
+    # testthat discovers `^test.*\\.[rR]$`, so these two run and must be
+    # expected; the `^test-` pattern this used until M10's review missed both.
+    "test_underscore.R" = 'test_that("u", { expect_true(TRUE) })',
+    "testbare.R" = 'test_that("v", { expect_true(TRUE) })',
     "helper-ignored.R" = "x <- 1",
     "notes.txt" = "not a test file"
   ))
 
-  ground_truth <- sort(list.files(dir, pattern = "^test-.*\\.[Rr]$"))
+  ground_truth <- sort(list.files(dir, pattern = "^test.*\\.[rR]$"))
   expect_identical(expected_test_files(dir), ground_truth)
-  expect_identical(
+  # Membership, not order: `sort()` collates by locale, so pinning the ORDER
+  # here would assert this machine's collation on every CI platform.
+  expect_setequal(
     expected_test_files(dir),
-    c("test-alpha.R", "test-beta.r", "test-empty.R", "test-garbage.R")
+    c("test-alpha.R", "test-beta.r", "test-empty.R", "test-garbage.R",
+      "test_underscore.R", "testbare.R")
   )
 
   # And it is invariant under arbitrary mutation of EVERY member's contents.
@@ -82,30 +89,39 @@ test_that("expected_test_files() reads no file content", {
 
 # --- the recorded set is execution-driven ----------------------------------
 
-test_that("a file whose only test skips still joins the recorded set", {
-  # An EXECUTABLE fixture suite, run on a registry of its own so its file names
-  # cannot leak into the real `ran`. Its helper is this suite's own
-  # `helper-openac.R`, copied verbatim with only the registry binding
-  # overridden -- so the recorder under test is the recorder that ships, not a
-  # re-implementation of it that could agree with a broken original.
+# Run an EXECUTABLE fixture suite and return the registry it recorded into.
+#
+# The fixture's helper is this suite's own `helper-openac.R`, copied verbatim
+# with only the registry binding overridden (plus any `helper_extra` lines the
+# case needs) -- so the recorder under test is the recorder that ships, not a
+# re-implementation of it that could agree with a broken original. The private
+# registry is what keeps fixture file names out of the real `ran`.
+run_fixture_suite <- function(contents, helper_extra = character(),
+                              .env = parent.frame()) {
   registry <- new.env(parent = emptyenv())
   registry$owners <- character()
   registry$ran <- character()
   withr::local_options(openac_fixture_registry = registry)
 
-  dir <- write_fixture_dir(list(
+  dir <- write_fixture_dir(contents, .env = .env)
+  writeLines(
+    c(readLines(test_path("helper-openac.R")),
+      'openac_registry <- getOption("openac_fixture_registry")',
+      helper_extra),
+    file.path(dir, "helper-openac.R")
+  )
+  testthat::test_dir(dir, reporter = "silent", stop_on_failure = FALSE)
+  attr(registry, "dir") <- dir
+  registry
+}
+
+test_that("a file whose only test skips still joins the recorded set", {
+  before <- openac_registry$ran
+  registry <- run_fixture_suite(list(
     "test-runs.R" = 'test_that("runs", { expect_true(TRUE) })',
     "test-skips.R" = 'test_that("skips", { skip("nothing to do"); expect_true(FALSE) })',
     "test-fails.R" = 'test_that("fails", { expect_true(FALSE) })'
   ))
-  writeLines(
-    c(readLines(test_path("helper-openac.R")),
-      'openac_registry <- getOption("openac_fixture_registry")'),
-    file.path(dir, "helper-openac.R")
-  )
-
-  before <- openac_registry$ran
-  testthat::test_dir(dir, reporter = "silent", stop_on_failure = FALSE)
 
   # Every file that executed a test is recorded, regardless of its outcome --
   # the skip-only file is the case the two content proxies both got wrong.
@@ -115,6 +131,27 @@ test_that("a file whose only test skips still joins the recorded set", {
   )
   # And the nested run left the real registry alone.
   expect_identical(openac_registry$ran, before)
+})
+
+test_that("the files testthat discovers are exactly the files expected of it", {
+  # The other half of AC1's guarantee, measured rather than assumed: the
+  # expected set and the set testthat actually EXECUTES agree, over names the
+  # narrower `^test-` pattern used to miss. An underscore- or bare-prefixed
+  # file ran and was required by nothing until M10's review.
+  contents <- list(
+    "test-hyphen.R" = 'test_that("h", { expect_true(TRUE) })',
+    "test_underscore.R" = 'test_that("u", { expect_true(TRUE) })',
+    "testbare.R" = 'test_that("b", { expect_true(TRUE) })',
+    "helper-ignored.R" = "x <- 1"
+  )
+  registry <- run_fixture_suite(contents)
+  dir <- attr(registry, "dir")
+
+  ran <- sort(unique(registry$ran))
+  expect_setequal(ran, c("test-hyphen.R", "test_underscore.R", "testbare.R"))
+  # The point of the pattern: what testthat ran and what the gate expects are
+  # the same set, so nothing testthat executes is exempt from the gate.
+  expect_setequal(expected_test_files(dir), ran)
 })
 
 test_that("installing the tool fakes records nothing about which files ran", {

@@ -26,17 +26,24 @@ recorded_test_files <- function() sort(unique(openac_registry$ran))
 # Content-free BY CONSTRUCTION: it lists names and never opens a file, so
 # nothing any contributor writes INSIDE a test file can add to or remove from
 # this set. That is the guarantee, and it is behavioral -- the set is identical
-# to `sort(list.files(dir, pattern = "^test-.*\\.[Rr]$"))` under arbitrary
+# to `sort(list.files(dir, pattern = "^test.*\\.[rR]$"))` under arbitrary
 # mutation of every member's contents. The two proxies this replaces derived
 # the expected set from what the files SAID (an install count, then a text
 # search), and both diverged from what the suite DID, each time leaving the
 # coverage gate silently disarmed (D-013).
 #
+# The pattern is testthat's OWN, copied from `find_test_scripts()`
+# (`dir(path, "^test.*\\.[rR]$")`, testthat 3.3.2), so the expected set is
+# exactly what the runner executes. It read `^test-.*\\.[Rr]$` until M10's
+# review: a narrower expectation than the runner's discovery is a hole, not a
+# convention -- a `test_foo.R` ran, sorted after this file, and was required by
+# nothing.
+#
 # Parameterized by directory so the fixture suites can hold it to that
 # guarantee over deliberately hostile contents -- including a member that does
 # not parse, which no content-reading implementation survives.
 expected_test_files <- function(dir) {
-  sort(list.files(dir, pattern = "^test-.*\\.[Rr]$"))
+  sort(list.files(dir, pattern = "^test.*\\.[rR]$"))
 }
 
 # Did the runner DECLARE this an unfiltered run of the whole suite?
