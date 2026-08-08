@@ -178,6 +178,41 @@ supported interface. The four exported `find_*` wrappers cover ffmpeg, ffprobe,
 ffplay, and mediainfo only, so there is no supported way to ask tidymedia to
 resolve openface or opensmile.
 
+## Distribution consequence
+
+All figures read at commit `b99f7e8` — observed 2026-08-08.
+
+tidymedia is `Version: 0.1.0.9000`, `License: GPL-3` (`DESCRIPTION:4,14`), carries
+no `Remotes:` field of its own, has no git tags at all, is badged
+lifecycle-experimental (`README.md:9`), and its only documented installation
+route is `devtools::install_github("jmgirard/tidymedia")` (`README.md:29`). It is
+not on CRAN and has never cut a release.
+
+A hard `Imports: tidymedia` would therefore require `Remotes: jmgirard/tidymedia`
+in openac's `DESCRIPTION`. openac already carries `Remotes: bnosac/audio.whisper`
+(`DESCRIPTION:35-36`), and `cairn/DESIGN.md` "Purpose & Scope" states the CRAN
+gate plainly: submission is blocked until there is "a CRAN-legal resolution for
+`audio.whisper` (the `Remotes:` field cannot ship …)".
+
+The honest reading is narrower than "this blocks CRAN": the gate is *already*
+closed by `audio.whisper`, so a tidymedia dependency does not close a gate that
+is open. What it does is **add a second, independent blocker to a gate that
+currently has one**, each needing its own CRAN-legal resolution before
+submission. The `audio.whisper` blocker has at least two known exits already
+under consideration (Additional_repositories, or wrapping whisper.cpp directly);
+a tidymedia blocker's only exits are tidymedia reaching CRAN, or openac vendoring
+what it needs. Both are outside openac's control in a way the current blocker is
+not — `audio.whisper` is a third-party package openac chose to wrap, whereas
+tidymedia is the same maintainer's package, which cuts both ways: the release
+timing is in the maintainer's hands, but so is every clean-break rename.
+
+That last point is the sharpest cost. tidymedia's D014 is an explicit
+clean-break rename policy with no `lifecycle` shims — old names are removed, not
+deprecated — and its own DESIGN records the naming as still unsettled pending a
+follow-up milestone. openac depending on it pre-0.2.0 buys a dependency whose
+function and argument names may change without a deprecation window, in a
+package whose maintainer has deliberately reserved the right to do so.
+
 ## Open questions
 
 - Whether the maintainer wants openac and tidymedia to share one config

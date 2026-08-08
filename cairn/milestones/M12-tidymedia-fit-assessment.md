@@ -100,7 +100,7 @@ ROADMAP rows for whatever the assessment surfaces and this milestone does not do
       (`R/programs_find.R:68`); tidymedia's is in `run_program()`
       (`R/program_management.R:108`) for structured calls and nowhere for its
       `system()`-based escape hatches.
-- [ ] T3. Write the distribution section: tidymedia release status at the pinned
+- [x] T3. Write the distribution section: tidymedia release status at the pinned
       commit, `Remotes:` consequence, interaction with the CRAN gate
       (`cairn/DESIGN.md` "Purpose & Scope") and the existing `Remotes:` entry
       (`DESCRIPTION:35-36`).
@@ -125,6 +125,7 @@ ROADMAP rows for whatever the assessment surfaces and this milestone does not do
 - 2026-08-08: T1 done — set O is 33 members (24 exported, 9 internal, incl. `require_program`), set C is 8; openac exports 48, tidymedia 86. tidymedia pinned at `b99f7e8`; it advanced two commits during M12's planning session, which is why AC1's snapshot `Extraction:` form is the right classifier.
 - 2026-08-08: T2 done — 10 of 33 rows name a counterpart. Two dominant findings: the two packages read/write DIFFERENT rappdirs config dirs (`openac` vs `tidymedia`), so depending on tidymedia for discovery strands existing openac users' recorded tool locations; and tidymedia's `find_program` is unexported, so there is no supported way to ask it to resolve openface/opensmile.
 - 2026-08-08: T2 observed rather than inferred — `glue("{NULL} -version")` is `character(0)` and `system()` on it errors "non-empty character argument expected", so tidymedia's `ffmpeg()` fails on a missing binary without shell-injecting; and an unquoted space-bearing path fails under `system()`, which `R/ffmpeg.R:28` (unquoted) risks and `R/ffprobe.R:21` (quoted) does not.
+- 2026-08-08: T3 done — tidymedia has no CRAN release and no git tags, so a hard dep needs `Remotes: jmgirard/tidymedia`. Framed honestly: openac's CRAN gate is ALREADY closed by `audio.whisper` (`DESCRIPTION:35-36`), so this adds a second independent blocker rather than closing an open gate; the added cost is tidymedia's no-shim clean-break rename policy pre-0.2.0.
 - 2026-08-08: plan chose a committed `references/` synthesis note over keeping the analysis in this milestone file because the CRAN-distribution question and the queued install/discovery candidates will re-read it after this milestone archives; falsified by the decision closing the question with no later reader.
 
 ## Decisions
