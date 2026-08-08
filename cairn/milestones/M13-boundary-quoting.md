@@ -5,7 +5,7 @@
 - **Depends on:** —
 - **Driving RR:** —
 - **Principles touched:** IP1, GP5, GP7
-- **Branch/PR:** `m13-boundary-quoting`
+- **Branch/PR:** `m13-boundary-quoting` · https://github.com/jmgirard/openac/pull/14
 
 ## Goal
 
@@ -129,6 +129,8 @@ direct docs commit to the default branch, not a milestone.
 - 2026-08-08: T9 found debris I committed myself at T5, and `R CMD check` is what caught it. The broken intermediate state at T5 had the old fakes running `sub('^.*"([^"]+)"$', ..., args)` against a token VECTOR; `sub()` and `file.create()` are both vectorized, so instead of erroring they created one zero-byte file per token in `tests/testthat/` — `'-y'`, `'0:a:0'`, `'-c:a'` and nine more. My `git add -A` then swept all twelve into bc7199f, which is exactly the stranger-sweeping the git model warns against. Removed in this commit; check now reports no non-portable file names, and a clean run creates none.
 - 2026-08-08: a scripted edit had normalized `R/use_ffprobe.R` and `R/use_openface.R` from CRLF to LF as a side effect, burying ~37 real changed lines under ~400 of ending churn. Restored; the branch squash-merges, so the net diff is what lands and it is now 30 and 37 lines. Both files keep the endings they had on main — this milestone made no decision about line endings.
 - 2026-08-08: M13 complete, status review. Suite 585 pass / 0 fail / 2 skip (the pre-existing OpenFace and whisper real-tool gates); `R CMD check` 0/0/0; `devtools::document()` no diff.
+- 2026-08-08: review in progress, draft PR #14 open; CI green on all five jobs (macOS, Windows, Ubuntu release/devel/oldrel) — Windows is the only verification of the cmd-style quoting branch, which no local run reaches. Two of three review lenses reported zero findings; the diff-bug lens is still running.
+- 2026-08-08: review found AC4 FAILS as written. Its procedure — `grep -n 'boundary_args' tests/testthat/test-commands-*.R` returns nothing — returns one line, a comment at `test-commands-probe.R:25` explaining why those assertions moved off the collapsing accessor. The substantive claim holds; the named procedure over-matches prose. Disposition pending the third lens, so one return covers everything.
 - 2026-08-08: plan chose to arm the unquoted-whitespace invariant in the harness over asserting it per command test, because the harness already carries the sibling absolute-path invariant (helper-openac.R:605) and a per-test assertion is skipped by omission; falsified by a legitimate boundary call the invariant cannot express, requiring more opt-outs than the one test-helper-boundary.R needs.
 
 ## Decisions
