@@ -30,7 +30,7 @@ completeness itself is observed (D-013 stands unamended).
 
 ## Acceptance criteria
 
-- [ ] AC1: Over a generated fixture directory holding exactly these twelve
+- [x] AC1: Over a generated fixture directory holding exactly these twelve
       members, the scanner's result is `identical()` to the sorted vector of the
       seven marked ✓ — reported ✓: `test-top-bare.R` (top-level `skip()`),
       `test-top-qualified.R` (`testthat::skip_on_cran()`), `test-top-indented.R`
@@ -42,30 +42,30 @@ completeness itself is observed (D-013 stands unamended).
       `test-skipname.R` (top-level `skipper <- function() NULL`),
       `test-fn-def.R` (top-level `gate <- function() skip()` — defining is not
       skipping), `helper-top-skip.R` (top-level `skip()`, but not a test file).
-- [ ] AC2: Adding a member that does not parse to AC1's fixture directory
+- [x] AC2: Adding a member that does not parse to AC1's fixture directory
       changes neither the scanner's result nor its success — the same
       `identical()` assertion holds under `expect_no_error()` and
       `expect_no_warning()`.
-- [ ] AC3: No member of `expected_test_files(test_path("."))` has a top-level
+- [x] AC3: No member of `expected_test_files(test_path("."))` has a top-level
       expression, outside any `test_that()` call and outside any function
       definition, containing a call to a function whose name begins `skip` —
       asserted in `test-zzz-command-contract.R` by the scanner returning
       `character()`, and passing under `devtools::test()`. The claim is exactly
       what that walk enumerates: a top-level call to a locally defined wrapper
       that itself skips is a disclosed residual hole.
-- [ ] AC4: With a `skip_on_cran()` temporarily hoisted above the first
+- [x] AC4: With a `skip_on_cran()` temporarily hoisted above the first
       `test_that()` of `tests/testthat/test-real-tools.R`, `devtools::test()`
       reports a failure raised by AC3's assertion and naming
       `test-real-tools.R`. Run recorded in the Review section, mutation reverted
       in the same task.
-- [ ] AC5: A test asserts both that parsing `tests/testthat.R` finds a top-level
+- [x] AC5: A test asserts both that parsing `tests/testthat.R` finds a top-level
       `Sys.setenv()` call setting `OPENAC_FULL_SUITE` to a value
       `declared_full_run()` reads as `TRUE`, and that when
       `Sys.getenv("_R_CHECK_PACKAGE_NAME_")` is non-empty `declared_full_run()`
       is `TRUE`. Deleting that `Sys.setenv()` line makes `devtools::test()`
       fail. Both the passing run and the mutation run recorded in the Review
       section, mutation reverted in the same task.
-- [ ] AC6: The profile's verify slot is clean — `devtools::document()` produces
+- [x] AC6: The profile's verify slot is clean — `devtools::document()` produces
       no diff and `devtools::test()` passes. Both outputs recorded.
 
 ## Coverage
@@ -120,3 +120,49 @@ completeness itself is observed (D-013 stands unamended).
 ## Decisions
 
 ## Review
+
+**PR:** https://github.com/jmgirard/openac/pull/12
+
+### Acceptance-criterion evidence (2026-08-08, all re-executed at review)
+
+- AC1: the twelve-member fixture directory rebuilt and `top_level_skips()` called
+  directly — reported the seven expected members, and `identical()` against the
+  sorted expectation returned TRUE. Also green as a suite assertion
+  (`test-harness-recording.R`, 19 pass).
+- AC2: a non-parsing member added to that same directory — result `identical()`
+  to the seven-member expectation, no error, and no warning surfaced by a
+  `withCallingHandlers()` probe.
+- AC3: `top_level_skips("tests/testthat")` reported 0 files; the assertion at
+  `test-zzz-command-contract.R:176` passes in a full `devtools::test()`
+  (548 pass, 0 fail, 2 skip — OpenFace and whisper absent on this machine).
+- AC4: mutation re-run at review — `skip_on_cran()` hoisted above the first
+  `test_that()` of `test-real-tools.R` gives FAIL 1, raised by
+  `test-zzz-command-contract.R:176` with `actual: "test-real-tools.R"`; the
+  criterion's "raised by AC3's assertion and naming that file" is met by that
+  line and value. Reverted, tree clean.
+- AC5: static half green in the same 548-pass run; mutation re-run at review —
+  deleting `Sys.setenv(OPENAC_FULL_SUITE = "true")` from `tests/testthat.R`
+  gives FAIL 1 at `test-zzz-command-contract.R:151`,
+  `Expected declaration_present(runner) to be TRUE`. Reverted, tree clean.
+- AC6: `devtools::document()` produced no diff (`git status` empty after the
+  run); `devtools::test()` passes at 548.
+
+### Consistency gate
+
+- CI on PR #12: pass on all five jobs — ubuntu release / devel / oldrel-1,
+  macos-latest, windows-latest. These are the runs in which `R CMD check`
+  declares a full suite, so the contract gate enforced rather than skipped.
+- `cairn_validate.py`: all checks passed, exit 0.
+- `cairn_impact.py`: not run — no DESIGN.md principle changed.
+- `devtools::check()`: 0 errors, 0 warnings, 1 NOTE — the standing spelling
+  NOTE (its own ROADMAP candidate). Every hit it lists is in an `.Rd`,
+  `NEWS.md`, `README.md` or a vignette; `git diff --name-only main..HEAD` shows
+  this branch touches no such path, so the NOTE is unchanged from the default
+  branch by construction rather than by comparison of remembered counts (the
+  M06 lesson's trap).
+- Profile `consistency-gate`: `document()` no-diff ✓; generated files not
+  hand-edited (the diff touches no `R/`, `man/`, `NAMESPACE` or `DESCRIPTION`
+  path) ✓; README.Rmd untouched, so no re-knit owed ✓; no `_pkgdown.yml` in the
+  repo, so the pkgdown check no-ops ✓; no NEWS entry owed — the milestone is
+  test-code and tracking only, with no user-visible change ✓; no new top-level
+  files ✓.
