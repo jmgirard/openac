@@ -5,6 +5,21 @@
 # so a new wrapper cannot be added without either a test or an explicit
 # deferral. Named test-zzz-* so it runs after the files whose calls it counts.
 
+# The canary, deliberately FIRST in the file (D-013).
+#
+# It asserts this file's own execution was recorded, through the same shadow
+# every other file is recorded by -- there is no self-registration path, and
+# adding one would satisfy this assertion while the recorder was dead, which is
+# the exact failure it exists to catch. Being first means a later top-level
+# error in this file cannot stop it running.
+#
+# It RUNS, never skips, under every invocation: a full run, a filtered run, and
+# `test_file()` on this file alone. So a broken recorder fails the next run of
+# any scope, rather than turning the gate into a permanent silent skip.
+test_that("the contract file's own execution is recorded", {
+  expect_true("test-zzz-command-contract.R" %in% recorded_test_files())
+})
+
 # Symbols occurring anywhere in a language object. Deliberately an
 # over-approximation over call heads: os_extract_dir() and aw_transcribe_dir()
 # reach their tools through do.call(what = os_extract, ...), where the function
