@@ -1,20 +1,19 @@
 # Roadmap
 
 _The only authority on milestone status. Grouped by status, not ID._
-_Last hygiene check: 2026-08-08 (M13 and M14 planned from M12's harvest; their two candidate rows graduated, two deferrals added in their place; the collision note shipped to README, its row narrowed to the 1.0 rename half)_
+_Last hygiene check: 2026-08-08 (M13 merged and archived; M08 pruned under terminal-row retention; one candidate added for the Windows `%` gap M13's review surfaced; M14 is workable)_
 _Released 0.1.0 (GitHub) 2026-07-11._
 
 ## Milestones
 
 | ID | Title | Status | Depends on | Priority | File/Archive |
 |---|---|---|---|---|---|
-| M13 | Quote at the process boundary, not at the call site | review | — | high | milestones/M13-boundary-quoting.md |
+| M13 | Quote at the process boundary, not at the call site | done | — | high | milestones/archive/M13-boundary-quoting.md |
 | M14 | A bad file is an outcome, not the end of the batch | planned | M13 | normal | milestones/M14-resilient-stream-count.md |
 | M12 | Does openac belong on top of tidymedia? — a fit assessment, and a decision | done | — | high | milestones/archive/M12-tidymedia-fit-assessment.md |
 | M11 | A wholly-skipped test file cannot exist — the coverage gate's blind spot, closed at the door | done | M10 | normal | milestones/archive/M11-forbid-top-level-skips.md |
 | M09 | Test-harness hardening — fake fidelity at the tool boundary | done | — | normal | milestones/archive/M09-harness-hardening.md |
 | M10 | Command-contract coverage gate — completeness observed, not inferred | done | M09 | high | milestones/archive/M10-coverage-gate-run-scope.md |
-| M08 | GitHub Actions CI — R CMD check across platforms | done | — | high | milestones/archive/M08-github-actions-ci.md |
 
 ## Candidates
 <!-- unnumbered ideas; one line each: idea — added YYYY-MM-DD — links -->
