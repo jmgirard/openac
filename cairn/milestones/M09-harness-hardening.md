@@ -1,6 +1,6 @@
 # M09: Test-harness hardening — fake fidelity and a non-vacuous coverage gate
 
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** normal
 - **Depends on:** —
 - **Driving RR:** —
@@ -33,7 +33,7 @@ percentages remain a diagnostic, never a gate (PROFILE `test-doctrine`).
 
 ## Acceptance criteria
 
-- [ ] AC1: `helper-openac.R` defines exactly one executability predicate —
+- [x] AC1: `helper-openac.R` defines exactly one executability predicate —
       "would a real `Sys.which()` resolve this path" — taking the platform as an
       explicit argument rather than reading `.Platform$OS.type` internally, and
       both `local_fake_tools()` and `local_fake_downloads()` install one shared
@@ -41,7 +41,7 @@ percentages remain a diagnostic, never a gate (PROFILE `test-doctrine`).
       `local_fake_os()` names, not the host's. Evidence:
       `grep -c "fake_is_executable <- function\|fake_sys_which <- function"
       tests/testthat/helper-openac.R` returns 2, both at top level.
-- [ ] AC2: the predicate models what R's `Sys.which()` was measured to do (M09
+- [x] AC2: the predicate models what R's `Sys.which()` was measured to do (M09
       probe, R 4.6.1, GitHub runners). Driven with the platform set to Windows it
       returns `TRUE` for an existing file carrying any extension — `.exe`,
       `.bat`, `.cmd`, `.com` and `.txt` all measured as resolving — `TRUE` for an
@@ -52,20 +52,20 @@ percentages remain a diagnostic, never a gate (PROFILE `test-doctrine`).
       drive as root (`file.access(path, 1L)` returns 0 there whatever the mode).
       Both drives run wherever the suite runs, so a macOS run still exercises the
       Windows branch.
-- [ ] AC3: `local_fake_tools()` creates fixture binaries carrying the extension
+- [x] AC3: `local_fake_tools()` creates fixture binaries carrying the extension
       the host platform requires (`.exe` on Windows, none elsewhere), the fake
       resolves a bare program name to that fixture on every platform, and
       `boundary_tools()` records the extension-stripped program name so every
       existing tool assertion holds unchanged. Evidence: `R CMD check` green on
       all five CI platforms in this milestone's PR (macOS, Windows, Ubuntu
       devel/release/oldrel-1).
-- [ ] AC4: `local_fake_tools()` redirects every `rappdirs::` function openac's
+- [x] AC4: `local_fake_tools()` redirects every `rappdirs::` function openac's
       package code calls. A test enumerates those call sites by walking the
       loaded `openac` namespace for `rappdirs::user_*_dir` calls — the source
       tree is absent under `R CMD check` — and asserts each named function
       returns something other than its real value inside scope — so a future
       call site to a third `rappdirs` dir fails the test rather than leaking.
-- [ ] AC5: `fake_system2()` fails the calling test when the `command` it
+- [x] AC5: `fake_system2()` fails the calling test when the `command` it
       receives is not absolute, decided by an explicit `is_absolute_path()`
       matching the three absolute forms — POSIX `/x`, UNC `\\server\share`, and
       a Windows drive `C:/x` or `C:\x`. Not
@@ -75,21 +75,21 @@ percentages remain a diagnostic, never a gate (PROFILE `test-doctrine`).
       equal and passed — exactly the regression the check guards against. The
       check runs on every boundary call routed through `local_fake_tools()`, not
       a chosen sample. A test asserts it fires for a relative command.
-- [ ] AC6: a `boundary_argv(state)` accessor returns each call's `args` exactly
+- [x] AC6: a `boundary_argv(state)` accessor returns each call's `args` exactly
       as `system2()` received it, and `boundary_args()` is defined in terms of
       it. A test asserts `boundary_argv()` distinguishes a call made with
       `c("-i", "a b")` from one made with `"-i a b"`, which `boundary_args()`
       renders identically.
-- [ ] AC7: a test computes every set of openac namespace names bound to one
+- [x] AC7: a test computes every set of openac namespace names bound to one
       identical closure and asserts `openac_name_of()` returns the recorded
       primary for each; an alias class absent from the recorded table fails the
       test naming it. The four classes today are `ffm`/`ffmpeg`, `ffp`/`ffprobe`,
       `of`/`openface`, `opensmile`/`os`.
-- [ ] AC8: with owner *attribution* disabled while the harness still records
+- [x] AC8: with owner *attribution* disabled while the harness still records
       that it ran, a full suite run makes `test-zzz-command-contract.R` FAIL
       rather than skip; `testthat::test_file()` on that file alone still skips.
       Both runs and their output go in the work log.
-- [ ] AC9: `Rscript -e 'devtools::test()'` clean and `Rscript -e
+- [x] AC9: `Rscript -e 'devtools::test()'` clean and `Rscript -e
       'devtools::check()'` clean (0 errors, 0 warnings; the standing spelling
       NOTE justified).
 
@@ -127,7 +127,7 @@ percentages remain a diagnostic, never a gate (PROFILE `test-doctrine`).
 - [x] T8: replace `test-zzz-command-contract.R`'s `skip_if(length(covered) == 0)`
       ([:80](tests/testthat/test-zzz-command-contract.R:80)) with a run-scope
       signal separate from attribution; record both runs.
-- [ ] T9: `devtools::document()` if roxygen changed, `devtools::test()`,
+- [x] T9: `devtools::document()` if roxygen changed, `devtools::test()`,
       `devtools::check()`; retire the M08 executability lesson from LESSONS.md
       and write its replacement.
 
@@ -151,6 +151,9 @@ percentages remain a diagnostic, never a gate (PROFILE `test-doctrine`).
 - 2026-08-07: LESSONS — retired the M06/M08 executability lesson (`test-helper-boundary.R` now fails on the mistake it warned about, D-051) and replaced it with the measured `Sys.which()` rule; added the `normalizePath()` absoluteness trap.
 - 2026-08-07: local `devtools::check()` clean — 0 errors, 0 warnings, 1 NOTE, the standing spelling NOTE that already carries its own candidate row.
 - 2026-08-07: first branch CI run — 4/5 platforms green, Windows failed on one assertion T3 had missed (`test-helper-boundary.R:71` read the raw `$command` basename, which is `ffmpeg.exe` there) with 466 pass / 1 fail; both predicate branches and every other assertion held. Routed that read through `fake_program_name()`. This is the failure the plan gate predicted and the reason T3 refused to trust a macOS run.
+- 2026-08-07: AC3 evidence — branch CI run 31238766612 green on all five platforms (macOS release, Windows release, Ubuntu devel/release/oldrel-1).
+- 2026-08-07: temporary `probe-syswhich.yaml` deleted; the PR makes `R-CMD-check.yaml` run on the same five platforms. Its measurements survive as the comment on `fake_is_executable()` and the M09 LESSONS entry.
+- 2026-08-07: T9 done; all criteria met. Status → review.
 - 2026-08-07: 9 acceptance criteria exceeds the 7 tripwire deliberately — one per independent review finding plus the profile's verify slot, each separately fenceable at review; merging them would blur which finding a piece of evidence closes.
 
 ## Decisions
