@@ -91,7 +91,7 @@ completeness itself is observed (D-013 stands unamended).
 - [x] T3: Add AC3's assertion to `tests/testthat/test-zzz-command-contract.R`
       beside the existing bypassing-forms test (test-zzz-command-contract.R:135),
       with prose stating the rule and its disclosed hole.
-- [ ] T4: Mutation-verify T3: hoist a `skip_on_cran()` above the first
+- [x] T4: Mutation-verify T3: hoist a `skip_on_cran()` above the first
       `test_that()` of `test-real-tools.R` (test-real-tools.R:51), record the
       failing `devtools::test()` output, revert.
 - [ ] T5: Add AC5's declaration guard — static parse of `tests/testthat.R` plus
@@ -111,6 +111,7 @@ completeness itself is observed (D-013 stands unamended).
 - 2026-08-08 (T1): fixture test added to `test-harness-recording.R`; all three assertions fail with `could not find function "top_level_skips"`, the pre-implementation red T1 plans for.
 - 2026-08-08 (T2): `top_level_skips()` and `skip_call_present()` added to `helper-openac.R`; the fixture file is green (19 pass, 0 fail) and the scanner returns `character()` over the real suite.
 - 2026-08-08 (T3): assertion added to `test-zzz-command-contract.R`; `devtools::test()` reports 546 pass, 0 fail, 2 skip (OpenFace and whisper absent on this machine).
+- 2026-08-08 (T4): mutation verified — a `skip_on_cran()` hoisted above the first `test_that()` of `test-real-tools.R` gives FAIL 1, raised by `test-zzz-command-contract.R:157` with `actual: "test-real-tools.R"`; the completeness check stays green because `NOT_CRAN=true` makes the hoisted call a runtime no-op, so the scanner is the sole cause. Reverted.
 - 2026-08-08: plan chose a parse walk excluding `test_that()` and `function` subtrees over a top-level call-head match, because the head match misses `if (cond) skip()`, `local({ skip() })` and `suppressWarnings(skip_on_cran())`, each of which aborts a file identically; falsified by a skip form that aborts a file while sitting inside one of the two excluded subtrees.
 
 ## Decisions
