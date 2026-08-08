@@ -6,7 +6,7 @@
 - **Driving RR:** —
 - **Principles touched:** GP3, GP6, GP7, IP1
 
-- **Branch/PR:** `m07-wrapper-tests-remainder`
+- **Branch/PR:** `m07-wrapper-tests-remainder` / PR #8 https://github.com/jmgirard/openac/pull/8
 
 ## Goal
 
@@ -30,11 +30,11 @@ submission → user-declared release window (D-050).
 
 ## Acceptance criteria
 
-- [ ] AC1 The deferral list in `test-command-contract.R` is empty and the test
+- [x] AC1 The deferral list in `test-command-contract.R` is empty and the test
       passes with its computed domain covering the full transitive closure — so
       every openac function that can reach `system2` records a command
       assertion, with no name exempted.
-- [ ] AC2 Each of `install_ffmpeg_win`, `install_openface_win`,
+- [x] AC2 Each of `install_ffmpeg_win`, `install_openface_win`,
       `install_opensmile_win` and `install_opensmile_mac` has tests asserting the
       download URL and install path it constructs, with `utils::download.file` and
       `archive::archive_extract` mocked to record their arguments and to fail
@@ -43,13 +43,13 @@ submission → user-declared release window (D-050).
       `rlang::check_installed("audio.whisper")`. The mocks are
       the procedure that establishes no test performs a real network request or
       writes outside a per-test temporary directory.
-- [ ] AC3 Every installer whose name carries a `_win` or `_mac` suffix — the
+- [x] AC3 Every installer whose name carries a `_win` or `_mac` suffix — the
       set computed from `getNamespaceExports("openac")` by suffix match, not a
       hand list — aborts with a classed `cli` condition when `Sys.info()`
       reports a different OS, tested in both directions per installer. On an OS
       with no installer for a tool, the message names the tool and states that
       no automated installer exists rather than failing silently.
-- [ ] AC4 For each `*_dir` wrapper, tests cover: extension matching (including
+- [x] AC4 For each `*_dir` wrapper, tests cover: extension matching (including
       that a file named `clip.mp4.backup.mp4` and a directory named `mp4` do not
       mis-derive), `recursive` on and off, output-path derivation for an input
       directory containing regex metacharacters, and GP6 skip-and-report when
@@ -58,10 +58,10 @@ submission → user-declared release window (D-050).
       unanchored `gsub(inext, …)`, and the inconsistent `paste0(inext, "$")`
       vs `paste0("\\.", inext, "$")` patterns) are fixed (D-002 permits the
       behavior change).
-- [ ] AC5 `aw_transcribe()` and `aw_transcribe_wav()` are tested with
+- [x] AC5 `aw_transcribe()` and `aw_transcribe_wav()` are tested with
       `audio.whisper`'s `predict` mocked, asserting the parameters passed
       through and the file written, with no model download and no whisper run.
-- [ ] AC6 `tests/testthat/test-real-tools.R` performs at least one real
+- [x] AC6 `tests/testthat/test-real-tools.R` performs at least one real
       invocation per wrapped tool behind `skip_if(!check_<tool>())` and
       `skip_on_cran()`; `devtools::test()` passes both with the tools installed
       and with resolution forced to fail, and `devtools::check()` reports 0
@@ -114,3 +114,91 @@ submission → user-declared release window (D-050).
 ## Decisions
 
 ## Review
+
+_2026-08-07, PR #8. Branch cut from `main` at de8ec49; `main` had not moved
+(`git rev-list HEAD..origin/main` = 0), so no merge-forward was needed and every
+measurement below is against a current branch._
+
+**Consistency gate.** `cairn_validate` exits 0 — all 16 CHECKs PASS and all 8
+advisories OK. No `DESIGN.md` principle changed, so `cairn_impact` does not
+apply. Toolchain gate (`r-package` profile): `devtools::document()` leaves the
+tree clean (no `NAMESPACE` or `man/` diff); `NAMESPACE` and `README.Rmd` are
+untouched by the branch so no re-knit is owed; no `_pkgdown.yml` exists, so that
+check is not applicable; `NEWS.md` carries entries for every user-visible change;
+no top-level file was added, so no `.Rbuildignore` entry is owed;
+`devtools::check()` reports 0 errors, 0 warnings, 1 NOTE.
+
+**AC evidence**
+
+- AC1 — `system2_closure()` computed live at review returns 27 members;
+  `length(deferred)` is 0, so all 27 are enforced and none exempt. Run alone, the
+  contract file skips its coverage gate by design ("needs the full test suite");
+  in the full-suite run it executes, and the only two skips in the whole suite are
+  the real-tool gates for OpenFace and audio.whisper — so the gate ran and passed.
+- AC2 — `test-installers.R` 85 pass / 0 fail. Each of the four downloading
+  installers asserts its URL, extraction directory and registered tool location
+  with `expect_identical`, the location read back from the config file
+  `set_program()` wrote; `install_whisper` is pinned to its
+  `rlang::check_installed("audio.whisper")` delegation. Discrimination measured by
+  mutation, not inferred: bumping `install_opensmile_win`'s pinned URL from v3.0.2
+  to v3.0.3 turned the suite red on `download_urls(state)` (1 fail / 84 pass), and
+  restoring it returned 85 pass. The no-real-network / no-stray-write claim rests
+  on two measurements — `test-helper-boundary.R` asserts the `download.file` and
+  `archive_extract` fakes actually intercept (20 pass), and this machine's real
+  openac config dir was unmodified across the installer runs
+  (`find -newermt '-3 minutes'` returned 0; its contents still date from 2024).
+- AC3 — the guarded set is computed at review from
+  `getNamespaceExports("openac")` by suffix and returns exactly
+  `install_ffmpeg_win`, `install_openface_win`, `install_opensmile_mac`,
+  `install_opensmile_win`; `test-installers.R` asserts that set and its fixture
+  table are mutually exhaustive, so a future suffixed installer fails rather than
+  going unexercised. Four per-installer test bodies run over that computed set —
+  wrong platform aborts (`class = "openac_wrong_os"`, with zero downloads and zero
+  extractions recorded, so the guard precedes the network), the no-installer-here
+  message names the tool and `set_<tool>()`, the right platform proceeds to a
+  download, and a failed download reports and installs nothing. Both message
+  branches are pinned as mutually exclusive: `install_opensmile_win()` on Darwin
+  names `install_opensmile_mac` and does *not* say "no automated", while
+  `install_ffmpeg_win()` on Darwin says "no automated" and does not invent a
+  sibling. Guard discrimination measured by mutation during implementation:
+  deleting `install_ffmpeg_win()`'s guard turned three tests red, and they failed
+  on a different error class rather than on bare failure.
+- AC4 — `test-batch-dirs.R` 42 pass / 0 fail, over 13 test bodies covering
+  extension matching (`clip.mp4.backup.mp4`, `notes.notmp4`, a directory named
+  `mp4`, a leading-dot `inext`, and a metacharacter extension), `recursive` on and
+  off, derivation under an input directory named `study(1)+raw.data`, an input
+  outside `indir`, the empty-directory case, and GP6 skip-and-report in three
+  shapes (one file of two fails, the warning names the file, all files fail). The
+  derivation fixes are backed as regressions by executing the pre-M07 code against
+  the same fixture: `gsub(indir, outdir, infiles)` matched nothing under that
+  directory name — `(1)` is a capture group and `+` a quantifier — so outputs were
+  derived back INTO the input tree, and `b.mp4.backup.mp4` became
+  `b.csv.backup.csv`; `list.files(pattern = "mp4$")` also returned
+  `notes.notmp4`.
+- AC5 — `test-whisper-transcribe.R` 42 pass / 0 fail, asserting the five
+  parameters `aw_transcribe_wav()` hands whisper (`object`, `newdata`, `type`,
+  `language`, `trace`), that `whisper_args` merge, that the `.rds` holds the whole
+  object and the `.csv` only `$data`, that nothing is written when no path is
+  given, and that whisper is never reached on any of the four rejection branches.
+  The no-download / no-whisper-run claim is measured rather than argued:
+  `requireNamespace("audio.whisper")` returns FALSE on this machine, so no whisper
+  code exists here to run and no model could be fetched.
+- AC6 — `test-real-tools.R` gates every test on `skip_on_cran()` plus its tool's
+  `check_*()`, and covers ffprobe, ffmpeg, openSMILE (single file and `_dir`),
+  OpenFace and whisper. Both suite states measured. Tools installed: 439 pass / 0
+  fail / 2 skip, the two skips being OpenFace and audio.whisper, which are absent
+  here. Resolution forced to fail — PATH reduced to a shim dir holding only R, and
+  `HOME` redirected so the recorded openSMILE config is unreachable, confirmed by
+  `Sys.which()` returning empty for both `ffmpeg` and `SMILExtract` — 426 pass / 0
+  fail / 7 skip, every real-tool test skipping and the mocked layer unaffected.
+  `devtools::check()` re-run at review: `Status: 1 NOTE`, 0 errors, 0 warnings.
+  The NOTE is M06's recorded spelling-diff baseline, established by measurement:
+  `spelling::spell_check_package()` on this branch and on a `main` worktree each
+  return 54 words with a byte-identical sorted list, so the branch adds no NOTE
+  and no new word.
+
+**CI.** PR #8 green on all five `check-standard` jobs: macos-latest (release),
+windows-latest (release), ubuntu-latest (release, devel, oldrel-1). The Windows
+job is the load-bearing one here — the new installer tests mock `Sys.info()` to
+run a Windows installer's path on whatever host CI provides, and M08's two CI
+failures were exactly this class.
