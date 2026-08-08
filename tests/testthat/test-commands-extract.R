@@ -100,8 +100,18 @@ test_that("of_extract() toggles each flag independently", {
     state <- local_fake_tools(results = list("ok"))
     do.call(of_extract, c(list(infile, outfile), replace(off, nm, TRUE)))
     # Token containment, not substring: `-pose` must be its own argument, not
-    # a fragment of a longer one.
-    expect_true(all(shQuote(flags[[nm]]) %in% boundary_argv(state)[[1]]), info = nm)
+    # a fragment of a longer one. And for the one flag that carries a VALUE,
+    # adjacency as well -- `%in%` alone asserted that `-multi_view` and `1`
+    # each appear somewhere, which `c("-multi_view", "-2Dfp", "1")` satisfies
+    # (M13 review B7).
+    argv <- boundary_argv(state)[[1]]
+    expect_true(all(shQuote(flags[[nm]]) %in% argv), info = nm)
+    if (length(flags[[nm]]) > 1L) {
+      expect_identical(
+        boundary_value(argv, flags[[nm]][[1]]), flags[[nm]][[2]],
+        info = nm
+      )
+    }
   }
 })
 

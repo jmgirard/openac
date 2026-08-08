@@ -620,15 +620,28 @@ local_fake_tools <- function(results = list(),
     # that can reach a tool routes at least one. A per-test assertion is skipped
     # by omission, which is how the next assembler would slip through.
     #
-    # The quote character is DERIVED from shQuote() rather than written out, so
-    # this stays strict per platform: a hand-written `"..."` on unix would pass a
-    # permissive both-characters test while still expanding `$`, which is the bug
-    # measured at M13 T1, not a variant of it.
+    # EITHER quote character counts as enclosing, and the first cut of this
+    # check got that wrong. It derived one character with
+    # `substr(shQuote("x"), 1L, 1L)` -- `'` on unix -- on the premise that
+    # shQuote always wraps in it. It does not: `shQuote(type = "sh")` switches
+    # to the DOUBLE-quote branch whenever the string contains an apostrophe.
+    # MEASURED: `shQuote("Jeff's clip.mp4")` is `"Jeff's clip.mp4"`. So a
+    # correct call on a path with an apostrophe and a space aborted here,
+    # accusing its call site of hand-interpolating quotes (M13 review B1).
+    #
+    # Accepting both is deliberately WEAKER than the strict version it
+    # replaces: a hand-written `"..."` on unix now passes, and that form does
+    # still expand `$`. It is accepted because the strict version has FALSE
+    # POSITIVES on correct code, and a guard that aborts correct calls is worse
+    # than one that misses a form nothing in the package produces -- every
+    # openac command goes through run_tool(). A round-trip test
+    # (`identical(el, shQuote(unquote(el)))`) would keep the strictness, but it
+    # false-positives in turn on the double-quote branch's backslash escaping,
+    # so it trades one wrong abort for another.
     if (isTRUE(check_quoting) && length(args) > 1L) {
-      qc <- substr(shQuote("x"), 1L, 1L)
       bare <- vapply(as.character(args), function(el) {
         if (!grepl("[[:space:]]", el)) return(FALSE)
-        !(nchar(el) >= 2L && startsWith(el, qc) && endsWith(el, qc))
+        !boundary_is_quoted(el)
       }, logical(1), USE.NAMES = FALSE)
       if (any(bare)) {
         stop(
@@ -813,8 +826,28 @@ boundary_argv <- function(state) {
 }
 
 # Just the argument strings, in call order.
+#
+# NOT for command assertions. Since M13 every openac assembler emits a token
+# vector, so collapsing erases the boundaries that carry the meaning; assert
+# with boundary_argv() instead. That holds even for the legacy single-string
+# form, where collapsing IS lossless -- precisely because it is lossless there,
+# asserting through this accessor proves nothing about which form was used.
+# It survives for the two places that legitimately want one flat string: the
+# accessor's own tests, and filtering a call by tool.
 boundary_args <- function(state) {
   vapply(boundary_argv(state), paste, character(1), collapse = " ")
+}
+
+# Is this token wrapped in a matching pair of shell quotes?
+#
+# BOTH `'...'` and `"..."` count, because `shQuote()` produces both: the
+# sh-style default wraps in single quotes, but switches to double quotes when
+# the string itself contains an apostrophe, and the cmd style always uses
+# double quotes. Reading only one of them is the M13 review B1 defect.
+boundary_is_quoted <- function(x) {
+  if (nchar(x) < 2L) return(FALSE)
+  first <- substr(x, 1L, 1L)
+  identical(first, substr(x, nchar(x), nchar(x))) && first %in% c("'", "\"")
 }
 
 # The output path a boundary call was told to write, recovered from its argv.
@@ -837,12 +870,18 @@ boundary_outfile <- function(args) {
 
 # Strip the one layer of quoting run_tool() added to a token. See the caveat
 # above: outer quote characters only.
+#
+# Reads either quote character via boundary_is_quoted(). The single-character
+# version this replaces left the wrapping `"` in place for an apostrophe-bearing
+# path, so boundary_outfile() returned a path WITH literal quotes and the
+# side-effecting fakes created a quote-named file -- silently, which is the
+# failure mode this helper exists to remove (M13 review B2).
 boundary_unquote <- function(x) {
-  qc <- substr(shQuote("x"), 1L, 1L)
-  ifelse(
-    nchar(x) >= 2L & startsWith(x, qc) & endsWith(x, qc),
-    substr(x, 2L, nchar(x) - 1L),
-    x
+  vapply(
+    as.character(x),
+    function(el) if (boundary_is_quoted(el)) substr(el, 2L, nchar(el) - 1L) else el,
+    character(1),
+    USE.NAMES = FALSE
   )
 }
 
@@ -853,10 +892,26 @@ boundary_unquote <- function(x) {
 # substring: it asserts that `path` is the argument AFTER `-I` rather than that
 # the two happen to appear near each other, so a wrapper that emitted them in
 # the wrong order, or glued into one token, no longer passes.
+# Matching is done on UNQUOTED values, never by comparing against
+# `shQuote(flag)`. `shQuote()` chooses its quoting style for the whole VECTOR,
+# not per element: MEASURED, `shQuote(c("-i", "Jeff's.mp4"))` double-quotes
+# BOTH elements, while `shQuote("-i")` on its own single-quotes. So a scalar
+# `shQuote(flag)` does not match the recorded token whenever any OTHER element
+# of that argv contained an apostrophe, and the accessor silently found nothing.
+#
+# Returns every value following a match, so a flag appearing more than once
+# yields one element per occurrence -- `test-batch-dirs.R` relies on that for
+# `-csvoutput`/`-lldcsvoutput`. Absent flag gives `character(0)`; a flag in the
+# final position would index past the end, so that is an error rather than a
+# silent `NA`.
 boundary_value <- function(args, flag) {
-  args <- as.character(args)
-  at <- which(args == shQuote(flag))
-  boundary_unquote(args[at + 1L])
+  vals <- boundary_unquote(as.character(args))
+  at <- which(vals == flag)
+  if (any(at == length(vals))) {
+    stop(sprintf("boundary_value: %s is the last token, so it has no value", flag),
+         call. = FALSE)
+  }
+  vals[at + 1L]
 }
 
 # The outermost openac function responsible for each boundary call.

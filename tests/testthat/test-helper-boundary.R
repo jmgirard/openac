@@ -374,6 +374,34 @@ test_that("the check exempts the two forms that are not loose tokens", {
   expect_no_error(system2(bin, c("-i", "a.mp4")))
 })
 
+test_that("boundary_value() matches on unquoted values, not on a quoted flag", {
+  # M13 review. shQuote() picks its style for the whole VECTOR: one element
+  # containing an apostrophe double-quotes every element, while the flag quoted
+  # on its own would be single-quoted. Comparing against a scalar shQuote(flag)
+  # therefore found nothing, silently, on exactly the paths M13 exists to
+  # support.
+  plain <- shQuote(c("-i", "a b.mp4", "-c", "copy"))
+  apost <- shQuote(c("-i", "Jeff's clip.mp4", "-c", "copy"))
+
+  expect_identical(boundary_value(plain, "-i"), "a b.mp4")
+  expect_identical(boundary_value(apost, "-i"), "Jeff's clip.mp4")
+  # The two argvs really did take different shQuote branches, so this is not
+  # asserting the same case twice.
+  expect_false(identical(substr(plain[[1]], 1L, 1L), substr(apost[[1]], 1L, 1L)))
+})
+
+test_that("boundary_value() reports its degenerate cases rather than hiding them", {
+  argv <- shQuote(c("-i", "a.mp4", "-i", "b.mp4"))
+
+  # Absent flag: character(0), NOT logical(0) -- the latter came from indexing
+  # with integer(0) and made `all(boundary_value(...) == x)` pass vacuously.
+  expect_identical(boundary_value(argv, "-nope"), character())
+  # Repeated flag: one value per occurrence (test-batch-dirs.R relies on this).
+  expect_identical(boundary_value(argv, "-i"), c("a.mp4", "b.mp4"))
+  # Trailing flag: an error, not a silent NA.
+  expect_error(boundary_value(shQuote(c("-i", "-c")), "-c"), "last token")
+})
+
 test_that("openac_name_of() picks the primary name for every alias class", {
   # The attribution rule is "longest name wins", which is correct only while
   # every alias is shorter than its primary. The classes are COMPUTED from the

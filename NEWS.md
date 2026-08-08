@@ -1,11 +1,11 @@
 # openac (development version)
 
-* File paths containing characters the shell treats specially — most sharply a
-  `$` — are now handled correctly everywhere openac runs a tool. Previously a
-  file such as `my $clip.mp4` was passed to ffmpeg, ffprobe, OpenFace or
-  openSMILE with the `$clip` part removed, so the tool was asked for a file
-  that did not exist. Paths containing spaces were already handled and are
-  unaffected.
+* File paths containing a `$` are now handled correctly. Previously a file such
+  as `my $clip.mp4` was passed to ffmpeg, ffprobe, OpenFace or openSMILE with
+  the `$clip` part removed, so the tool was asked for a file that did not
+  exist. Paths containing spaces were already handled and are unaffected. One
+  gap remains, on Windows only: a path containing a token such as `%TEMP%` can
+  still be expanded by the command interpreter.
 
 * `ffmpeg()`, `ffprobe()`, `openface()` and `opensmile()` now also accept a
   character vector giving one command-line argument per element, and quote each

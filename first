@@ -1,2 +1,0 @@
-B1 -- does shQuote(type="sh") always wrap in a single quote?
-  plain      : 'a b.mp4' 

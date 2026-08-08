@@ -39,15 +39,20 @@ opt_arg <- function(test, ...) {
 run_tool <- function(program, arg) {
   if (!is.character(arg)) {
     cli::cli_abort(
-      "{.arg arg} must be a character vector, not {.obj_type_friendly {arg}}."
+      "{.arg arg} must be a character vector, not {.obj_type_friendly {arg}}.",
+      call = rlang::caller_env()
     )
   }
   if (length(arg) == 0L) {
-    cli::cli_abort("{.arg arg} must contain at least one element.")
+    cli::cli_abort(
+      "{.arg arg} must contain at least one element.",
+      call = rlang::caller_env()
+    )
   }
   if (anyNA(arg)) {
     cli::cli_abort(
-      "{.arg arg} must not contain a missing value ({.code NA})."
+      "{.arg arg} must not contain a missing value ({.code NA}).",
+      call = rlang::caller_env()
     )
   }
   args <- if (length(arg) > 1L) shQuote(arg) else arg

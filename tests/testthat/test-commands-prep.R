@@ -175,7 +175,13 @@ test_that("aw_prep_audio(afilters = FALSE) inserts no filter chain", {
 
   aw_prep_audio(infile, outfile, afilters = FALSE)
 
-  expect_false(shQuote("-af") %in% boundary_argv(state)[[2]])
+  # Both halves: the flag is not its own token, AND no token merely CONTAINS
+  # it. `%in%` alone passed a wrapper that glued flag to chain as one token
+  # (`"-af loudnorm=..."`), which the substring match this replaced had caught
+  # (M13 review B8).
+  argv <- boundary_argv(state)[[2]]
+  expect_false(shQuote("-af") %in% argv)
+  expect_false(any(grepl("-af", argv, fixed = TRUE)))
 })
 
 test_that("aw_prep_audio(overwrite = FALSE) skips an existing output", {

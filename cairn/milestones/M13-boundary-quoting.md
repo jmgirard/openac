@@ -1,6 +1,6 @@
 # M13: Quote at the process boundary, not at the call site
 
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** high
 - **Depends on:** —
 - **Driving RR:** —
@@ -33,13 +33,13 @@ direct docs commit to the default branch, not a milestone.
 
 ## Acceptance criteria
 
-- [ ] AC1 Each of `ffmpeg()`, `ffprobe()`, `openface()`, `opensmile()` treats a
+- [x] AC1 Each of `ffmpeg()`, `ffprobe()`, `openface()`, `opensmile()` treats a
       character vector of length > 1 as one CLI token per element and hands
       `system2()` one `shQuote()`-ed element per token, with the platform's
       `type`; a length-1 argument reaches `system2()` byte-identical to today.
       Evidence: per passthrough, one mocked-boundary test of each form asserting
       the recorded vector element by element via `boundary_argv()`.
-- [ ] AC2 Given a media path containing a space and a `$`, the element the
+- [x] AC2 Given a media path containing a space and a `$`, the element the
       boundary receives for that path is `shQuote()`'s rendering of the path and
       nothing else — asserted at the mocked boundary for `ffp_count_streams()`
       and `os_prep_audio()`, each test failing against the pre-milestone
@@ -47,7 +47,7 @@ direct docs commit to the default branch, not a milestone.
       a separate claim, asserted in `test-real-tools.R` behind the existing
       real-binary gate by probing such a file and asserting stream counts rather
       than an error.
-- [ ] AC3 `local_fake_tools()`'s fake `system2()` aborts on any boundary call
+- [x] AC3 `local_fake_tools()`'s fake `system2()` aborts on any boundary call
       whose argument vector has length > 1 and contains an element carrying
       whitespace that `shQuote()` would have enclosed, and the full suite passes
       with that check armed. `test-helper-boundary.R`'s deliberate raw-argv
@@ -56,14 +56,14 @@ direct docs commit to the default branch, not a milestone.
       over the boundary calls the suite makes, not over every branch of every
       wrapper. Verified by mutation: restoring `ffp_count_streams()`'s
       concatenated assembly (`R/use_ffprobe.R:51-56`) turns the suite red.
-- [ ] AC4 No command assertion reads the collapsing accessor `boundary_args()`:
+- [x] AC4 No command assertion reads the collapsing accessor `boundary_args()`:
       `grep -n 'boundary_args' tests/testthat/test-commands-*.R` returns nothing.
       Its uses outside those three files are untouched.
-- [ ] AC5 `cairn/DESIGN.md`'s Architecture "Calling the CLIs" paragraph
+- [x] AC5 `cairn/DESIGN.md`'s Architecture "Calling the CLIs" paragraph
       (`:164-174`) and the four passthroughs' roxygen `@param arg` and
       `@examples` describe both accepted forms; `devtools::document()` leaves no
       uncommitted diff.
-- [ ] AC6 `devtools::test()` passes and `devtools::check()` reports 0 errors, 0
+- [x] AC6 `devtools::test()` passes and `devtools::check()` reports 0 errors, 0
       warnings, and no note absent from a check of the default branch run the
       same day.
 
@@ -133,8 +133,117 @@ direct docs commit to the default branch, not a milestone.
 - 2026-08-08: review found AC4 FAILS as written. Its procedure — `grep -n 'boundary_args' tests/testthat/test-commands-*.R` returns nothing — returns one line, a comment at `test-commands-probe.R:25` explaining why those assertions moved off the collapsing accessor. The substantive claim holds; the named procedure over-matches prose. Disposition pending the third lens, so one return covers everything.
 - 2026-08-08: review RETURN 1 to in-progress, two causes. (a) AC4 fails inside its own named procedure's domain: the grep it specifies returns a comment. (b) Actioned finding B1 (scored 80): the harness guard's quote character is derived as `substr(shQuote("x"),1,1)` = `'`, but `shQuote(type="sh")` switches to DOUBLE quotes when the string contains an apostrophe — MEASURED `shQuote("Jeff's clip.mp4")` -> `"Jeff's clip.mp4"` — so a correct call on an apostrophe-bearing path aborts, blaming the call site. Reproduced end to end.
 - 2026-08-08: three review lenses ran; blame-history and prior-review returned zero findings each, the diff lens returned 12. It verified all seven assemblers token-by-token equivalent to main — no dropped flag, changed value, or reorder — so the production conversion itself is clean.
+- 2026-08-08: return 1 resolved. AC4 fixed by moving the explanatory comment to `helper-openac.R` beside `boundary_args()`'s definition; B1 fixed by accepting either quote character, which is weaker than the strict version and recorded as such in the Review section.
+- 2026-08-08: writing B1's regression test surfaced a second instance of the same class, which no reviewer found: `shQuote()` chooses its quoting style for the whole VECTOR, not per element — MEASURED, `shQuote(c("-i", "Jeff's.mp4"))` double-quotes BOTH elements while `shQuote("-i")` alone single-quotes. So `boundary_value()`'s scalar `shQuote(flag)` comparison silently matched nothing whenever any element of that argv held an apostrophe. It now matches on unquoted values.
+- 2026-08-08: second debris incident — a file named `first`, from a malformed heredoc, swept into cf650ad by `git add -A` and caught by `R CMD check`, not by me. Twice on one branch is a pattern: `git add -A` after any failed command needs `git status` read first.
+- 2026-08-08: post-return verification: suite 598 pass / 0 fail / 2 skip; `R CMD check` 0/0/0; `cairn_validate` clean; AC3's named mutation re-confirmed red with the mutation verified present in the file before running.
 - 2026-08-08: plan chose to arm the unquoted-whitespace invariant in the harness over asserting it per command test, because the harness already carries the sibling absolute-path invariant (helper-openac.R:605) and a per-test assertion is skipped by omission; falsified by a legitimate boundary call the invariant cannot express, requiring more opt-outs than the one test-helper-boundary.R needs.
 
 ## Decisions
 
 ## Review
+
+Reviewed 2026-08-08 against PR #14. One return (recorded in the work log) before
+this evidence was gathered; all figures below are from the post-return branch.
+
+### Acceptance criteria — fresh evidence
+
+- **AC1** — `test-run-tool.R` asserts both forms directly (length-1 byte-identical;
+  length>1 equal to `shQuote(tokens)` element-wise, with `expect_length` pinning
+  the token count); `test-commands-probe.R` "each passthrough takes the token
+  form and quotes it per element" covers all four passthroughs. The Windows
+  `shQuote(type="cmd")` branch, which no local run reaches, is verified by the
+  green windows-latest CI job.
+- **AC2** — mocked half: `ffp_count_streams()` and `os_prep_audio()` asserted on a
+  path carrying a space and a `$`; both red when the concatenated assembly is
+  restored (mutation run: 6 failures). Shell half: `test-real-tools.R` "a path
+  with a space and a `$` survives the real shell round trip" RAN rather than
+  skipped (ffmpeg/ffprobe installed). Under the mutation, real ffprobe exits
+  status 1 and reports 0 audio streams against 1 expected — the failure identity
+  is verified against the tool, not inferred.
+- **AC3** — full suite green with the check armed (598 pass / 0 fail / 2 skip, the
+  two pre-existing real-tool gates). The opt-out has exactly one caller,
+  `test-helper-boundary.R` (`grep -rln check_quoting tests/` returns only it and
+  the helper defining it). Named mutation re-run after the return, with the
+  mutation confirmed present in the file before running: reds many assertions
+  across `test-commands-extract.R` and siblings.
+- **AC4** — `grep -n 'boundary_args' tests/testthat/test-commands-*.R` returns
+  nothing (exit 1). This FAILED on the first pass, returning one line — an
+  explanatory comment — and was the milestone's return; the explanation moved to
+  `helper-openac.R` beside `boundary_args()`'s own definition, which is where
+  guidance about not using an accessor belongs.
+- **AC5** — DESIGN's "Calling the CLIs" paragraph rewritten around `run_tool()`;
+  all four `@param arg` blocks and `@examples` carry both forms.
+  `devtools::document()` leaves no diff.
+- **AC6** — `devtools::check()` 0 errors / 0 warnings / 0 notes. All five CI jobs
+  green: macOS, Windows, Ubuntu release/devel/oldrel.
+
+### Consistency gate
+
+`cairn_validate` all checks passed. Profile `consistency-gate` slot: `document()`
+no diff; NAMESPACE/man regenerate clean; README unchanged this milestone; no
+pkgdown site in this repo; NEWS.md carries two entries; no new top-level files;
+`devtools::check()` clean.
+
+### Independent review — three lenses, then a scorer
+
+Blame-history [S] and prior-PR-comments [S] returned zero findings each; the
+latter's probe found no real GitHub review threads, so it judged against the
+archived `## Review` sections of M06-M11. The diff-bug lens [O] returned 12,
+and separately verified all seven assemblers token-by-token equivalent to main —
+no dropped flag, changed value, or reorder — so the production conversion is
+clean and every finding lands in the harness, the docs, or test strictness.
+
+Actioned (scored >=80):
+
+- **B1 (80)** — the `check_quoting` guard derived one quote character from
+  `substr(shQuote("x"),1,1)`; `shQuote(type="sh")` switches to double quotes for
+  a string containing an apostrophe, so a correct call on such a path aborted,
+  blaming its own call site. FIXED: `boundary_is_quoted()` accepts either
+  character. Deliberately weaker than the strict version — a hand-written
+  `"..."` on unix now passes — because the strict version has false positives on
+  correct code, and every openac command goes through `run_tool()` anyway.
+
+Logged, below the action threshold, with dispositions:
+
+- **B8 (78)**, **B7 (75)**, **B4 (72)**, **B2 (70)** — all FIXED anyway despite
+  scoring below 80, because each is a defect this branch itself introduced and
+  each fix is small: B8 and B7 restore test strictness M13 weakened (a glued
+  `-af` token, and flag/value adjacency for `-multi_view`); B4 restores
+  pre-M13 error attribution via `call = rlang::caller_env()`, so `ffmpeg(1)`
+  again names `ffmpeg()` rather than the internal `run_tool()`; B2 shares B1's
+  root cause and its fix.
+- **B5 (50)** — the Windows `%` gap is real and MEASURED (`shQuote(type="cmd")`
+  does not escape `%`; `cmd2` does), but out of M13's scope. Two dispositions:
+  a ROADMAP candidate row records the gap, and the roxygen/NEWS wording that
+  overclaimed ("any other character the shell would otherwise act on",
+  "everywhere openac runs a tool") was NARROWED to what is true, with the
+  Windows gap stated. The narrowing is not the scorer's call — branch-added
+  prose contradicted by measurement is corrected regardless of score.
+- **B6 (40)** — FIXED: the tautological assertion (comparing against shQuote's
+  own documented default) replaced by a round-trip through `boundary_unquote()`.
+- **B3 (35)** — PARTLY FIXED. `boundary_value()` now matches on unquoted values,
+  returns `character(0)` rather than `logical(0)` for an absent flag, and errors
+  on a trailing flag. This turned out to matter more than its score: `shQuote()`
+  chooses its style for the whole VECTOR, so one apostrophe anywhere made a
+  scalar `shQuote(flag)` comparison silently match nothing. Found while writing
+  B1's regression test, not by the reviewer.
+- **B9 (48)**, **B10 (25)**, **B11 (20)**, **B12 (35)** — REJECTED as scored.
+  B9 (mid-test `skip_on_os`) is real but reporting hygiene, not a defect;
+  B10 is comment placement; B11 is the D-017 contract working as the plan gate
+  chose it; B12 is unreachable edge cases in helpers with pre-validating callers.
+
+### Two debris incidents, both mine
+
+Twelve zero-byte files at T5 (a vectorized `sub()`/`file.create()` against a
+token vector) and a file named `first` at the return (a malformed heredoc), each
+swept into a commit by `git add -A` and each caught by `R CMD check` as a
+non-portable or non-standard top-level file rather than by me. Both removed;
+check is 0/0/0. The pattern, not either instance, is the lesson.
+
+### One correction
+
+Mid-review I reported that AC3's mutation "no longer reds" after the fixes. That
+was wrong: the `sed` applying the mutation had silently failed to match. Re-run
+with the mutation confirmed present in the file first, it reds as before. The
+suite's sensitivity was never lost.

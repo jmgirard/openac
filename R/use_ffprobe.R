@@ -7,8 +7,10 @@
 #' @param arg (character) The arguments to append to the ffprobe
 #'   command line call, in either of two forms. Give a **character vector**
 #'   with one CLI token per element and each element is quoted for you at the
-#'   process boundary, so a file path may contain spaces, `$`, or any other
-#'   character the shell would otherwise act on. Give a **single string** and
+#'   process boundary, so a file path may contain spaces or a `$`. (One known
+#'   gap: on Windows, `%` is not escaped, so a path containing a token such as
+#'   `%TEMP%` can still be expanded by the command interpreter.) Give a
+#'   **single string** and
 #'   it is passed through to the shell exactly as written, quoting and all,
 #'   which leaves any quoting up to you. Prefer the vector form.
 #' @return A character vector containing the output of ffprobe. Errors if

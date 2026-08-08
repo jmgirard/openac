@@ -36,17 +36,43 @@ test_that("a longer argument is quoted one element per token", {
 test_that("quoting uses shQuote's platform default rather than a fixed style", {
   # Asserted against `shQuote()` itself rather than a literal `'a b'`, because a
   # literal encodes the unix style and would have to be wrong on one platform.
-  # What is pinned is that run_tool adds no type of its own: sh-style quoting on
-  # unix, cmd-style on Windows, decided by the same rule `shQuote()` uses.
+  # What is pinned is that run_tool adds no type of its own.
+  #
+  # The second assertion here used to repeat the first against shQuote's own
+  # documented default, which could only fail if base R changed and covered
+  # nothing in run_tool (M13 review B6). Replaced by the property that actually
+  # distinguishes "quoted by the platform rule" from "quoted some other way":
+  # the token round-trips back to its input.
   state <- local_fake_tools(results = list("out"))
 
   openac:::run_tool("ffprobe", c("-i", "a b.mp4"))
 
-  expect_identical(boundary_argv(state)[[1]][[2]], shQuote("a b.mp4"))
-  expect_identical(
-    boundary_argv(state)[[1]][[2]],
-    shQuote("a b.mp4", type = if (.Platform$OS.type == "windows") "cmd" else "sh")
-  )
+  quoted <- boundary_argv(state)[[1]][[2]]
+  expect_identical(quoted, shQuote("a b.mp4"))
+  expect_identical(boundary_unquote(quoted), "a b.mp4")
+})
+
+test_that("a path containing an apostrophe is quoted, and read back, correctly", {
+  # M13 review B1/B2. `shQuote(type = "sh")` does NOT always wrap in a single
+  # quote: given a string containing an apostrophe it switches to the
+  # double-quote branch -- MEASURED, `shQuote("Jeff's clip.mp4")` is
+  # `"Jeff's clip.mp4"`. The harness assumed one quote character, so this call
+  # aborted with the guard blaming its own (correct) call site, and the
+  # unquoting accessors returned a path with the quotes still on it.
+  state <- local_fake_tools(results = list("out"))
+  path <- "/tmp/Jeff's clip.mp4"
+
+  expect_no_error(openac:::run_tool("ffprobe", c("-i", path)))
+
+  argv <- boundary_argv(state)[[1]]
+  expect_identical(argv[[2]], shQuote(path))
+  # The double-quote branch really is what shQuote chose here, so this test
+  # would pass vacuously if it only ever exercised the single-quote branch.
+  skip_on_os("windows")
+  expect_identical(substr(argv[[2]], 1L, 1L), "\"")
+  # And the accessors recover the original path rather than a quoted one.
+  expect_identical(boundary_unquote(argv[[2]]), path)
+  expect_identical(boundary_value(argv, "-i"), path)
 })
 
 # --- validation --------------------------------------------------------------
