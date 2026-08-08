@@ -832,12 +832,31 @@ boundary_args <- function(state) {
 # contains a quote; a path that did would need shQuote's escaping undone, and
 # this would return it wrong rather than pretend otherwise.
 boundary_outfile <- function(args) {
-  last <- as.character(args)[[length(args)]]
+  boundary_unquote(as.character(args)[[length(args)]])
+}
+
+# Strip the one layer of quoting run_tool() added to a token. See the caveat
+# above: outer quote characters only.
+boundary_unquote <- function(x) {
   qc <- substr(shQuote("x"), 1L, 1L)
-  if (nchar(last) >= 2L && startsWith(last, qc) && endsWith(last, qc)) {
-    last <- substr(last, 2L, nchar(last) - 1L)
-  }
-  last
+  ifelse(
+    nchar(x) >= 2L & startsWith(x, qc) & endsWith(x, qc),
+    substr(x, 2L, nchar(x) - 1L),
+    x
+  )
+}
+
+# The unquoted value(s) following `flag` in a recorded argv.
+#
+# The token-form counterpart of the substring matches these tests used before
+# M13 (`expect_match(args, ' -I "path"')`). It is strictly better than a
+# substring: it asserts that `path` is the argument AFTER `-I` rather than that
+# the two happen to appear near each other, so a wrapper that emitted them in
+# the wrong order, or glued into one token, no longer passes.
+boundary_value <- function(args, flag) {
+  args <- as.character(args)
+  at <- which(args == shQuote(flag))
+  boundary_unquote(args[at + 1L])
 }
 
 # The outermost openac function responsible for each boundary call.

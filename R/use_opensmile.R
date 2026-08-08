@@ -326,20 +326,12 @@ os_extract_wav <- function(
     dir.create(dirname(lldfile), recursive = TRUE)
   }
   # Construct opensmile command
-  arg <- paste0(
-    '-C "', config, '"',
-    ' -I "', infile, '"',
-    ifelse(
-      test = !is.null(aggfile),
-      yes = paste0(' -csvoutput "', aggfile, '"'),
-      no = ''
-    ),
-    ifelse(
-      test = !is.null(lldfile),
-      yes = paste0(' -lldcsvoutput "', lldfile, '"'),
-      no = ''
-    ),
-    ' -instname "', basename(infile), '"'
+  arg <- c(
+    "-C", config,
+    "-I", infile,
+    opt_arg(!is.null(aggfile), "-csvoutput", aggfile),
+    opt_arg(!is.null(lldfile), "-lldcsvoutput", lldfile),
+    "-instname", basename(infile)
   )
   # Run opensmile command
   out <- opensmile(arg)

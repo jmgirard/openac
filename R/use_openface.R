@@ -74,17 +74,17 @@ of_extract <- function(
   stopifnot(rlang::is_bool(wild))
   stopifnot(rlang::is_bool(multiview))
   # Construct openface command
-  arg <- paste0(
-    '-f "', infile, '"',
-    ' -of "', outfile, '"',
-    ifelse(fp2D, ' -2Dfp', ''),
-    ifelse(fp3D, ' -3Dfp', ''),
-    ifelse(pdm, ' -pdmparams', ''),
-    ifelse(pose, ' -pose', ''),
-    ifelse(gaze, ' -gaze', ''),
-    ifelse(aus, ' -aus', ''),
-    ifelse(wild, ' -wild', ''),
-    ifelse(multiview, ' -multi_view 1', '')
+  arg <- c(
+    "-f", infile,
+    "-of", outfile,
+    opt_arg(fp2D, "-2Dfp"),
+    opt_arg(fp3D, "-3Dfp"),
+    opt_arg(pdm, "-pdmparams"),
+    opt_arg(pose, "-pose"),
+    opt_arg(gaze, "-gaze"),
+    opt_arg(aus, "-aus"),
+    opt_arg(wild, "-wild"),
+    opt_arg(multiview, "-multi_view", "1")
   )
   # Run openface command
   openface(arg)

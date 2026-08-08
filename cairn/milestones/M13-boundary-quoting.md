@@ -95,7 +95,7 @@ direct docs commit to the default branch, not a milestone.
 - [x] T5 Convert `os_prep_audio()` (`R/use_opensmile.R:174`), `aw_check_audio()`
       (`R/use_whisper.R:20`) and `aw_prep_audio()` including its `-af` filter
       branch (`R/use_whisper.R:109,129`).
-- [ ] T6 Convert `of_extract()` (`R/use_openface.R:80`) and `os_extract()`
+- [x] T6 Convert `of_extract()` (`R/use_openface.R:80`) and `os_extract()`
       including its `aggfile`/`lldfile`/`-instname` branches
       (`R/use_opensmile.R:331`).
 - [ ] T7 Move the three `test-commands-*.R` files' assertions to
@@ -119,6 +119,9 @@ direct docs commit to the default branch, not a milestone.
 - 2026-08-08: T5 done. `os_prep_audio()`, `aw_check_audio()` and `aw_prep_audio()` converted; the `-af` chain is now two tokens (flag, whole chain as one value) and the `ifelse` that built it went away for a `character()` that vanishes inside `c()`.
 - 2026-08-08: T5 uncovered a real coupling the plan missed: three tests used side-effecting fakes that recovered the output path from the glued args with `sub('^.*"([^"]+)"$', ...)`. Tokenisation silently defeated that regex, which then returned the shQuoted last element and made `file.create()` write a quote-named file — surfacing as a wrapper bug. Replaced by a `boundary_outfile()` helper that reads the last token and strips one layer of quoting.
 - 2026-08-08: T5 mutation sharpens T4's note on the guard's scope. Gluing a flag to its value (`"-map 0:a:0"` as one token) reds 6 command tests but does NOT trip the harness guard, because `run_tool()` quotes that token before the fake sees it. So the guard cannot observe mis-tokenisation that goes through `run_tool()` at all; it observes only a call site reaching `system2()` without it. AC3 is satisfied as written, but its value should not be read wider than this.
+- 2026-08-08: T6 done. `of_extract()` and `os_extract_wav()` converted. The `ifelse(flag, ' -x', '')` idiom does not survive tokenisation — `""` is a real empty argument once quoted, where the absence wanted is `character()` — so an `opt_arg()` helper in `R/run_tool.R` replaces it at all ten optional-flag sites.
+- 2026-08-08: T6 replaced the substring assertions (`expect_match(args, ' -I "path"')`) with a `boundary_value(argv, flag)` accessor reading the token AFTER a flag. Strictly stronger than what it replaced: it fails on a wrapper that emits flag and value in the wrong order or glued into one token, which a substring match passed.
+- 2026-08-08: T6 mutations both red — gluing `-multi_view 1` into one token reds 2, dropping the `-lldcsvoutput` pair reds 2. Also fixed a latent looseness in `test-batch-dirs.R`: its `(?<=csvoutput ")` lookbehind matched `-lldcsvoutput` by suffix as well; the two flags are now matched exactly.
 - 2026-08-08: plan chose to arm the unquoted-whitespace invariant in the harness over asserting it per command test, because the harness already carries the sibling absolute-path invariant (helper-openac.R:605) and a per-test assertion is skipped by omission; falsified by a legitimate boundary call the invariant cannot express, requiring more opt-outs than the one test-helper-boundary.R needs.
 
 ## Decisions

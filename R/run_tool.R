@@ -26,6 +26,16 @@
 # Resolution stays in `require_program()` rather than moving here, because that
 # guard is what stops `system2(NULL, args)` from executing `args` as a shell
 # command when a tool is absent (M06).
+# An optional run of tokens, or none (M13).
+#
+# The token form has no equivalent of the empty string that `ifelse(flag, " -x",
+# "")` relied on: `""` is a real, empty argument once quoted, and the tool sees
+# it. `character()` is the right absence -- it disappears inside the enclosing
+# `c()` -- so optional flags go through here rather than through `ifelse()`.
+opt_arg <- function(test, ...) {
+  if (isTRUE(test)) c(...) else character()
+}
+
 run_tool <- function(program, arg) {
   if (!is.character(arg)) {
     cli::cli_abort(
