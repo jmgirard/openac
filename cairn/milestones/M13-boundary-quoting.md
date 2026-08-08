@@ -1,6 +1,6 @@
 # M13: Quote at the process boundary, not at the call site
 
-- **Status:** review
+- **Status:** in-progress
 - **Priority:** high
 - **Depends on:** —
 - **Driving RR:** —
@@ -131,6 +131,8 @@ direct docs commit to the default branch, not a milestone.
 - 2026-08-08: M13 complete, status review. Suite 585 pass / 0 fail / 2 skip (the pre-existing OpenFace and whisper real-tool gates); `R CMD check` 0/0/0; `devtools::document()` no diff.
 - 2026-08-08: review in progress, draft PR #14 open; CI green on all five jobs (macOS, Windows, Ubuntu release/devel/oldrel) — Windows is the only verification of the cmd-style quoting branch, which no local run reaches. Two of three review lenses reported zero findings; the diff-bug lens is still running.
 - 2026-08-08: review found AC4 FAILS as written. Its procedure — `grep -n 'boundary_args' tests/testthat/test-commands-*.R` returns nothing — returns one line, a comment at `test-commands-probe.R:25` explaining why those assertions moved off the collapsing accessor. The substantive claim holds; the named procedure over-matches prose. Disposition pending the third lens, so one return covers everything.
+- 2026-08-08: review RETURN 1 to in-progress, two causes. (a) AC4 fails inside its own named procedure's domain: the grep it specifies returns a comment. (b) Actioned finding B1 (scored 80): the harness guard's quote character is derived as `substr(shQuote("x"),1,1)` = `'`, but `shQuote(type="sh")` switches to DOUBLE quotes when the string contains an apostrophe — MEASURED `shQuote("Jeff's clip.mp4")` -> `"Jeff's clip.mp4"` — so a correct call on an apostrophe-bearing path aborts, blaming the call site. Reproduced end to end.
+- 2026-08-08: three review lenses ran; blame-history and prior-review returned zero findings each, the diff lens returned 12. It verified all seven assemblers token-by-token equivalent to main — no dropped flag, changed value, or reorder — so the production conversion itself is clean.
 - 2026-08-08: plan chose to arm the unquoted-whitespace invariant in the harness over asserting it per command test, because the harness already carries the sibling absolute-path invariant (helper-openac.R:605) and a per-test assertion is skipped by omission; falsified by a legitimate boundary call the invariant cannot express, requiring more opt-outs than the one test-helper-boundary.R needs.
 
 ## Decisions
