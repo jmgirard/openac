@@ -67,9 +67,14 @@ fake_program_file <- function(name, os = Sys.info()[["sysname"]]) {
   paste0(name, if (identical(os, "Windows")) ".exe" else "")
 }
 
-# Drop that extension again, so assertions read the same on every platform.
+# Drop that extension again, so assertions read the same on every platform. The
+# set is `fake_win_exts()`, not a second list beside it: two lists drift, and
+# one that strips less than the fixture namer adds leaves a `.exe` in an
+# assertion that reads bare everywhere else.
 fake_program_name <- function(file) {
-  sub("\\.(exe|bat|cmd|com)$", "", file, ignore.case = TRUE)
+  pattern <- paste0("(", paste(gsub(".", "\\.", fake_win_exts(), fixed = TRUE),
+                               collapse = "|"), ")$")
+  sub(pattern, "", file, ignore.case = TRUE)
 }
 
 # Config names the fake openSMILE install ships, relative to its config/ dir
