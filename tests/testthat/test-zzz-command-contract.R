@@ -141,6 +141,29 @@ test_that("no test file reaches past the recording shadow", {
   expect_identical(bypassing_forms(test_path(".")), character())
 })
 
+test_that("no test file skips before its tests run", {
+  # The recorder records a file when one of its tests RUNS, so a file whose top
+  # level skips is recorded by nothing and a declared-full run reports it as a
+  # file that never ran -- the gate's one blind spot (M10 review D20). The fix
+  # is placement, not a wider observation: a skip inside `test_that()` ends that
+  # test and leaves the file recorded, which is also where GP7 asks for it.
+  #
+  # Enforced rather than documented, for the same reason the shadow rule above
+  # is. `top_level_skips()` reports a skip call anywhere in a top-level
+  # expression except inside a `test_that()` body or a function definition, so
+  # `if (cond) skip()`, `local({ skip() })` and `suppressWarnings(skip_on_cran())`
+  # are all caught. Its disclosed hole is the mirror of that exclusion: a
+  # top-level call to a locally defined wrapper that itself skips.
+  expect_identical(
+    top_level_skips(test_path(".")), character(),
+    info = paste0(
+      "These test files skip before any test_that() runs, so the recorder ",
+      "never sees them and a full run reports them as never run. Move the ",
+      "skip inside the test_that() it guards."
+    )
+  )
+})
+
 test_that("every tool-calling function has a command test", {
   # The decision is made by CALLING the pure function -- this test carries no
   # skip or failure path of its own for completeness, so there is nowhere for a
