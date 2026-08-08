@@ -33,6 +33,21 @@ test_that("a directly tested passthrough owns its own call", {
   expect_identical(boundary_owners(state), "ffprobe")
 })
 
+test_that("a do.call()-dispatched frame is attributed to the outer function", {
+  # os_extract_dir() and aw_transcribe_dir() reach their tools through
+  # do.call(what = <function value>, ...), where the call head is a function
+  # rather than a name. A dropped frame there would credit the call to the
+  # inner passthrough -- marking openface covered by a test of of_extract.
+  state <- local_fake_tools(results = list("ok"))
+  infile <- withr::local_tempfile(fileext = ".mp4")
+  file.create(infile)
+  outfile <- file.path(withr::local_tempdir(), "faces.csv")
+
+  do.call(of_extract, list(infile, outfile))
+
+  expect_identical(boundary_owners(state), "of_extract")
+})
+
 test_that("an exhausted result queue errors instead of recycling", {
   local_fake_tools(results = list("only one"))
   expect_identical(ffmpeg("-first"), "only one")

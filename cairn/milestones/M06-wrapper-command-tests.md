@@ -133,7 +133,7 @@ defers it to submission time). CRAN submission → user-declared release window.
 - [ ] T14 (review G1, toolchain gate) Add a `NEWS.md` development-version entry
       for the user-visible contract changes, with no milestone numbers in the
       user-facing text.
-- [ ] T15 (review AC2, discovered) Make `openac_stack()` name a frame whose call
+- [x] T15 (review AC2, discovered) Make `openac_stack()` name a frame whose call
       head is a function value, so a `do.call()`-dispatched frame is attributed
       to the outer function and not to the inner passthrough. Test that path.
 
@@ -203,6 +203,14 @@ defers it to submission time). CRAN submission → user-declared release window.
   `-I`, and is gone after the call. Verified discriminating: replacing
   `if (temp) unlink(wavfile)` with `if (FALSE)` fails that last expectation
   alone.
+
+- 2026-08-07: T15 — `openac_stack()` now recovers a frame whose call head is a
+  function value by matching `sys.function()` against the namespace by identity
+  (longest name wins, so an alias pair resolves to its primary), making the
+  outermost-frame rule hold for `do.call()` dispatch. Verified discriminating:
+  with the recovery replaced by `NA_character_` the new test reports owner
+  "openface" instead of "of_extract" — the false attribution AC2 forbids.
+  Suite 252 pass, 0 fail, 0 skip.
 
 ## Decisions
 

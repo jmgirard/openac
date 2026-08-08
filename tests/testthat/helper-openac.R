@@ -39,6 +39,23 @@ write_fake_os_output <- function(path) {
   path
 }
 
+# The openac name a function value is bound to, or NA.
+#
+# Aliases share one closure (`ffm` and `ffmpeg` are the same object), so a hit
+# can be ambiguous; the longest name wins, which is the primary name in every
+# alias pair openac exports (ffmpeg/ffm, ffprobe/ffp, openface/of, opensmile/os).
+openac_name_of <- function(f, ns) {
+  hits <- Filter(
+    function(n) {
+      obj <- get(n, envir = ns)
+      is.function(obj) && identical(obj, f)
+    },
+    ls(ns, all.names = TRUE)
+  )
+  if (!length(hits)) return(NA_character_)
+  hits[order(-nchar(hits), hits)][[1]]
+}
+
 # Names of the openac functions on the current call stack, outermost first.
 #
 # A frame belongs to openac when its environment's top-level environment is the
@@ -58,7 +75,11 @@ openac_stack <- function() {
     } else if (is.call(head) && as.character(head[[1]])[[1]] %in% c("::", ":::")) {
       as.character(head[[3]])
     } else {
-      NA_character_
+      # `do.call(what = <function value>, ...)` -- the form os_extract_dir() and
+      # aw_transcribe_dir() dispatch through -- leaves a function, not a name,
+      # in the call head. Dropping the frame would attribute the call to the
+      # inner passthrough and mark it covered by a test of the outer function.
+      openac_name_of(sys.function(i), ns)
     }
     if (!is.na(name)) out <- c(out, name)
   }
