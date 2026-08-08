@@ -19,7 +19,9 @@ aw_transcribe_dir(
 \item{indir}{(character) What directory contains the input files?}
 
 \item{inext}{(character) What file extension should be looked for in \code{indir}
-(e.g., "mp4" or "mp3")?}
+(e.g., "mp4" or "mp3")? Matched regardless of case, so "mp4" also takes
+\code{.MP4} files; if that leaves two inputs deriving the same output file, the
+batch is refused rather than one silently overwriting the other.}
 
 \item{wavdir}{(character, default=NULL) What directory should the prepared
 WAV files be saved to? If \code{NULL}, temporary WAV files will be created and

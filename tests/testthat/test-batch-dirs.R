@@ -119,6 +119,47 @@ test_that("output paths mirror the input tree without treating indir as a regex"
   expect_false(any(grepl("study(1)+raw.data", outfiles, fixed = TRUE)))
 })
 
+test_that("inputs differing only in extension case are refused, not overwritten", {
+  # `dir_inputs()` matches the extension case-insensitively, so on a
+  # case-sensitive filesystem `clip.mp4` and `clip.MP4` are both inputs and both
+  # derive `clip.wav`. Deriving them silently means the batch writes one output
+  # twice and one input's result is lost with no warning.
+  # The two inputs are handed to `dir_outputs()` directly rather than created on
+  # disk: it derives paths lexically, and a case-INsensitive filesystem (APFS,
+  # NTFS) cannot hold both names at once, which would make this skip on the
+  # majority of developer machines and only ever run on Linux CI.
+  root <- withr::local_tempdir()
+  indir <- file.path(root, "in")
+  dir.create(indir)
+  infiles <- file.path(indir, c("clip.mp4", "clip.MP4"))
+
+  expect_error(
+    openac:::dir_outputs(infiles, indir, file.path(root, "out"), "wav"),
+    class = "openac_output_collision"
+  )
+  # The message names both colliding inputs, so the caller can rename one.
+  expect_error(
+    openac:::dir_outputs(infiles, indir, file.path(root, "out"), "wav"),
+    "clip\\.MP4"
+  )
+})
+
+test_that("distinct inputs sharing a stem across subdirectories do not collide", {
+  # The guard must key on the derived output path, not the stem: `a/clip.mp4`
+  # and `b/clip.mp4` both derive `clip.wav` but under mirrored subdirectories,
+  # so they are distinct outputs and must be allowed through.
+  root <- withr::local_tempdir()
+  indir <- file.path(root, "in")
+  dir.create(file.path(indir, "a"), recursive = TRUE)
+  dir.create(file.path(indir, "b"), recursive = TRUE)
+  file.create(file.path(indir, c("a/clip.mp4", "b/clip.mp4")))
+
+  infiles <- openac:::dir_inputs(indir, "mp4", recursive = TRUE)
+  outfiles <- openac:::dir_outputs(infiles, indir, file.path(root, "out"), "wav")
+
+  expect_length(unique(outfiles), 2L)
+})
+
 test_that("an input outside indir is refused rather than derived wrongly", {
   root <- withr::local_tempdir()
   indir <- file.path(root, "in")

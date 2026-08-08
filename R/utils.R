@@ -18,6 +18,12 @@ regex_quote <- function(x) {
 # pattern against file names only, so a *directory* named `mp4` contributes no
 # match either. Both were live defects: the old `paste0(inext, "$")` matched any
 # name merely ending in those letters.
+#
+# Matching is case-INsensitive, so `inext = "mp4"` also takes `clip.MP4` ---
+# cameras and phones write upper-case extensions routinely, and a batch that
+# silently ignored half a directory is worse than one that takes too much. The
+# cost is that two inputs differing only in extension case derive one output
+# path; `dir_outputs()` refuses that rather than letting one overwrite the other.
 dir_inputs <- function(indir, inext, recursive = FALSE) {
   inext <- sub("^\\.", "", inext)
   found <- list.files(
@@ -45,12 +51,37 @@ dir_inputs <- function(indir, inext, recursive = FALSE) {
 # `(`, or `.` derived a wrong output path --- and substituted every occurrence
 # of the extension anywhere in the path, so `clips/mp4/a.mp4.backup.mp4` became
 # `out/wav/a.wav.backup.wav` under a directory that was never meant to move.
+#
+# Two inputs deriving the SAME output path abort the batch. Because `dir_inputs()`
+# matches the extension case-insensitively, `clip.mp4` and `clip.MP4` are both
+# inputs on a case-sensitive filesystem and both derive `clip.wav` --- the batch
+# would write that one file twice and report success for both, losing one result
+# with nothing to show for it. This trades GP6 (skip-and-report over aborting)
+# deliberately: the check is pre-flight, so no tool has run and no batch work is
+# thrown away, and it matches the sibling `indir` guard above.
 dir_outputs <- function(infiles, indir, outdir, ext) {
   rel <- fs::path_rel(fs::path_abs(infiles), start = fs::path_abs(indir))
   if (any(startsWith(as.character(rel), ".."))) {
     cli::cli_abort("All input files must be located under {.arg indir}.")
   }
   out <- fs::path_ext_set(fs::path(fs::path_abs(outdir), rel), ext)
+  dupes <- unique(out[duplicated(out)])
+  if (length(dupes)) {
+    collisions <- vapply(
+      dupes,
+      function(d) paste(basename(infiles[out == d]), collapse = " and "),
+      character(1)
+    )
+    cli::cli_abort(
+      c(
+        "Two or more input files would be written to the same output file.",
+        "x" = "{.file {basename(dupes)}} would be written from {collisions}.",
+        "i" = "Input extensions are matched regardless of case; rename or
+               separate the inputs so each derives its own output."
+      ),
+      class = "openac_output_collision"
+    )
+  }
   if (length(out)) {
     fs::dir_create(fs::path_dir(out))
   }
