@@ -64,7 +64,9 @@ future_pwalk(
 ```
 
 For the whole-directory case, `os_extract_dir()` finds and processes every
-matching file for you:
+matching file for you. A file that fails is skipped with a warning rather than
+stopping the run, and the returned data frame records the outcome of every file,
+so you can find and re-run just the failures:
 
 ```{r}
 os_extract_dir(
