@@ -234,6 +234,8 @@ defers it to submission time). CRAN submission → user-declared release window.
   "is enforced by a named test in this branch": bullet 4 (`set_program()`'s
   documented return) is a doc-only change and no test enforces it (R18).
 
+- 2026-08-07: review 2 — at the merge gate the user chose to raise the testthat floor before merging; DESCRIPTION Suggests now reads `testthat (>= 3.2.0)` (D-012, review finding R7). `document()` no diff; `test()` 252 pass, 0 fail, 0 skip; `check()` 0 errors, 0 warnings, 1 NOTE (the spelling baseline).
+
 ## Decisions
 
 ### 2026-08-07 — A missing tool aborts the low-level wrappers
