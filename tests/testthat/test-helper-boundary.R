@@ -48,6 +48,16 @@ test_that("a do.call()-dispatched frame is attributed to the outer function", {
   expect_identical(boundary_owners(state), "of_extract")
 })
 
+test_that("a relative command is refused at the boundary", {
+  # IP1: a tool location is discovered or user-configured and comes back
+  # absolute. Every command assertion in the suite compares basenames and
+  # args, so a regression handing system2() a bare name would pass all of
+  # them -- the check lives in the recorder instead, where it sees every call.
+  local_fake_tools(results = list())
+  expect_error(system2("ffmpeg", "-x"), "not an absolute path")
+  expect_error(system2(file.path("rel", "ffmpeg"), "-x"), "not an absolute path")
+})
+
 test_that("an exhausted result queue errors instead of recycling", {
   local_fake_tools(results = list("only one"))
   expect_identical(ffmpeg("-first"), "only one")
@@ -58,7 +68,11 @@ test_that("resolution is deterministic and independent of the real machine", {
   state <- local_fake_tools(results = list("ok"))
   ffmpeg("-x")
   # Resolved to the fake tree, never to a binary that happens to be installed.
-  expect_identical(basename(state$calls[[1]]$command), "ffmpeg")
+  # Read through fake_program_name(): the fixture carries the host's required
+  # extension, so the raw basename is `ffmpeg.exe` on Windows.
+  expect_identical(
+    fake_program_name(basename(state$calls[[1]]$command)), "ffmpeg"
+  )
   expect_false(startsWith(state$calls[[1]]$command, "/opt"))
   expect_false(startsWith(state$calls[[1]]$command, "/usr"))
 })
@@ -84,8 +98,293 @@ test_that("the install-time mock intercepts the network and the extractor", {
   expect_true(file.exists(file.path(target, "bin", "tool")))
 })
 
+# AC2 -- the predicate the two Sys.which fakes share. Its rules were MEASURED
+# on GitHub runners (R 4.6.1, M09 probe workflow), and the assertions below
+# restate those measurements; see the comment on fake_is_executable(). The
+# platform is an argument, so a macOS run still exercises the Windows rule.
+
+test_that("the Windows rule resolves any extension, and mode is irrelevant", {
+  dir <- withr::local_tempdir()
+  make <- function(name, mode = "0755") {
+    p <- file.path(dir, name)
+    file.create(p)
+    Sys.chmod(p, mode)
+    p
+  }
+
+  # Measured: .exe, .bat, .cmd, .com AND .txt all resolved on Windows.
+  for (ext in c(".exe", ".bat", ".cmd", ".com", ".txt")) {
+    expect_true(
+      fake_is_executable(make(paste0("tool", ext)), os = "Windows"),
+      label = ext
+    )
+  }
+  # Measured: a 0644 file with an extension still resolved -- the mode plays
+  # no part on Windows, which is why file.access() is not consulted there.
+  expect_true(fake_is_executable(make("mode.exe", "0644"), os = "Windows"))
+})
+
+test_that("the Windows rule resolves an extensionless path through a sibling", {
+  # Each case gets its OWN directory holding exactly ONE file, mirroring the
+  # second M09 probe. The first probe created `tool` and `tool.exe` together,
+  # so the extensionless file answered every question and the sibling rule was
+  # never exercised -- the harness then shipped a sibling branch that an
+  # earlier `!file.exists(path)` guard made unreachable (M09 review, O1).
+  only <- function(ext) {
+    dir <- withr::local_tempdir(.local_envir = parent.frame())
+    p <- file.path(dir, paste0("tool", ext))
+    file.create(p)
+    Sys.chmod(p, "0644")  # measured: a 0644 .exe still resolved
+    file.path(dir, "tool")
+  }
+
+  # Measured: .exe, .bat, .cmd and .com siblings all resolved.
+  for (ext in c(".exe", ".bat", ".cmd", ".com")) {
+    bare <- only(ext)
+    expect_true(fake_is_executable(bare, os = "Windows"), label = ext)
+    # And it resolves TO the sibling, not to the name that was asked for --
+    # which does not exist, and which find_program() would then choke on.
+    expect_identical(
+      fake_sys_which_path(bare, os = "Windows"), paste0(bare, ext),
+      label = ext
+    )
+  }
+
+  # Measured: a .txt sibling did NOT resolve, though a .txt file named directly
+  # does. The two rules are different, and reading one off the other is what
+  # made the criterion claim `.exe` alone.
+  expect_false(fake_is_executable(only(".txt"), os = "Windows"))
+
+  # Measured: extensionless with no sibling is <empty>, mode notwithstanding.
+  bare <- only("")
+  Sys.chmod(bare, "0755")
+  expect_false(fake_is_executable(bare, os = "Windows"))
+})
+
+test_that("the predicate refuses a directory the real Sys.which() would return", {
+  # A measured divergence, not an untested assumption: the Windows probe
+  # returned a DIRECTORY named `tool.exe` when asked for it. openac would hand
+  # that straight to system2(), so the fake is deliberately stricter.
+  dir <- withr::local_tempdir()
+  d <- file.path(dir, "tool.exe")
+  dir.create(d)
+  expect_false(fake_is_executable(d, os = "Windows"))
+  expect_identical(fake_sys_which_path(d, os = "Windows"), "")
+})
+
+test_that("the Unix rule is the execute bit, whatever the extension", {
+  # file.access(path, 1L) reports 0 for root regardless of mode, and a Windows
+  # host has no mode bit to read at all (the probe measured -1 for a 0755
+  # extensionless file there), so the mode distinction is only observable on a
+  # non-root Unix host.
+  skip_on_os("windows")
+  skip_if(
+    identical(Sys.info()[["effective_user"]], "root"),
+    "file.access() ignores mode for root"
+  )
+  dir <- withr::local_tempdir()
+  make <- function(name, mode) {
+    p <- file.path(dir, name)
+    file.create(p)
+    Sys.chmod(p, mode)
+    p
+  }
+
+  expect_true(fake_is_executable(make("tool", "0755"), os = "Linux"))
+  expect_false(fake_is_executable(make("nonexec", "0644"), os = "Linux"))
+  # The extension plays no part here -- measured: tool.txt at 0755 resolved.
+  expect_true(fake_is_executable(make("tool.txt", "0755"), os = "Darwin"))
+  expect_false(fake_is_executable(make("nonexec.exe", "0644"), os = "Darwin"))
+})
+
+test_that("the predicate refuses what no Sys.which() would return", {
+  dir <- withr::local_tempdir()
+  for (os in c("Windows", "Linux")) {
+    expect_false(fake_is_executable("", os = os), label = os)
+    expect_false(fake_is_executable(file.path(dir, "missing"), os = os), label = os)
+    expect_false(fake_is_executable(file.path(dir, "missing.exe"), os = os), label = os)
+    # A directory: file.exists() is TRUE for one and file.access(dir, 1L) is 0
+    # for a searchable one, so both branches would otherwise let it through.
+    expect_false(fake_is_executable(dir, os = os), label = os)
+  }
+})
+
+test_that("the fake tree is built for the platform the predicate reads", {
+  # The fixture namer decides what the tree CONTAINS and the predicate decides
+  # what resolves out of it, so the two must read the same platform. They did
+  # not: the namer read the HOST while the predicate read the simulated OS, so
+  # under local_fake_os("Windows") on a Unix host the tree served an
+  # extensionless file its own resolver refuses (M09 review, O3).
+  local_fake_os("Windows")
+  state <- local_fake_tools(results = list("ok"))
+
+  # Built Windows-shaped on whatever host this is running on.
+  expect_true(file.exists(file.path(state$bindir, "ffmpeg.exe")))
+  expect_identical(state$os, "Windows")
+
+  # And the resolver agrees with what was built, rather than refusing it.
+  resolved <- unname(Sys.which("ffmpeg"))
+  expect_identical(basename(resolved), "ffmpeg.exe")
+  expect_true(fake_is_executable(resolved, os = "Windows"))
+
+  # Assertions still read the bare name, so nothing downstream sees the .exe.
+  ffmpeg("-x")
+  expect_identical(boundary_tools(state), "ffmpeg")
+})
+
+test_that("the shared Sys.which fake reads the platform at call time", {
+  # `os` used to be a default ARGUMENT -- a promise forced once, on first use,
+  # and cached ever after. A fake built before local_fake_os() ran therefore
+  # pinned whatever platform was current at its first Sys.which() call and
+  # silently ignored the faked one from then on (M09 review, O15).
+  # local_fake_downloads() builds exactly such a fake and its docstring
+  # promises no ordering constraint, so the platform must be read per call.
+  dir <- withr::local_tempdir()
+  file.create(file.path(dir, "tool.exe"))
+  bare <- file.path(dir, "tool")
+
+  which_fake <- fake_sys_which()
+  # Each ask fakes the OS inside its own frame, so the mock unwinds on return
+  # and one closure is genuinely asked twice under two platforms.
+  ask <- function(sysname) {
+    local_fake_os(sysname)
+    unname(which_fake(bare))
+  }
+
+  # Asking as Unix first is what forced and cached the promise.
+  expect_identical(ask("Linux"), "")
+  # Same closure, new platform: the .exe sibling resolves now.
+  expect_identical(ask("Windows"), file.path(dir, "tool.exe"))
+})
+
+test_that("both scoped helpers resolve by the same rule", {
+  # local_fake_downloads() used to carry its own Sys.which fake that resolved
+  # ANY existing file -- so it disagreed with local_fake_tools() about a
+  # non-executable one, and the install tests were asserting against a resolver
+  # no platform implements (M07 B1/P1). Observed here rather than asserted
+  # structurally: a file that exists but cannot run must resolve to "" under
+  # BOTH helpers.
+  skip_on_os("windows")  # where the mode bit carries no meaning
+  skip_if(identical(Sys.info()[["effective_user"]], "root"))
+  dir <- withr::local_tempdir()
+  dud <- file.path(dir, "dud")
+  file.create(dud)
+  Sys.chmod(dud, "0644")
+
+  under_downloads <- local({
+    local_fake_downloads()
+    Sys.which(dud)
+  })
+  under_tools <- local({
+    local_fake_tools()
+    Sys.which(dud)
+  })
+
+  expect_identical(unname(under_downloads), "")
+  expect_identical(unname(under_tools), "")
+})
+
+test_that("local_fake_tools() redirects every rappdirs dir openac's code reads", {
+  # The domain is not a remembered list of two functions: it is whatever `R/`
+  # actually calls, read off `R/` here. A future call site reaching a third
+  # rappdirs dir fails this test instead of quietly reading the real one --
+  # which is how the original leak survived (find_program() falls through to
+  # user_config_dir() whenever Sys.which() reports "", and a maintainer who has
+  # run set_program() has a file sitting there).
+  # Read off the loaded namespace, not off `R/`: under `R CMD check` the source
+  # tree is gone but the namespace is exactly what will run.
+  ns <- asNamespace("openac")
+  code <- unlist(lapply(ls(ns, all.names = TRUE), function(n) {
+    obj <- get(n, envir = ns)
+    if (is.function(obj)) deparse(body(obj)) else character()
+  }))
+  hits <- unlist(regmatches(code, gregexpr("rappdirs::user_[a-z_]+dir", code)))
+  used <- sort(unique(sub("^rappdirs::", "", hits)))
+  expect_gt(length(used), 0)  # the walk itself must not silently find nothing
+
+  real <- vapply(used, function(fn) {
+    getExportedValue("rappdirs", fn)("openac", "R")
+  }, character(1))
+
+  local_fake_tools()
+
+  redirected <- vapply(used, function(fn) {
+    getExportedValue("rappdirs", fn)("openac", "R")
+  }, character(1))
+
+  # Every one of them, named, so a failure says which dir leaked.
+  for (fn in used) {
+    expect_false(identical(redirected[[fn]], real[[fn]]), label = fn)
+  }
+})
+
 test_that("a program left out of `resolve` is not found", {
   local_fake_tools(results = list(), resolve = character())
   expect_warning(res <- find_program("ffmpeg"))
   expect_null(res)
+})
+
+test_that("boundary_argv() preserves argument boundaries that collapse erases", {
+  # Two different commands: one passes two arguments, the other one argument
+  # containing a space. `boundary_args()` renders them identically, so an
+  # assertion built on it cannot tell a correctly quoted path from a wrapper
+  # that split on whitespace.
+  state <- local_fake_tools(results = list("a", "b"))
+  bin <- file.path(state$bindir, fake_program_file("ffmpeg"))
+
+  system2(bin, c("-i", "a b"))
+  system2(bin, "-i a b")
+
+  expect_identical(boundary_argv(state), list(c("-i", "a b"), "-i a b"))
+  expect_identical(boundary_args(state)[[1]], boundary_args(state)[[2]])
+})
+
+test_that("openac_name_of() picks the primary name for every alias class", {
+  # The attribution rule is "longest name wins", which is correct only while
+  # every alias is shorter than its primary. The classes are COMPUTED from the
+  # namespace rather than listed, so a newly added alias appears here and fails
+  # this test until its primary is recorded -- rather than silently changing
+  # which function a do.call()-dispatched boundary call is credited to.
+  ns <- asNamespace("openac")
+  fns <- Filter(function(n) is.function(get(n, envir = ns)),
+                ls(ns, all.names = TRUE))
+  # Group names by the closure object they are bound to.
+  classes <- list()
+  for (n in fns) {
+    f <- get(n, envir = ns)
+    hit <- NA_integer_
+    for (i in seq_along(classes)) {
+      if (identical(get(classes[[i]][[1]], envir = ns), f)) {
+        hit <- i
+        break
+      }
+    }
+    if (is.na(hit)) classes[[length(classes) + 1L]] <- n else
+      classes[[hit]] <- c(classes[[hit]], n)
+  }
+  aliased <- Filter(function(x) length(x) > 1L, classes)
+
+  # The recorded answer for each class, keyed by the class's sorted names.
+  primary <- c(
+    "ffm,ffmpeg" = "ffmpeg",
+    "ffp,ffprobe" = "ffprobe",
+    "of,openface" = "openface",
+    "opensmile,os" = "opensmile"
+  )
+
+  found <- vapply(aliased, function(x) paste(sort(x), collapse = ","),
+                  character(1))
+  expect_setequal(found, names(primary))
+
+  for (cls in aliased) {
+    key <- paste(sort(cls), collapse = ",")
+    # Asked via every binding in the class: attribution must not depend on
+    # which name the caller happened to use.
+    for (n in cls) {
+      expect_identical(
+        openac_name_of(get(n, envir = ns), ns), unname(primary[[key]]),
+        label = paste0(n, " (class ", key, ")")
+      )
+    }
+  }
 })

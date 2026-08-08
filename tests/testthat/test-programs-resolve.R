@@ -9,7 +9,10 @@
 # into /private/var, so a bare tempdir() path is not what comes back).
 fake_binary <- function(name = "tool") {
   dir <- withr::local_tempdir(.local_envir = parent.frame())
-  path <- file.path(dir, name)
+  # Carries the host's required extension: an extensionless file is not
+  # something a real Windows `Sys.which()` resolves, so a fixture without one
+  # would assert a resolution the platform refuses (M09).
+  path <- file.path(dir, fake_program_file(name))
   file.create(path)
   Sys.chmod(path, "0755")
   tools::file_path_as_absolute(path)
@@ -17,18 +20,17 @@ fake_binary <- function(name = "tool") {
 
 test_that("find_program() resolves a program found on PATH", {
   local_fake_tools()
-  local_fake_config()
 
-  expect_identical(basename(find_program("ffmpeg")), "ffmpeg")
-  expect_identical(basename(find_ffprobe()), "ffprobe")
-  expect_identical(basename(find_openface()), "openface")
-  expect_identical(basename(find_opensmile()), "opensmile")
+  nm <- function(x) fake_program_name(basename(x))
+  expect_identical(nm(find_program("ffmpeg")), "ffmpeg")
+  expect_identical(nm(find_ffprobe()), "ffprobe")
+  expect_identical(nm(find_openface()), "openface")
+  expect_identical(nm(find_opensmile()), "opensmile")
 })
 
 test_that("find_program() resolves a program recorded in the config file", {
   # Nothing on PATH, so resolution must come from the config file.
-  local_fake_tools(resolve = character())
-  config_dir <- local_fake_config()
+  config_dir <- local_fake_tools(resolve = character())$config
   recorded <- fake_binary("opensmile")
   writeLines(recorded, file.path(config_dir, "opensmile_location.txt"))
 
@@ -41,12 +43,14 @@ test_that("find_program() resolves a config entry naming a bare program name", {
   # a path. Before this fix find_program() handed that raw string to
   # tools::file_path_as_absolute(), which errored, and check_*() propagated it.
   state <- local_fake_tools(results = list("v"), resolve = "ffmpeg")
-  config_dir <- local_fake_config()
+  config_dir <- state$config
   writeLines("ffmpeg", file.path(config_dir, "opensmile_location.txt"))
 
   expect_identical(
     find_program("opensmile"),
-    tools::file_path_as_absolute(file.path(state$bindir, "ffmpeg"))
+    tools::file_path_as_absolute(
+      file.path(state$bindir, fake_program_file("ffmpeg"))
+    )
   )
   # And the check_* contract holds on that path instead of erroring.
   expect_true(check_opensmile())
@@ -54,7 +58,6 @@ test_that("find_program() resolves a config entry naming a bare program name", {
 
 test_that("set_program() writes a location find_program() reads back", {
   local_fake_tools(resolve = character())
-  local_fake_config()
   recorded <- fake_binary("ffmpeg")
 
   set_ffmpeg(recorded)
@@ -63,15 +66,13 @@ test_that("set_program() writes a location find_program() reads back", {
 
 test_that("find_program() warns and returns NULL when the tool is absent", {
   local_fake_tools(resolve = character())
-  local_fake_config()
 
   expect_warning(res <- find_program("ffmpeg"), "Failed to find")
   expect_null(res)
 })
 
 test_that("find_program() warns and returns NULL for a stale config entry", {
-  local_fake_tools(resolve = character())
-  config_dir <- local_fake_config()
+  config_dir <- local_fake_tools(resolve = character())$config
   writeLines(
     file.path(tempdir(), "gone-for-good"),
     file.path(config_dir, "openface_location.txt")
@@ -82,8 +83,7 @@ test_that("find_program() warns and returns NULL for a stale config entry", {
 })
 
 test_that("find_program() treats an empty config file as unresolved", {
-  local_fake_tools(resolve = character())
-  config_dir <- local_fake_config()
+  config_dir <- local_fake_tools(resolve = character())$config
   writeLines(c("", "   "), file.path(config_dir, "ffprobe_location.txt"))
 
   expect_warning(res <- find_program("ffprobe"), "no longer resolves")
@@ -100,7 +100,6 @@ test_that("check_*() return FALSE, not an error, when the tool is absent", {
   # The regression this milestone exists to prevent: before the find_program()
   # fix these propagated an error out of file_path_as_absolute(NULL).
   local_fake_tools(resolve = character())
-  local_fake_config()
 
   expect_warning(expect_false(check_ffmpeg()), "Failed to find")
   expect_warning(expect_false(check_ffprobe()), "Failed to find")
@@ -110,7 +109,6 @@ test_that("check_*() return FALSE, not an error, when the tool is absent", {
 
 test_that("check_*() return TRUE when the tool resolves and runs", {
   state <- local_fake_tools(results = list("v1", "v2", "v3", "v4"))
-  local_fake_config()
 
   expect_true(check_ffmpeg())
   expect_true(check_ffprobe())
