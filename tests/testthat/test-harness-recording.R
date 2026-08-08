@@ -164,6 +164,86 @@ test_that("top_level_skips() survives a member that does not parse", {
   expect_identical(result, skip_fixture_expected())
 })
 
+# Review findings F1/F3/F4, each in its own directory rather than added to the
+# set above: that set is fixed at twelve members by AC1, and growing it would
+# change an assertion the criterion states literally.
+test_that("top_level_skips() sees an applied function and an indirect call", {
+  # F1: an immediately-invoked function expression RUNS its body, so the
+  # `function` exclusion must not swallow it -- the head-position test is what
+  # separates it from `gate <- function() skip()` two lines down.
+  # F3: `do.call` holds its callee as a symbol or a string, so no call to
+  # `skip` exists in the tree for the walk to find.
+  # F4: `skipper()` is a call whose name merely begins "skip"; reporting it
+  # tells its author to move a skip that is not there.
+  dir <- write_fixture_dir(list(
+    "test-iife.R" = c('(function() skip("invoked here"))()',
+                      'test_that("a", { expect_true(TRUE) })'),
+    "test-iife-lambda.R" = c('(\\() skip("invoked here"))()',
+                             'test_that("b", { expect_true(TRUE) })'),
+    "test-docall-symbol.R" = c('do.call(skip, list("x"))',
+                               'test_that("c", { expect_true(TRUE) })'),
+    "test-docall-string.R" = c('do.call("skip_on_cran", list())',
+                               'test_that("d", { expect_true(TRUE) })'),
+    "test-docall-named.R" = c('do.call(what = skip, args = list("x"))',
+                              'test_that("e", { expect_true(TRUE) })'),
+    # Not reported: a call whose name only begins "skip", a definition that is
+    # never applied, and an unrelated `do.call`.
+    "test-skipper-called.R" = c('skipper <- function() NULL', 'skipper()',
+                                'test_that("f", { expect_true(TRUE) })'),
+    "test-def-only.R" = c('gate <- function() skip("only if called")',
+                          'test_that("g", { expect_true(TRUE) })'),
+    "test-docall-other.R" = c('do.call(sum, list(1, 2))',
+                              'test_that("h", { expect_true(TRUE) })')
+  ))
+
+  expect_identical(
+    top_level_skips(dir),
+    sort(c("test-iife.R", "test-iife-lambda.R", "test-docall-symbol.R",
+           "test-docall-string.R", "test-docall-named.R"))
+  )
+})
+
+# --- the runner's full-run declaration --------------------------------------
+
+# `declaration_present()` answers "does this runner start the suite with the
+# declaration on", which is not "does a declaration appear somewhere in it".
+# Every case below returned the wrong answer under the first cut (review
+# F11/F12/F14), and each is a plausible edit to a nine-line file.
+test_that("declaration_present() reads the state the run actually starts with", {
+  runner <- function(lines) {
+    path <- withr::local_tempfile(fileext = ".R", .local_envir = parent.frame(2))
+    writeLines(lines, path)
+    path
+  }
+  declares <- 'Sys.setenv(OPENAC_FULL_SUITE = "true")'
+  runs <- 'test_check("openac")'
+
+  expect_true(declaration_present(runner(c(declares, runs))))
+
+  # Declared only AFTER the suite has already run.
+  expect_false(declaration_present(runner(c(runs, declares))))
+  # Turned back off, or unset, before the run.
+  expect_false(declaration_present(runner(c(
+    declares, 'Sys.setenv(OPENAC_FULL_SUITE = "false")', runs
+  ))))
+  expect_false(declaration_present(runner(c(
+    declares, 'Sys.unsetenv("OPENAC_FULL_SUITE")', runs
+  ))))
+  # Re-declared after being unset is on again -- last write before the run.
+  expect_true(declaration_present(runner(c(
+    'Sys.unsetenv("OPENAC_FULL_SUITE")', declares, runs
+  ))))
+  # A value no static read can resolve is not a declaration, and must not be an
+  # error either: the check has to be able to SAY the runner stopped declaring.
+  expect_false(
+    declaration_present(runner(c('flag <- "true"',
+                                 "Sys.setenv(OPENAC_FULL_SUITE = flag)", runs)))
+  )
+  # No declaration at all, and a file that does not parse.
+  expect_false(declaration_present(runner(runs)))
+  expect_false(declaration_present(runner('test_check("openac"')))
+})
+
 # --- the recorded set is execution-driven ----------------------------------
 
 # Run an EXECUTABLE fixture suite and return the registry it recorded into.

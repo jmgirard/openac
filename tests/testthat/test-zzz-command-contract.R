@@ -169,10 +169,14 @@ test_that("no test file skips before its tests run", {
   #
   # Enforced rather than documented, for the same reason the shadow rule above
   # is. `top_level_skips()` reports a skip call anywhere in a top-level
-  # expression except inside a `test_that()` body or a function definition, so
-  # `if (cond) skip()`, `local({ skip() })` and `suppressWarnings(skip_on_cran())`
-  # are all caught. Its disclosed hole is the mirror of that exclusion: a
-  # top-level call to a locally defined wrapper that itself skips.
+  # expression except inside a `test_that()` body or an UNAPPLIED function
+  # definition -- so `if (cond) skip()`, `local({ skip() })`,
+  # `suppressWarnings(skip_on_cran())`, `(function() skip())()` and
+  # `do.call(skip, ...)` are caught, while `gate <- function() skip()` is not.
+  # Its disclosed holes all mirror that exclusion and all need a value a static
+  # scan cannot resolve: a call to a locally defined wrapper that skips, a skip
+  # inside a lambda handed to an applier, and a `do.call()` with a computed
+  # callee. D-015 records them.
   expect_identical(
     top_level_skips(test_path(".")), character(),
     info = paste0(

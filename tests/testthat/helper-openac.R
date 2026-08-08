@@ -67,16 +67,49 @@ expected_test_files <- function(dir) {
 skip_call_present <- function(x) {
   if (!is.call(x)) return(FALSE)
   head <- x[[1L]]
+  head_is <- function(h, what) {
+    is.call(h) && as.character(h[[1L]])[[1L]] %in% what
+  }
   name <- if (is.symbol(head)) {
     as.character(head)
-  } else if (is.call(head) &&
-             as.character(head[[1L]])[[1L]] %in% c("::", ":::")) {
+  } else if (head_is(head, c("::", ":::"))) {
     as.character(head[[3L]])
   } else {
     ""
   }
   if (name %in% c("test_that", "function")) return(FALSE)
-  if (grepl("^skip", name)) return(TRUE)
+  # `skip` and `skip_*`, never every name merely BEGINNING "skip": a bare
+  # `^skip` prefix reports a call to `skipper()` or `skips_expected()` and tells
+  # its author to move a skip that is not there (review F4). testthat's whole
+  # skip surface -- `skip`, `skip_if`, `skip_if_not`, `skip_if_not_installed`,
+  # `skip_on_cran`, `skip_on_os`, `skip_on_ci`, ... -- matches this.
+  if (grepl("^skip($|_)", name)) return(TRUE)
+  # `do.call(skip, ...)` and `do.call("skip", ...)` hold the callee as a SYMBOL
+  # or a string, so no call to it exists in the tree and the walk below cannot
+  # see it (review F3). `language_symbols()` in `test-zzz-command-contract.R`
+  # exists for this same defeat (D-010); this is its narrow instance.
+  if (identical(name, "do.call")) {
+    what <- as.list(x)[-1L]
+    what <- if (!is.null(what[["what"]])) what[["what"]] else what[[1L]]
+    if ((is.symbol(what) || is.character(what)) &&
+        grepl("^skip($|_)", as.character(what))) {
+      return(TRUE)
+    }
+  }
+  # An immediately-invoked function expression RUNS its body right here, so the
+  # `function` exclusion above must not reach it (review F1). The exclusion is
+  # meant for a definition -- `gate <- function() skip()` describes a skip and
+  # performs none -- and the discriminator is application, which is visible:
+  # the definition sits in the CALL HEAD rather than in an argument.
+  # The parentheses an IIFE needs survive in the AST as a `(` call wrapping the
+  # definition, so the head is `(function() ...)` rather than `function() ...`
+  # -- measured, after the first cut of this branch reported neither IIFE form.
+  applied <- head
+  while (head_is(applied, "(")) applied <- applied[[2L]]
+  if (head_is(applied, "function") &&
+      any(vapply(as.list(applied)[-1L], skip_call_present, logical(1)))) {
+    return(TRUE)
+  }
   any(vapply(as.list(x)[-1L], skip_call_present, logical(1)))
 }
 
@@ -134,10 +167,11 @@ declared_full_run <- function() {
 declaration_present <- function(path) {
   exprs <- tryCatch(parse(path, keep.source = FALSE), error = function(e) NULL)
   if (is.null(exprs)) return(FALSE)
-  sets_flag <- function(x) {
-    if (!is.call(x)) return(FALSE)
+
+  call_name <- function(x) {
+    if (!is.call(x)) return("")
     head <- x[[1L]]
-    name <- if (is.symbol(head)) {
+    if (is.symbol(head)) {
       as.character(head)
     } else if (is.call(head) &&
                as.character(head[[1L]])[[1L]] %in% c("::", ":::")) {
@@ -145,13 +179,36 @@ declaration_present <- function(path) {
     } else {
       ""
     }
-    if (!identical(name, "Sys.setenv")) return(FALSE)
-    value <- as.list(x)[-1L][["OPENAC_FULL_SUITE"]]
-    # Read the literal the same way `declared_full_run()` reads the variable, so
-    # a value that sets the flag without turning it on cannot satisfy this.
-    !is.null(value) && isTRUE(as.logical(value))
   }
-  any(vapply(as.list(exprs), sets_flag, logical(1)))
+
+  # Walk top level IN ORDER and keep the state the run actually starts with,
+  # rather than asking whether a declaration appears anywhere. `any()` was the
+  # first cut and it read TRUE for three runners that do not declare a full run
+  # (review F11/F12): a `Sys.setenv()` placed AFTER `test_check()`, a later
+  # `Sys.unsetenv()`, and a later re-set to "false". The last write before the
+  # run is the only one that matters, so that is what this reads.
+  declared <- FALSE
+  for (x in as.list(exprs)) {
+    name <- call_name(x)
+    if (identical(name, "test_check")) break
+    if (identical(name, "Sys.setenv")) {
+      value <- as.list(x)[-1L][["OPENAC_FULL_SUITE"]]
+      # A non-literal (`Sys.setenv(OPENAC_FULL_SUITE = flag)`) cannot be read
+      # statically; it errored out of `as.logical()` before review F14. Unknown
+      # is not declared -- fail closed and let the check say so.
+      if (!is.null(value)) {
+        declared <- (is.character(value) || is.logical(value)) &&
+          isTRUE(as.logical(value))
+      }
+    } else if (identical(name, "Sys.unsetenv")) {
+      if (any(vapply(as.list(x)[-1L],
+                     function(a) identical(as.character(a), "OPENAC_FULL_SUITE"),
+                     logical(1)))) {
+        declared <- FALSE
+      }
+    }
+  }
+  declared
 }
 
 # The skip/fail/enforce decision, as a PURE function of the six facts the

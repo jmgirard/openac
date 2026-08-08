@@ -293,9 +293,11 @@ a file behaving exactly as its author intended. M10's review reproduced it
 **Decision:** forbid the shape rather than widen the observation. A test file in
 this suite may not skip outside a `test_that()` body. `top_level_skips()`
 reports a skip call occurring anywhere in a top-level expression except within a
-`test_that()` call or a function definition — so `if (cond) skip()`,
-`local({ skip() })` and `suppressWarnings(skip_on_cran())` are all caught — and
-`test-zzz-command-contract.R` fails while it returns anything. D-013's
+`test_that()` call or an unapplied function definition — so `if (cond) skip()`,
+`local({ skip() })`, `suppressWarnings(skip_on_cran())`, an immediately-invoked
+`(function() skip())()` and `do.call(skip, ...)` are caught, while
+`gate <- function() skip()` is not — and `test-zzz-command-contract.R` fails
+while it returns anything. D-013's
 observation rule is untouched. Considered and rejected: recording the files
 testthat SOURCES, via a `Reporter` subclass whose `start_file()` fires whatever
 a file contains. It fixes the whole class rather than one form, but it needs
@@ -309,9 +311,14 @@ whole-file skip is needed which per-test gating cannot express.
 qualified `testthat::test_that()`, `describe()` and `it()` (D-013), a skip
 outside a `test_that()` body is a suite failure naming the file and telling the
 author to move it inside. `test-real-tools.R` keeps its per-test
-`skip_on_cran()` calls unchanged. One hole is disclosed rather than closed: a
-top-level call to a locally defined wrapper that itself skips is invisible to a
-static scan, being the mirror of the function-definition exclusion. Separately,
+`skip_on_cran()` calls unchanged. Three holes are disclosed rather than closed,
+all mirrors of the function-definition exclusion, all requiring a value a static
+scan cannot resolve: a top-level call to a locally defined wrapper that itself
+skips; a skip inside a lambda handed to an applier (`lapply(x, \(i) skip())`),
+which is indistinguishable from a definition merely being stored; and a
+`do.call()` whose callee is computed rather than named. The scanner's domain is
+also the test files only — a `helper-*.R` or `setup-*.R` that skips is out of
+scope, and aborts the run loudly rather than silently. Separately,
 the declaration the gate's whole failure mode rests on is now asserted —
 `declaration_present()` parses `tests/testthat.R` for its
 `Sys.setenv(OPENAC_FULL_SUITE = ...)` call, because deleting that one line
