@@ -16,7 +16,9 @@ coverage gate cannot pass vacuously.
 ## Scope
 
 **In:** `tests/testthat/helper-openac.R` and its own test file
-`test-helper-boundary.R`, plus `test-zzz-command-contract.R`'s skip condition.
+`test-helper-boundary.R`, plus `test-zzz-command-contract.R`'s skip condition
+and the call-site updates those changes force in `test-programs-resolve.R` and
+`test-commands-probe.R`.
 One shared `Sys.which()` executability predicate, driven by the faked OS and
 faithful to real `Sys.which()` on both platforms; per-platform fixture binaries;
 `rappdirs` redirection folded into `local_fake_tools()`; an absolute-command
@@ -85,10 +87,14 @@ percentages remain a diagnostic, never a gate (PROFILE `test-doctrine`).
       primary for each; an alias class absent from the recorded table fails the
       test naming it. The four classes today are `ffm`/`ffmpeg`, `ffp`/`ffprobe`,
       `of`/`openface`, `opensmile`/`os`.
-- [ ] AC8: with owner *attribution* disabled while the harness still records
-      that it ran, a full suite run makes `test-zzz-command-contract.R` FAIL
-      rather than skip; `testthat::test_file()` on that file alone still skips.
-      Both runs and their output go in the work log.
+- [ ] AC8: `test-zzz-command-contract.R` decides whether to enforce from whether
+      the run was complete, not from whether anything was recorded. With owner
+      *attribution* disabled while the harness still records that it ran, a full
+      suite run makes the file FAIL rather than skip; `testthat::test_file()` on
+      that file alone still skips; and on a healthy tree a partial run covering
+      only some of the harness's test files
+      (`devtools::test(filter = "helper-boundary|zzz")`) skips rather than fails.
+      All three runs and their output go in the work log.
 - [x] AC9: `Rscript -e 'devtools::test()'` clean and `Rscript -e
       'devtools::check()'` clean (0 errors, 0 warnings; the standing spelling
       NOTE justified).
@@ -154,6 +160,8 @@ percentages remain a diagnostic, never a gate (PROFILE `test-doctrine`).
 - 2026-08-07: AC3 evidence — branch CI run 31238766612 green on all five platforms (macOS release, Windows release, Ubuntu devel/release/oldrel-1).
 - 2026-08-07: temporary `probe-syswhich.yaml` deleted; the PR makes `R-CMD-check.yaml` run on the same five platforms. Its measurements survive as the comment on `fake_is_executable()` and the M09 LESSONS entry.
 - 2026-08-07: T9 done; all criteria met. Status → review.
+- 2026-08-07: return gate — AC8 amended to name the partial-run case O15 found: the gate must decide from run completeness, not from what was recorded, so `devtools::test(filter = "helper-boundary|zzz")` skips instead of failing. Scope "In:" amended to name `test-programs-resolve.R` and `test-commands-probe.R`, which the diff rewrote (O24).
+- 2026-08-07: return gate chose to MEASURE AC2's `<path>.exe` sibling rule on Windows CI rather than accept it as inferred — the first probe created `tool` and `tool.exe` together, so the sibling-only case it asserts was never observed. Second probe workflow pushed; AC2's text waits on its output.
 - 2026-08-07: 9 acceptance criteria exceeds the 7 tripwire deliberately — one per independent review finding plus the profile's verify slot, each separately fenceable at review; merging them would blur which finding a piece of evidence closes.
 
 ## Decisions
