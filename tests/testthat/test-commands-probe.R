@@ -22,7 +22,13 @@ test_that("each passthrough forwards its argument string unchanged", {
     boundary_tools(state),
     c("ffmpeg", "ffprobe", "openface", "opensmile")
   )
-  expect_identical(boundary_args(state), c("-version", "-h", "-help", "-L"))
+  # boundary_argv, not boundary_args: these ARE the legacy single-string form,
+  # where collapsing happens to be lossless -- which is exactly why asserting
+  # through the collapsing accessor would prove nothing about the form.
+  expect_identical(
+    boundary_argv(state),
+    list("-version", "-h", "-help", "-L")
+  )
 })
 
 test_that("each alias reaches the same tool as its primary name", {
@@ -37,7 +43,10 @@ test_that("each alias reaches the same tool as its primary name", {
     boundary_tools(state),
     c("ffmpeg", "ffprobe", "openface", "opensmile")
   )
-  expect_identical(boundary_args(state), c("-version", "-h", "-help", "-L"))
+  expect_identical(
+    boundary_argv(state),
+    list("-version", "-h", "-help", "-L")
+  )
 })
 
 test_that("each passthrough errors, and runs nothing, when its tool is absent", {
