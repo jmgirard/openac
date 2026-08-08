@@ -1,13 +1,14 @@
 # Roadmap
 
 _The only authority on milestone status. Grouped by status, not ID._
-_Last hygiene check: 2026-08-08 (M11 merged and archived; M06 pruned under terminal-row retention; nothing is in flight and the candidate list is the only workable queue)_
+_Last hygiene check: 2026-08-08 (M12 planned from the tidymedia candidate, which is retired into it; the spelling-NOTE candidate retired by a direct wordlist commit; five terminal rows, at retention)_
 _Released 0.1.0 (GitHub) 2026-07-11._
 
 ## Milestones
 
 | ID | Title | Status | Depends on | Priority | File/Archive |
 |---|---|---|---|---|---|
+| M12 | Does openac belong on top of tidymedia? — a fit assessment, and a decision | planned | — | high | milestones/M12-tidymedia-fit-assessment.md |
 | M11 | A wholly-skipped test file cannot exist — the coverage gate's blind spot, closed at the door | done | M10 | normal | milestones/archive/M11-forbid-top-level-skips.md |
 | M09 | Test-harness hardening — fake fidelity at the tool boundary | done | — | normal | milestones/archive/M09-harness-hardening.md |
 | M10 | Command-contract coverage gate — completeness observed, not inferred | done | M09 | high | milestones/archive/M10-coverage-gate-run-scope.md |
@@ -31,5 +32,3 @@ _Released 0.1.0 (GitHub) 2026-07-11._
 - Add the `test-coverage` / Codecov workflow (usethis `use_github_action("test-coverage")`); needs a `CODECOV_TOKEN` repository secret only the maintainer can add, so an unauthenticated job would block every later merge — added 2026-08-07 — M06 review 2; the check-standard half became M08 on 2026-08-07
 - Turn on branch protection with the CI checks required on the default branch — GitHub repository settings, not files, so no milestone can land it — added 2026-08-07 — M08
 - Restore GP6 for output-path collisions — drop colliding files into the `*_dir` outcome table as per-file failures instead of aborting the batch pre-flight; needs plumbing the derivation result through `dir_walk` — added 2026-08-07 — hotfix batch-extension-case, PR #9
-- Assess whether some openac functions should depend on tidymedia (jmgirard/tidymedia) instead of reimplementing — clearest overlap is `use_ffmpeg`/`use_ffprobe` and the `programs_*` binary-discovery/install family vs. tidymedia's `ffmpeg.R`/`ffprobe.R`/`program_management.R`; weigh against the add-tool bar and the dependency cost (tidymedia is GitHub-only today, so a hard dep reopens the CRAN-distribution question) — added 2026-08-08 — user request
-- `R CMD check` carries a standing spelling NOTE — 55 domain terms (openSMILE, ffmpeg, wav, PCM, ORCID…) flagged against a 2-entry `inst/WORDLIST`; run `spelling::update_wordlist()` and keep it current, or drop `tests/spelling.R` — added 2026-08-07 — hotfix batch-extension-case, PR #9
