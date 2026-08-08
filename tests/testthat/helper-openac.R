@@ -92,14 +92,21 @@ contract_decision <- function(expected, ran, covered, domain, deferred,
   list(action = "enforce_pass")
 }
 
-# The test file whose `test_that()` call is currently being set up, or NA.
+# The test file currently EXECUTING, or NA.
 #
-# Read from the srcref testthat attaches when it parses a test file, which names
-# the file the expression was read from -- so it answers for the file that is
-# executing, never for a file that merely exists. The fallback reads `path` out
-# of the `source_file()` frame testthat runs each file inside; it exists because
-# a run with source references dropped would otherwise report NA for every file,
-# and NA is indistinguishable from "did not run".
+# Read from the innermost `source_file()` frame testthat runs each file inside,
+# whose `path` is the file being sourced right now. That is the file the gate
+# needs: `expected` is a directory listing, so a recorded name only cancels a
+# missing one when it names the file testthat is running.
+#
+# The srcref of the test body is the FALLBACK, not the primary, and M10's review
+# is why. `getSrcFilename(substitute(code))` names the file the expression was
+# WRITTEN in, which differs from the file executing whenever a helper generates
+# tests: a `helper-*.R` generator called from `test-x.R` put `helper-openac.R`
+# into `ran` and left `test-x.R` out of it -- a real test file the gate then
+# reported as never run. It stays as the fallback because a run with source
+# references intact but no `source_file()` frame -- `test_that()` called outside
+# testthat's own sourcing -- has nothing else to answer with.
 #
 # Both routes FAIL CLOSED. Whatever breaks them, `ran` comes back short and the
 # contract file's canary -- which asserts its OWN name is in `ran`, recorded
@@ -107,9 +114,6 @@ contract_decision <- function(expected, ran, covered, domain, deferred,
 # whole reason the canary exists (D-013): a recorder that silently stops
 # recording must not read as a suite that silently stopped running.
 harness_caller_file <- function(expr = NULL) {
-  file <- tryCatch(utils::getSrcFilename(expr), error = function(e) character())
-  if (length(file) == 1L && nzchar(file)) return(basename(file))
-
   frames <- sys.frames()
   calls <- sys.calls()
   for (i in rev(seq_along(calls))) {
@@ -129,6 +133,9 @@ harness_caller_file <- function(expr = NULL) {
       return(basename(path))
     }
   }
+
+  file <- tryCatch(utils::getSrcFilename(expr), error = function(e) character())
+  if (length(file) == 1L && nzchar(file)) return(basename(file))
   NA_character_
 }
 

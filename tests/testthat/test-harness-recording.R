@@ -133,6 +133,26 @@ test_that("a file whose only test skips still joins the recorded set", {
   expect_identical(openac_registry$ran, before)
 })
 
+test_that("a test a helper generates is recorded against the file that ran it", {
+  # M10's review found the recorder answering with the file a test body was
+  # WRITTEN in: a generator living in `helper-*.R` put the helper into `ran` and
+  # left the test file that called it out, so a file that really ran read as
+  # missing. The fixture reproduces exactly that shape.
+  registry <- run_fixture_suite(
+    list(
+      "test-direct.R" = 'test_that("direct", { expect_true(TRUE) })',
+      "test-viahelper.R" = 'generate_test("via helper")'
+    ),
+    helper_extra =
+      'generate_test <- function(desc) test_that(desc, { expect_true(TRUE) })'
+  )
+
+  ran <- sort(unique(registry$ran))
+  expect_setequal(ran, c("test-direct.R", "test-viahelper.R"))
+  # And the helper it was written in is NOT what got credited.
+  expect_false("helper-openac.R" %in% ran)
+})
+
 test_that("the files testthat discovers are exactly the files expected of it", {
   # The other half of AC1's guarantee, measured rather than assumed: the
   # expected set and the set testthat actually EXECUTES agree, over names the
