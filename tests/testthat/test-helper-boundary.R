@@ -68,7 +68,11 @@ test_that("resolution is deterministic and independent of the real machine", {
   state <- local_fake_tools(results = list("ok"))
   ffmpeg("-x")
   # Resolved to the fake tree, never to a binary that happens to be installed.
-  expect_identical(basename(state$calls[[1]]$command), "ffmpeg")
+  # Read through fake_program_name(): the fixture carries the host's required
+  # extension, so the raw basename is `ffmpeg.exe` on Windows.
+  expect_identical(
+    fake_program_name(basename(state$calls[[1]]$command)), "ffmpeg"
+  )
   expect_false(startsWith(state$calls[[1]]$command, "/opt"))
   expect_false(startsWith(state$calls[[1]]$command, "/usr"))
 })
