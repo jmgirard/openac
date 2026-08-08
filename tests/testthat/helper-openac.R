@@ -115,6 +115,17 @@ local_fake_tools <- function(results = list(),
                              .env = parent.frame()) {
   dir <- withr::local_tempdir(.local_envir = .env)
 
+  # The rappdirs redirect belongs here rather than at each call site. Whenever
+  # `Sys.which()` reports "", `find_program()` falls through to
+  # `<user_config_dir>/<program>_location.txt` (R/programs_find.R:26) -- so any
+  # test passing `resolve = character()` reads the real config dir unless it
+  # remembered to redirect, and a maintainer who has ever run `set_program()`
+  # has a file sitting there. Owning both dirs makes the leak unreachable
+  # instead of a convention, and `state$config` / `state$data` are the single
+  # source of truth for where they went.
+  config_dir <- local_fake_config(.env = .env)
+  data_dir <- local_fake_data_dir(.env = .env)
+
   # A tool tree shaped like a real openSMILE install: the binary sits in bin/,
   # so `os_check_config()` resolves `dirname(find_opensmile())/../config/` to
   # the config/ sibling below.
@@ -143,6 +154,8 @@ local_fake_tools <- function(results = list(),
   state$i <- 0L
   state$dir <- dir
   state$bindir <- bindir
+  state$config <- config_dir
+  state$data <- data_dir
 
   fake_system2 <- function(command, args = character(), ...) {
     stack <- openac_stack()

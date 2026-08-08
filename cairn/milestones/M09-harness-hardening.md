@@ -108,7 +108,7 @@ percentages remain a diagnostic, never a gate (PROFILE `test-doctrine`).
 - [ ] T3: give `local_fake_tools()` fixtures the host's required extension and
       strip it in `boundary_tools()` ([:325](tests/testthat/helper-openac.R:325));
       run the suite on Windows CI before trusting it.
-- [ ] T4: fold `local_fake_config()` and `local_fake_data_dir()` into
+- [x] T4: fold `local_fake_config()` and `local_fake_data_dir()` into
       `local_fake_tools()`; add the `rappdirs::`-call-site enumeration test.
 - [ ] T5: add the absolute-command assertion inside `fake_system2()` and fix any
       call site it trips.
@@ -128,6 +128,7 @@ percentages remain a diagnostic, never a gate (PROFILE `test-doctrine`).
 - 2026-08-07: criteria audit ran — an [O] reader returned seven findings, all fixed at the gate: `local_fake_downloads()`'s permissive fake is load-bearing for `test-installers.R` (AC1 now drives the predicate from the faked OS); `.exe` fixtures would break ~15 `boundary_tools()` assertions on Windows (AC3 now strips the extension); AC1's evidence tested a different proposition than AC1's claim; AC8 named no mechanism and was unsatisfiable as written; AC2 contradicted itself on "every host"; AC5 over-claimed over `test-real-tools.R` and left "absolute" undefined on Windows; AC4's universal had no enumerating procedure.
 - 2026-08-07: plan gate chose a Windows-faithful predicate over leaving it loose and documenting the divergence, because a fake asserting a resolution the real `Sys.which()` would refuse is the defect F6 named, not a note to keep; falsified by Windows CI going red on the fixture rename in a way that cannot be fixed inside the harness.
 - 2026-08-07: plan gate chose one milestone over cutting R12 and R3 to candidate rows, because all nine findings edit the same 341-line file and two milestones in it would collide; falsified by the task list outgrowing one working session each.
+- 2026-08-07: T4 done — `local_fake_tools()` now owns both rappdirs dirs and exposes them as `state$config`/`state$data`; 10 call sites in test-programs-resolve.R and test-commands-probe.R dropped their own `local_fake_config()`. The AC4 enumeration test walks `asNamespace("openac")` rather than `R/` so it still runs under `R CMD check`, where the source tree is gone; it finds `user_config_dir` and `user_data_dir`.
 - 2026-08-07: 9 acceptance criteria exceeds the 7 tripwire deliberately — one per independent review finding plus the profile's verify slot, each separately fenceable at review; merging them would blur which finding a piece of evidence closes.
 
 ## Decisions

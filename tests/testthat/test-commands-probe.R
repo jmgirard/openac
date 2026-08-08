@@ -46,7 +46,6 @@ test_that("each passthrough errors, and runs nothing, when its tool is absent", 
   # that into an error; find_program()'s warning still carries the set_program()
   # hint.
   state <- local_fake_tools(results = list(), resolve = character())
-  local_fake_config()
 
   expect_warning(expect_error(ffmpeg("-version"), "Can't run"), "Failed to find")
   expect_warning(expect_error(ffprobe("-h"), "Can't run"), "Failed to find")

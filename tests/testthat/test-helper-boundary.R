@@ -84,6 +84,40 @@ test_that("the install-time mock intercepts the network and the extractor", {
   expect_true(file.exists(file.path(target, "bin", "tool")))
 })
 
+test_that("local_fake_tools() redirects every rappdirs dir openac's code reads", {
+  # The domain is not a remembered list of two functions: it is whatever `R/`
+  # actually calls, read off `R/` here. A future call site reaching a third
+  # rappdirs dir fails this test instead of quietly reading the real one --
+  # which is how the original leak survived (find_program() falls through to
+  # user_config_dir() whenever Sys.which() reports "", and a maintainer who has
+  # run set_program() has a file sitting there).
+  # Read off the loaded namespace, not off `R/`: under `R CMD check` the source
+  # tree is gone but the namespace is exactly what will run.
+  ns <- asNamespace("openac")
+  code <- unlist(lapply(ls(ns, all.names = TRUE), function(n) {
+    obj <- get(n, envir = ns)
+    if (is.function(obj)) deparse(body(obj)) else character()
+  }))
+  hits <- unlist(regmatches(code, gregexpr("rappdirs::user_[a-z_]+dir", code)))
+  used <- sort(unique(sub("^rappdirs::", "", hits)))
+  expect_gt(length(used), 0)  # the walk itself must not silently find nothing
+
+  real <- vapply(used, function(fn) {
+    getExportedValue("rappdirs", fn)("openac", "R")
+  }, character(1))
+
+  local_fake_tools()
+
+  redirected <- vapply(used, function(fn) {
+    getExportedValue("rappdirs", fn)("openac", "R")
+  }, character(1))
+
+  # Every one of them, named, so a failure says which dir leaked.
+  for (fn in used) {
+    expect_false(identical(redirected[[fn]], real[[fn]]), label = fn)
+  }
+})
+
 test_that("a program left out of `resolve` is not found", {
   local_fake_tools(results = list(), resolve = character())
   expect_warning(res <- find_program("ffmpeg"))
