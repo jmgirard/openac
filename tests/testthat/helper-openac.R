@@ -7,14 +7,165 @@
 # binary runs (D-010). So we mock `base::system2` and, for determinism,
 # `base::Sys.which`.
 
-# Suite-wide record of which openac function drove each boundary call.
-# Accumulates across test files within one run; the command-contract test reads
-# it to decide which members of the computed domain the suite actually covers,
-# so coverage is never a hand-maintained list of names (D-010).
+# Suite-wide record of which openac function drove each boundary call, and of
+# which test files actually executed. Accumulates across test files within one
+# run; the command-contract test reads `owners` to decide which members of the
+# computed domain the suite covers (D-010), and `ran` to decide whether the run
+# was complete enough for that question to mean anything (D-013).
 openac_registry <- new.env(parent = emptyenv())
 openac_registry$owners <- character()
+openac_registry$ran <- character()
 
 registered_owners <- function() sort(unique(openac_registry$owners))
+
+# The test files observed to have executed at least one test.
+recorded_test_files <- function() sort(unique(openac_registry$ran))
+
+# The test files a complete run of `dir` is expected to execute.
+#
+# Content-free BY CONSTRUCTION: it lists names and never opens a file, so
+# nothing any contributor writes INSIDE a test file can add to or remove from
+# this set. That is the guarantee, and it is behavioral -- the set is identical
+# to `sort(list.files(dir, pattern = "^test.*\\.[rR]$"))` under arbitrary
+# mutation of every member's contents. The two proxies this replaces derived
+# the expected set from what the files SAID (an install count, then a text
+# search), and both diverged from what the suite DID, each time leaving the
+# coverage gate silently disarmed (D-013).
+#
+# The pattern is testthat's OWN, copied from `find_test_scripts()`
+# (`dir(path, "^test.*\\.[rR]$")`, testthat 3.3.2), so the expected set is
+# exactly what the runner executes. It read `^test-.*\\.[Rr]$` until M10's
+# review: a narrower expectation than the runner's discovery is a hole, not a
+# convention -- a `test_foo.R` ran, sorted after this file, and was required by
+# nothing.
+#
+# Parameterized by directory so the fixture suites can hold it to that
+# guarantee over deliberately hostile contents -- including a member that does
+# not parse, which no content-reading implementation survives.
+expected_test_files <- function(dir) {
+  sort(list.files(dir, pattern = "^test.*\\.[rR]$"))
+}
+
+# Did the runner DECLARE this an unfiltered run of the whole suite?
+#
+# `tests/testthat.R` sets the variable and is the only thing that can honestly
+# know -- it is the entry point `R CMD check` and CI take, and it runs
+# `test_check()` unfiltered. A local `devtools::test()` never sources that file,
+# so an interactive run is undeclared and a partial one merely skips.
+declared_full_run <- function() {
+  isTRUE(as.logical(Sys.getenv("OPENAC_FULL_SUITE", "false")))
+}
+
+# The skip/fail/enforce decision, as a PURE function of the six facts the
+# contract test can observe. Pure so that every branch -- including the ones a
+# healthy suite must never take -- is reachable from a unit test with ordinary
+# arguments, rather than only by breaking the real suite (D-013).
+#
+# The five returns, in the order they are decided:
+#
+#   fail_incomplete          files are missing and the runner declared a full
+#                            run: the declaration and the observation disagree,
+#                            which is the case CI and `R CMD check` must fail on
+#   skip_partial             files are missing and nothing declared a full run:
+#                            an ordinary filtered local run, skipped with the
+#                            missing files named
+#   fail_broken_attribution  every file ran, yet no boundary call was attributed
+#                            to anything -- the coverage recorder is dead, and
+#                            an empty `covered` would otherwise read as "the
+#                            domain is uncovered" or, worse, pass vacuously
+#   enforce_fail             every file ran and some enforced function has no
+#                            command test
+#   enforce_pass             every file ran and every enforced function is
+#                            covered
+contract_decision <- function(expected, ran, covered, domain, deferred,
+                              declared_full) {
+  missing <- setdiff(expected, ran)
+  if (length(missing)) {
+    action <- if (isTRUE(declared_full)) "fail_incomplete" else "skip_partial"
+    return(list(action = action, files = missing))
+  }
+  if (!length(covered)) return(list(action = "fail_broken_attribution"))
+  uncovered <- setdiff(setdiff(domain, deferred), covered)
+  if (length(uncovered)) {
+    return(list(action = "enforce_fail", uncovered = uncovered))
+  }
+  list(action = "enforce_pass")
+}
+
+# The test file currently EXECUTING, or NA.
+#
+# Read from the innermost `source_file()` frame testthat runs each file inside,
+# whose `path` is the file being sourced right now. That is the file the gate
+# needs: `expected` is a directory listing, so a recorded name only cancels a
+# missing one when it names the file testthat is running.
+#
+# The srcref of the test body is the FALLBACK, not the primary, and M10's review
+# is why. `getSrcFilename(substitute(code))` names the file the expression was
+# WRITTEN in, which differs from the file executing whenever a helper generates
+# tests: a `helper-*.R` generator called from `test-x.R` put `helper-openac.R`
+# into `ran` and left `test-x.R` out of it -- a real test file the gate then
+# reported as never run. It stays as the fallback because a run with source
+# references intact but no `source_file()` frame -- `test_that()` called outside
+# testthat's own sourcing -- has nothing else to answer with.
+#
+# Both routes FAIL CLOSED. Whatever breaks them, `ran` comes back short and the
+# contract file's canary -- which asserts its OWN name is in `ran`, recorded
+# through this same path -- fails on the next run of any scope. That is the
+# whole reason the canary exists (D-013): a recorder that silently stops
+# recording must not read as a suite that silently stopped running.
+harness_caller_file <- function(expr = NULL) {
+  frames <- sys.frames()
+  calls <- sys.calls()
+  for (i in rev(seq_along(calls))) {
+    head <- calls[[i]][[1L]]
+    name <- if (is.symbol(head)) {
+      as.character(head)
+    } else if (is.call(head) &&
+               as.character(head[[1L]])[[1L]] %in% c("::", ":::")) {
+      as.character(head[[3L]])
+    } else {
+      next
+    }
+    if (!identical(name, "source_file")) next
+    path <- tryCatch(get("path", envir = frames[[i]], inherits = FALSE),
+                     error = function(e) NULL)
+    if (is.character(path) && length(path) == 1L && nzchar(path)) {
+      return(basename(path))
+    }
+  }
+
+  file <- tryCatch(utils::getSrcFilename(expr), error = function(e) character())
+  if (length(file) == 1L && nzchar(file)) return(basename(file))
+  NA_character_
+}
+
+# Shadow `test_that()` so that running a test RECORDS its file.
+#
+# Completeness used to be inferred from the content of test files -- an install
+# count, then a text search -- and both proxies diverged from the thing proxied,
+# leaving the coverage gate silently disarmed (D-013). This records the fact
+# itself, at execution time: a file joins `ran` because one of its tests ran,
+# not because something about its text suggested one would.
+#
+# testthat sources helper files into the environment test files are evaluated
+# in, so this binding shadows `testthat::test_that` for every test file in the
+# suite -- which is why this suite may only call `test_that()` bare. A qualified
+# `testthat::test_that()`, and `describe()`/`it()`, reach past the shadow and
+# are forbidden here (D-013); `test-zzz-command-contract.R` asserts their
+# absence.
+#
+# The call is forwarded UNEVALUATED to the real `test_that()`: `code` is never
+# forced here, so the test body runs exactly once, inside testthat's own
+# handlers, and a test that fails or skips is recorded exactly as one that
+# passes. Recording before the forward is deliberate -- a file whose only test
+# begins with `skip()` still ran.
+test_that <- function(desc, code) {
+  file <- harness_caller_file(substitute(code))
+  if (!is.na(file)) openac_registry$ran <- c(openac_registry$ran, file)
+  call <- match.call()
+  call[[1L]] <- quote(testthat::test_that)
+  eval.parent(call)
+}
 
 # Programs `find_program()` knows about; the fake resolver serves these.
 fake_programs <- function() c("ffmpeg", "ffprobe", "openface", "opensmile")
