@@ -369,3 +369,45 @@ resilience adaptation and a row documenting the eight shared export names;
 should be re-read against tidymedia before any future session reopens this. This
 declines a dependency, not the package: openac may still adopt tidymedia's ideas,
 and a future reversal supersedes this entry rather than ignoring it.
+
+### D-017 (2026-08-08): The passthrough argument contract — a lone string stays raw, a longer vector is tokens
+
+**Context:** openac's four passthroughs (`ffmpeg`, `ffprobe`, `openface`,
+`opensmile`) take one space-separated string and hand it to `system2()`, which
+the shell then parses; every internal caller therefore hand-quotes file paths
+with literal `"` characters at its own call site (`R/use_ffprobe.R:51-56` and six
+siblings). D-016 harvested tidymedia's boundary-quoting idea as the one place its
+design is clearly ahead, and M13 is where it lands — but adopting a token-vector
+contract means deciding what the four *exported* functions accept, since they are
+openac's documented way to call a tool by hand. A drafting audit found the first
+cut unsatisfiable: a criterion admitting a path with a space and one rejecting a
+stale multi-token string describe the same value — one character element carrying
+whitespace — so no implementation could satisfy both.
+**Decision:** Length decides. A length-1 argument is the legacy raw string and
+reaches `system2()` untouched, exactly as today; a character vector of length > 1
+is one CLI token per element, `shQuote()`-ed individually at the boundary with a
+platform-appropriate `type`. Every internal assembler emits the vector form; the
+raw string survives as a documented escape hatch.
+Considered and rejected: (a) vector-only with a heuristic rejecting a lone
+whitespace-carrying string that starts with `-` — rejected because the heuristic
+is a rule of thumb the contract cannot state precisely, and it breaks every
+existing user script for a defect none of them has; (b) vector-only with no
+detection — rejected because a stale call becomes a single quoted argument and
+the tool refuses it with its own message, turning a contract change into a
+confusing tool error; (c) leaving the four functions alone and quoting only in a
+new internal helper — rejected because it fixes openac's own call sites while
+leaving the identical trap for any user who builds a command by hand, which is
+what the passthroughs exist for. D-002's pre-1.0 free-break waiver would have
+permitted (a) or (b); it was not needed, and the option that needs no break was
+preferred over the options that spend one.
+**Consequences:** No exported behavior changes for any call that works today —
+the existing passthrough and alias tests pass unedited, which M13 makes its
+no-break check (M13 T2). The two forms are documented together in each
+passthrough's `@param arg` and in DESIGN's Architecture "Calling the CLIs"
+paragraph, which currently states the single-string contract as the only one.
+The cost is two behaviors in one function, mitigated by the rule being
+mechanical rather than heuristic. This also unblocks GP5's remaining half: a
+token vector is renderable as a human-readable command, so a display surface
+becomes cheap — deliberately deferred out of M13 as a ROADMAP candidate rather
+than folded in. A later 1.0 API freeze may retire the raw-string form; that
+supersedes this entry rather than ignoring it.
