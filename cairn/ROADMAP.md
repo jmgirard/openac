@@ -8,6 +8,9 @@ _Released 0.1.0 (GitHub) 2026-07-11._
 
 | ID | Title | Status | Depends on | Priority | File/Archive |
 |---|---|---|---|---|---|
+| M17 | A tool that exited non-zero is a failed file | planned | — | high | milestones/M17-tool-exit-status.md |
+| M18 | A skipped file is a skip, not a success | planned | M17 | normal | milestones/M18-batch-skip-outcome.md |
+| M19 | A guard that names no file | planned | — | normal | milestones/M19-guards-name-the-file.md |
 | M13 | Quote at the process boundary, not at the call site | done | — | high | milestones/archive/M13-boundary-quoting.md |
 | M14 | A bad file is an outcome, not the end of the batch | done | M13 | normal | milestones/archive/M14-resilient-stream-count.md |
 | M15 | What Windows actually does to a path the shell can eat | done | — | high | milestones/archive/M15-windows-quoting-oracle.md |
@@ -35,7 +38,5 @@ _Released 0.1.0 (GitHub) 2026-07-11._
 - OpenFace writes no `.csv` on Windows for a face-less input — it tracks to completion and writes `faces_of_details.txt` beside the requested `faces.csv`, where the same input on macOS yields a header-only CSV; `test-real-tools.R`'s OpenFace test fails on Windows on `main` as well as on the branch, so `devtools::check()` errors there — added 2026-08-08 — M15 review, out of scope
 - Two installer-guard robustness fixes M16's review logged just under the action bar: `download_model()`'s `if (size < floor)` errors instead of returning `FALSE` when `file.size()` gives `NA` (a Windows stat race), and `skip_if_not_installed("curl")` sits in the shared gate so a maintainer without curl loses all four opt-in tests rather than the one probe using it — added 2026-08-08 — M16 Review N10, N13
 - Run `install_opensmile_mac()` for real on macOS — the mac half of the gap M16 closes on Windows; the installers have only ever been exercised against a mocked download environment — added 2026-08-08 — M16 Out
-- Extend M14's per-file-outcome treatment to the other probe-and-abort guards (os_check_config, the stopifnot(file.exists()) guards in of_extract/os_extract_wav/os_fix_csv — os_extract itself has none, corrected 2026-08-08) — added 2026-08-08 — M14 Out
 - Revisit the 8 names openac and tidymedia both export at the 1.0 API freeze — the README now warns users (2026-08-08); renaming is the other half and only makes sense once the API is frozen — added 2026-08-08 — M12 (cairn/references/tidymedia-fit.md, C1-C8)
-- Restore GP6 for output-path collisions — drop colliding files into the `*_dir` outcome table as per-file failures instead of aborting the batch pre-flight; needs plumbing the derivation result through `dir_walk` — added 2026-08-07 — hotfix batch-extension-case, PR #9
-- A skipped file is recorded as a success in two batch tables — `aw_transcribe_dir()` and `os_prep_audio_dir()` both return `success = TRUE, error = NA` for a file that was never processed (measured 2026-08-08), because `aw_transcribe()` skips via a message and returns NULL, and `os_prep_audio()` never checks ffmpeg's exit status; needs either an abort or a third outcome column — added 2026-08-08 — M14 Review A4/A17; M07 review D11
+- Restore GP6 for output-path collisions — drop colliding files into the `*_dir` outcome table as per-file failures instead of aborting the batch pre-flight; waits on M18, whose skip channel is the pre-marked-row plumbing this needs (`dir_outputs()` returns a bare `character(N)` cbind-ed into a `pmap` frame, and the collision is a property of a row PAIR found before `dir_walk` is entered) — added 2026-08-07 — hotfix batch-extension-case, PR #9; M18
