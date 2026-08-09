@@ -108,8 +108,14 @@ aw_prep_audio <- function(
   stopifnot(rlang::is_integerish(stream, n = 1), stream >= 0)
   stopifnot(rlang::is_bool(afilters))
   stopifnot(rlang::is_bool(overwrite))
-  # Return early if overwrite is TRUE and outfile exists
+  # Return early if overwrite is TRUE and outfile exists. The skip is SIGNALLED
+  # as well as returned (M18): a direct caller sees the same "Skipped" it always
+  # did, while a `*_dir()` batch records the row as skipped rather than as work
+  # it did not do.
   if (overwrite == FALSE && file.exists(outfile)) {
+    skip_file(paste0(
+      basename(outfile), " already exists and overwrite = FALSE."
+    ))
     return("Skipped")
   }
   # Check that the requested audio stream exists. A file ffprobe could not read
@@ -291,12 +297,30 @@ aw_transcribe <- function(
   audio_args = list(),
   whisper_args = list()
 ) {
-  # Check for audio
-  has_audio <- tryCatch({
-    ffp_count_streams(infile)[['Audio']] > 0
-  }, error = function(e) FALSE)
-  if (is.na(has_audio) || !has_audio) {
-    cli::cli_alert_warning("Skipping {.file {basename(infile)}}: No audio streams detected.")
+  # Check for audio. The two facts this branch used to conflate now part
+  # company (M18). A file ffprobe could not probe is a FAILURE: nothing was
+  # learned about it, so calling it deliberately passed over would assert
+  # something false, and it aborts naming the file -- the same disposition
+  # `aw_prep_audio()` and `os_prep_audio()` already give an unprobeable input.
+  # A file that probed cleanly and carries no audio stream is a genuine SKIP:
+  # the answer is known and there is nothing to transcribe.
+  streams <- ffp_count_streams(infile)
+  if (is.na(streams[["Audio"]])) {
+    cli::cli_abort(
+      "Cannot transcribe {.file {basename(infile)}}: its streams could not be
+       counted."
+    )
+  }
+  if (streams[["Audio"]] == 0) {
+    skip_file("No audio streams detected.")
+    # AFTER the signal, deliberately. Under `dir_walk()` the handler for the
+    # condition above is exiting, so it unwinds this call and this line never
+    # runs -- the batch prints its own line naming the file. Reaching here
+    # means nothing handled the skip, i.e. a direct call, which keeps exactly
+    # the message it has always printed.
+    cli::cli_alert_warning(
+      "Skipping {.file {basename(infile)}}: No audio streams detected."
+    )
     return(NULL)
   }
   # Preallocate temp

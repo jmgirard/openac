@@ -275,22 +275,28 @@ test_that("aw_transcribe() skips a file with no audio rather than transcribing i
   expect_length(whisper$calls, 0)
 })
 
-test_that("aw_transcribe() reaches its NA branch, not its error fallback", {
-  # `has_audio` is computed inside a tryCatch whose error handler also yields
-  # a skip, so both an NA count and an outright error end in the same message
-  # and the message alone cannot say which branch ran. The discriminator is the
-  # warning: ffp_count_streams() warns on the way to NA, and an error path
-  # emits no such warning because it never returns.
+test_that("aw_transcribe() fails an unprobeable file rather than skipping it", {
+  # M18 split the branch that used to conflate these two. Before it, an NA
+  # stream count and a file with genuinely no audio both printed "No audio"
+  # and returned NULL, so the message could not say which had happened -- and
+  # a batch recorded a file nothing was ever learned about as deliberately
+  # passed over. Nothing is known about an unprobeable file, so it is a
+  # failure. The discriminator is which condition is raised, not the message.
   infile <- withr::local_tempfile(fileext = ".mp4")
   file.create(infile)
   local_fake_tools(results = list(fake_nonzero_exit()))
   whisper <- local_fake_whisper()
 
   warnings <- collect_warnings(
-    expect_message(out <- aw_transcribe(infile, model = fake_model()), "No audio")
+    expect_error(
+      aw_transcribe(infile, model = fake_model()),
+      "could not be counted"
+    )
   )
 
-  expect_null(out)
+  # It got there via the NA count, not some earlier abort:
+  # ffp_count_streams() warns on its way to returning NA, and it never
+  # reached whisper.
   expect_length(whisper$calls, 0)
   expect_length(warnings, 1L)
   expect_match(warnings, "ffprobe exited with status 1")

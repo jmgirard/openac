@@ -181,8 +181,14 @@ os_prep_audio <- function(infile, outfile, stream = 0, overwrite = TRUE) {
   stopifnot(rlang::is_string(outfile))
   stopifnot(rlang::is_integerish(stream, n = 1), stream >= 0)
   stopifnot(rlang::is_bool(overwrite))
-  # Return early if overwrite is TRUE and outfile exists
+  # Return early if overwrite is TRUE and outfile exists. The skip is SIGNALLED
+  # as well as returned (M18): a direct caller sees the same "Skipped" it always
+  # did, while a `*_dir()` batch records the row as skipped rather than as work
+  # it did not do.
   if (overwrite == FALSE && file.exists(outfile)) {
+    skip_file(paste0(
+      basename(outfile), " already exists and overwrite = FALSE."
+    ))
     return("Skipped")
   }
   # Create outfile directory if needed

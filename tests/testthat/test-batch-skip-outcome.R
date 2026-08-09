@@ -97,6 +97,26 @@ test_that("the zero-row table carries the same columns as a populated one", {
   expect_identical(nrow(empty), 0L)
 })
 
+test_that("a batch where every file succeeds reports no not-processed row", {
+  # The counterpart to the three-state test, and the reason the retired
+  # `dir_walk_reports_failure()` helper is not missed. That helper treated ANY
+  # column beyond the then-known set as evidence of a non-success outcome, so
+  # adding `status` would have made it report EVERY table -- including this
+  # one -- as carrying a failure. What it was really pinning is asserted here
+  # directly: a clean batch is all-ok, and the outcome columns are exactly the
+  # three.
+  result <- suppressMessages(openac:::dir_walk(
+    data.frame(infile = c("a.mp4", "b.mp4"), stringsAsFactors = FALSE),
+    function(infile) invisible(TRUE),
+    parallel = FALSE
+  ))
+
+  expect_identical(result$status, c("ok", "ok"))
+  expect_true(all(result$success))
+  expect_true(all(is.na(result$error)))
+  expect_identical(names(result), c("infile", "status", "success", "error"))
+})
+
 test_that("every *_dir() wrapper returns a table carrying a status column", {
   # The wrapper list is COMPUTED, never hand-written: a seventh `*_dir()`
   # function lands in the namespace and reds this test until it is covered

@@ -100,6 +100,22 @@ with_progress_mode <- function(run, progress = c("auto", "on", "off")) {
   }
 }
 
+# Signal that the caller deliberately did not process this file (M18).
+#
+# NOT an error. A condition signalled with no handler established simply
+# returns, so a DIRECT call to a single-file function is unchanged --
+# `aw_prep_audio(overwrite = FALSE)` still returns "Skipped" to a user who
+# calls it by hand. Under `dir_walk()` a handler IS established, and it unwinds
+# the call and records the row as skipped. That asymmetry is the point: the
+# batch learns the file was declined without the exported functions gaining an
+# error branch none of their callers asked for.
+#
+# `reason` is plain prose, not a cli template -- it is interpolated into
+# `dir_walk()`'s message as a value, so braces in it would be confusing at best.
+skip_file <- function(reason) {
+  rlang::signal(reason, class = "openac_file_skipped")
+}
+
 # Run `.f` over the rows of `.l`, surviving a per-file failure (GP6).
 #
 # A batch that dies on file 412 of 500 overnight is the failure mode to design
@@ -107,10 +123,27 @@ with_progress_mode <- function(run, progress = c("auto", "on", "off")) {
 # file and the condition that stopped it, and the returned table records every
 # file's outcome so a caller can re-run exactly the failures.
 #
+# THREE outcomes, not two (M18). `status` is the authority --- "ok" for a file
+# the operation completed, "skipped" for one it deliberately declined
+# (`skip_file()` above), "failed" for one that errored --- and `success` is
+# `status == "ok"`, kept because it is the column callers already read. A skip
+# and a failure both read `success = FALSE`, so `success` alone cannot tell "I
+# chose not to" from "I tried and could not"; before M18 a skip read
+# `success = TRUE` and the batch reported work it had not done.
+#
+# A failure WARNS and a skip only informs. Re-running a finished batch with
+# `overwrite = FALSE` skips every file, and 500 warnings for a batch behaving
+# exactly as asked would bury the rows a caller must actually act on.
+#
 # `parallel = FALSE` is for whisper, whose loop is sequential by design (D-006).
 dir_walk <- function(.l, .f, parallel = TRUE) {
   if (nrow(.l) == 0L) {
-    return(cbind(.l, success = logical(0), error = character(0)))
+    return(cbind(
+      .l,
+      status = character(0),
+      success = logical(0),
+      error = character(0)
+    ))
   }
   p <- progressr::progressor(steps = nrow(.l))
   step <- function(...) {
@@ -118,13 +151,23 @@ dir_walk <- function(.l, .f, parallel = TRUE) {
     out <- tryCatch(
       {
         .f(...)
-        list(success = TRUE, error = NA_character_)
+        list(status = "ok", success = TRUE, error = NA_character_)
+      },
+      openac_file_skipped = function(cnd) {
+        cli::cli_alert_info(
+          "Skipping {.file {basename(infile)}}: {conditionMessage(cnd)}"
+        )
+        list(
+          status = "skipped",
+          success = FALSE,
+          error = conditionMessage(cnd)
+        )
       },
       error = function(e) {
         cli::cli_warn(
           "Skipping {.file {basename(infile)}}: {conditionMessage(e)}"
         )
-        list(success = FALSE, error = conditionMessage(e))
+        list(status = "failed", success = FALSE, error = conditionMessage(e))
       }
     )
     p(message = basename(infile))
@@ -133,6 +176,7 @@ dir_walk <- function(.l, .f, parallel = TRUE) {
   res <- if (parallel) furrr::future_pmap(.l, step) else purrr::pmap(.l, step)
   cbind(
     .l,
+    status = vapply(res, function(x) x$status, character(1)),
     success = vapply(res, function(x) x$success, logical(1)),
     error = vapply(res, function(x) x$error, character(1)),
     stringsAsFactors = FALSE
