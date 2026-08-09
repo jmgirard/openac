@@ -5,7 +5,7 @@
 - **Depends on:** —
 - **Driving RR:** —
 - **Principles touched:** GP6, GP9
-- **Branch/PR:** `m19-guards-name-the-file`
+- **Branch/PR:** `m19-guards-name-the-file` · https://github.com/jmgirard/openac/pull/20
 
 ## Goal
 
@@ -36,19 +36,19 @@ messages; this milestone is scoped to what a batch row can carry.
 
 ## Acceptance criteria
 
-- [ ] AC1 Every guard T2's work-log enumeration classifies as batch-reachable
+- [x] AC1 Every guard T2's work-log enumeration classifies as batch-reachable
       signals an error whose message names the file it stopped on and the
       defect, and a test per guard asserts the file's basename appears in it.
       That enumeration is the domain and is stated rather than assumed: its
       input is `grep -n "stopifnot\|cli_abort" R/use_*.R`, and every hit T2
       classifies as not batch-reachable carries its reason.
-- [ ] AC2 The defect DESIGN's Known issues measured on 2026-08-08 is gone:
+- [x] AC2 The defect DESIGN's Known issues measured on 2026-08-08 is gone:
       `os_extract_dir()` recording a failed row whose message is the bare
       deparse `file.exists(infile) is not TRUE`, about a temporary wav that
       was never written. A test drives that path and asserts the row's `error`
       names the missing wav path and attributes it to ffmpeg having written no
       output there.
-- [ ] AC3 `os_check_config()` signals an error whose message contains the
+- [x] AC3 `os_check_config()` signals an error whose message contains the
       config value it could not resolve, and `os_extract_dir()` validates
       `config` before `dir_walk()` runs. Tests assert: the value appears in
       the message; an unresolvable config makes `os_extract_dir()` signal an
@@ -56,11 +56,11 @@ messages; this milestone is scoped to what a batch row can carry.
       all (`helper-openac.R:925`), not merely no openSMILE call; and the same
       validation runs when `config` is left at the default carried by
       `os_extract_wav()`'s signature rather than passed through `...`.
-- [ ] AC4 `os_fix_csv()`'s missing-input guard names the path it looked for
+- [x] AC4 `os_fix_csv()`'s missing-input guard names the path it looked for
       and attributes it to openSMILE having written no output there; a test
       asserts both parts. The attribution is honest for both of its callers
       (`R/use_opensmile.R:361`, `:364`), which is what makes it sayable.
-- [ ] AC5 `devtools::document()` shows no drift, `devtools::test()` passes,
+- [x] AC5 `devtools::document()` shows no drift, `devtools::test()` passes,
       and `devtools::check()` reports 0 errors, 0 warnings and no NOTE other
       than the pre-existing `spelling` NOTE.
 
@@ -113,3 +113,68 @@ messages; this milestone is scoped to what a batch row can carry.
 ## Decisions
 
 ## Review
+
+_Evidence gathered 2026-08-09 on R 4.6.1 / macOS 15 (Darwin 25.6.0), at branch
+`m19-guards-name-the-file`, PR #20._
+
+- **AC1 — verified.** Domain re-derived by its stated input:
+  `grep -n "stopifnot\|cli_abort" R/use_*.R` (44 hits, against 74 at T2 — the
+  drop is the rewritten guards). Every surviving `stopifnot()` in
+  `R/use_*.R` sits in a `*_dir()` pre-flight block — `of_extract_dir`
+  `use_openface.R:155-158`, `aw_prep_audio_dir` `use_whisper.R:249-252`,
+  `aw_transcribe_dir` `:544-549`, `os_prep_audio_dir` `use_opensmile.R:292-295`,
+  `os_extract_dir` `:510-516` — which is exactly the set T2 recorded as not
+  batch-reachable, with its reason; the three other `stopifnot` hits are inside
+  comments. The 38 batch-reachable guards now route through `abort_file()`
+  across eight functions (`os_check_audio`, `os_prep_audio`, `os_extract_wav`,
+  `of_extract`, `aw_check_audio`, `aw_prep_audio`, `aw_transcribe`,
+  `aw_transcribe_wav`) plus `os_fix_csv`'s own abort. 38 guard-message tests
+  ran, 0 failures, each asserting `basename(infile)` and a defect substring.
+
+- **AC2 — verified.** `os_extract_dir()` driven over a one-file directory with
+  `wavdir=` and `aggdir=`, ffprobe reporting a non-conforming input and ffmpeg
+  exiting 0 while writing nothing — the measured shape of the DESIGN
+  2026-08-08 defect. The returned row reads `status = "failed"` and its `error`
+  reads `Could not process 'clip.mp4'.` / `ffmpeg wrote no output at
+  '<wavdir>/clip.wav'.` The test asserts the derived wav path in full and the
+  ffmpeg attribution; the bare deparse it replaces appears nowhere.
+
+- **AC3 — verified.** Three tests, all green. (1) `os_check_config("egemaps/v99/nope")`
+  aborts with a message carrying `egemaps/v99/nope` and pointing at
+  `os_list_configs()`. (2) `os_extract_dir(..., config = "egemaps/v99/nope")`
+  signals an error rather than returning a table, and `boundary_tools()` is
+  `character(0)` — no call at all, which is the assertion the criterion asks
+  for rather than the weaker "no openSMILE call": the per-file path reaches
+  ffprobe long before openSMILE, so an absence-of-openSMILE assertion would
+  have passed over a batch that had already probed every input. (3) With the
+  config directory emptied and NO `config` argument supplied, the same abort
+  fires naming `misc/emo_large` — the default read from `formals(os_extract)`,
+  which is the path `...` never carries.
+
+- **AC4 — verified.** `os_fix_csv()` on a path nothing wrote aborts with
+  `Could not tidy the openSMILE output at '<path>'.` / `openSMILE wrote no
+  output there.`; the test asserts the full path and the attribution
+  separately. The attribution's honesty was re-checked against both call sites
+  rather than assumed: `os_extract_wav()` calls it only at
+  `R/use_opensmile.R:444` and `:447`, each on the `aggfile`/`lldfile` it passed
+  openSMILE as `-csvoutput` / `-lldcsvoutput` in the command built at `:433-439`
+  and run at `:441`, so the file's absence is openSMILE having written nothing
+  there. There is no third caller (`grep -n "os_fix_csv(" R/` returns the
+  definition and those two).
+
+- **AC5 — verified.** `devtools::document()` run at review leaves the tree
+  clean (no `man/`, `NAMESPACE` or `DESCRIPTION` diff). `devtools::test()`:
+  308 tests, 0 failures, 0 errors, 6 skips. `devtools::check()`: **Status OK —
+  0 errors, 0 warnings, 0 notes** in 48.4s; the pre-existing `spelling` NOTE
+  the criterion allows for did not appear at all, `spelling.R` passing as a
+  test instead.
+
+- **Consistency gate — passed.** `cairn_validate.py` exit 0: 16 PASS, 8 OK
+  advisories, no FAIL. No `DESIGN.md` IP/GP principle changed (the edit is a
+  Known-issues correction), so `cairn_impact` is a clean no-op. Toolchain
+  slot (`r-package`): `document()` no diff; generated files regenerated, not
+  hand-edited; README.Rmd/README.md untouched by the branch and last written by
+  the same commit; no pkgdown site in the repo, so that check no-ops and no
+  reference-index row is owed (nothing new is exported); NEWS.md carries two
+  entries for this milestone's user-visible changes, with no milestone number
+  in them; no new top-level files; `check()` clean as recorded under AC5.
