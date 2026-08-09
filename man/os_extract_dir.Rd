@@ -62,7 +62,10 @@ not processed) or \code{"failed"} (the operation raised an error); \code{success
 \code{status == "ok"}, so a skipped file reads \code{FALSE}, and \code{error} carries the
 reason for a skipped file as well as for a failed one. A file that fails
 does not abort the batch: it is warned about, recorded as \code{"failed"}, and
-the remaining files still run.
+the remaining files still run. A \code{config} that cannot be resolved is the
+exception, and is not a per-file outcome: it is wrong for every input, so
+it errors before any file is touched, naming the config, and no table is
+returned.
 }
 \description{
 Find all .wav files in a specified directory and then extract opensmile

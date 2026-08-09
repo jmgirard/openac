@@ -1,6 +1,6 @@
 # M19: A guard that names no file
 
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** normal
 - **Depends on:** —
 - **Driving RR:** —
@@ -90,7 +90,7 @@ messages; this milestone is scoped to what a batch row can carry.
       `tests/testthat/test-commands-extract.R:118`, `:176`;
       `test-commands-prep.R:112`, `:148`, `:213`;
       `test-whisper-transcribe.R:134`, `:161`.
-- [ ] T7 `devtools::document()`, `devtools::test()`, `devtools::check()`.
+- [x] T7 `devtools::document()`, `devtools::test()`, `devtools::check()`.
 
 ## Work log
 
@@ -106,6 +106,9 @@ messages; this milestone is scoped to what a batch row can carry.
 - 2026-08-09: minor amendment, T3 — `aw_transcribe_wav()`'s model guard moved from `class(model) == "whisper"` to `inherits()`. The old form compares a whole class vector against one string, so a subclassed model made `stopifnot()` die on the comparison's length rather than on the contract.
 - 2026-08-09: T6 removed three tests outright rather than retargeting them — `os_prep_audio()`/`aw_prep_audio()`/`of_extract()` "validates its arguments" — each of whose entire content was a deparse pin now asserted guard-by-guard, and more strongly, in `test-guard-messages.R`; a pointer comment stands where each was. The four with assertions beyond the message (whisper never reached, the stream index, the config) were retargeted in place.
 - 2026-08-09: discovered sub-task (minor amendment): a NEWS entry for the two user-visible changes, and a DESIGN Known-issues correction in place — its GP6 paragraph asserted "the abort messages name the file in only one of them, the rest being bare `stopifnot()` deparses", which the branch makes false. The NEWS claim that the config message points at `os_list_configs()` was untested when written, so an assertion for it was added rather than the claim softened.
+- 2026-08-09: T7 MEASURED on R 4.6.1 / macOS 15 at commit before this one: `devtools::document()` writes no diff, `devtools::test()` 308 tests 0 failures 0 errors 6 skips, `devtools::check()` Status OK — 0 errors, 0 warnings, 0 notes; the pre-existing `spelling` NOTE AC5 allows for did not appear at all.
+- 2026-08-09: T7 also added `os_extract_dir()`'s `@return` note that an unresolvable `config` errors before any file is touched and returns no table — the abort T5 introduces was absent from its own documented contract, which is the shape of finding the M18 review logged against `aw_transcribe()`.
+- 2026-08-09: status → review.
 
 ## Decisions
 

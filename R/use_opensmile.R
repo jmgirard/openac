@@ -491,7 +491,10 @@ os_extract_wav <- function(
 #'   `status == "ok"`, so a skipped file reads `FALSE`, and `error` carries the
 #'   reason for a skipped file as well as for a failed one. A file that fails
 #'   does not abort the batch: it is warned about, recorded as `"failed"`, and
-#'   the remaining files still run.
+#'   the remaining files still run. A `config` that cannot be resolved is the
+#'   exception, and is not a per-file outcome: it is wrong for every input, so
+#'   it errors before any file is touched, naming the config, and no table is
+#'   returned.
 #' @export
 #'
 os_extract_dir <- function(
