@@ -1,5 +1,26 @@
 # openac (development version)
 
+* A batch's results table now says whether each file was processed, deliberately
+  skipped, or failed. It gains a `status` column reading `"ok"`, `"skipped"` or
+  `"failed"`, and `success` is now `status == "ok"` — so a file the batch chose
+  not to process reads `success = FALSE` where it used to read `TRUE`. If you
+  read `success` to count completed work, that count was previously flattering
+  and is now honest; if you read it to find the files that need attention, read
+  `status` as well to tell a deliberate skip from a genuine failure. Three cases
+  skip: an output that already exists under `overwrite = FALSE` in
+  `aw_prep_audio()` and `os_prep_audio()`, and a file with no audio stream in
+  `aw_transcribe()`. `status` describes the batch's own job, so a batch that
+  merely *reuses* audio it prepared on an earlier run — `os_extract_dir()` or
+  `aw_transcribe_dir()` given a `wavdir` and `overwrite = FALSE` — still
+  extracts or transcribes as usual and reads `"ok"`; only a batch whose whole
+  job was preparing that audio reads `"skipped"`. The reason appears in the
+  `error` column, as it already did for a failure. A skip is announced with an informational line rather than a
+  warning, so re-running a finished batch does not bury the rows that do need
+  you. Calling any of these functions on a single file by hand is unchanged.
+  Separately, `aw_transcribe()` now stops on a file ffprobe cannot read instead of
+  quietly returning nothing: nothing is known about such a file, so a batch
+  records it as a failure rather than as a skip.
+
 * When ffmpeg, openSMILE or OpenFace fails on a file, that file is now reported
   as a failure instead of a success. Until now nothing in the package looked at
   whether these programs had actually worked — they report failure through a
@@ -30,9 +51,7 @@
   failure you can read and re-run, where before the table said only that an
   audio stream index was not true — a message that named neither the file nor
   the reason, and that came from reading a failed probe as a file with no audio.
-  One batch function does not yet report it that clearly and still records such
-  a file as a success: `aw_transcribe_dir()` skips it, and a skipped file is not
-  yet distinguishable from a transcribed one in the returned table. A
+  `aw_transcribe_dir()` reports it too, as the next entry describes. A
   missing ffprobe stops the run as before, because that is a problem with the
   installation rather than with any one file. `ffp_count_streams()` also now
   requires a single file path: it previously accepted a vector of several and

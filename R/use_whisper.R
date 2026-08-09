@@ -89,7 +89,11 @@ aw_check_audio <- function(infile, verbose = FALSE) {
 #'   `infile` to convert or extract. Note that ffmpeg uses zero-indexing so the
 #'   default of 0 is the first stream. Defaults to 0.
 #' @param overwrite Should outfile be overwritten if it already exists? It will
-#'   be silently skipped otherwise. Defaults to TRUE.
+#'   be skipped otherwise, silently for a direct call. In a batch the row
+#'   depends on whose job the preparing is: under `aw_prep_audio_dir()` it is
+#'   the whole job, so the row reads `"skipped"`; under `aw_transcribe_dir()`
+#'   the existing file is reused and whisper still runs, so the row reads
+#'   `"ok"`. Defaults to TRUE.
 #' @param afilters Should audio filters be used to try to improve audio quality?
 #'   (See Details.) Defaults to FALSE.
 #' @return A string containing the text output from ffmpeg. Errors, naming the
@@ -108,8 +112,14 @@ aw_prep_audio <- function(
   stopifnot(rlang::is_integerish(stream, n = 1), stream >= 0)
   stopifnot(rlang::is_bool(afilters))
   stopifnot(rlang::is_bool(overwrite))
-  # Return early if overwrite is TRUE and outfile exists
+  # Return early if overwrite is TRUE and outfile exists. The skip is SIGNALLED
+  # as well as returned (M18): a direct caller sees the same "Skipped" it always
+  # did, while a `*_dir()` batch records the row as skipped rather than as work
+  # it did not do.
   if (overwrite == FALSE && file.exists(outfile)) {
+    skip_file(paste0(
+      basename(outfile), " already exists and overwrite = FALSE."
+    ))
     return("Skipped")
   }
   # Check that the requested audio stream exists. A file ffprobe could not read
@@ -198,9 +208,14 @@ aw_prep_audio <- function(
 #'   - `"off"`: Suppresses progress signals via `progressr::without_progress()`.
 #' @inheritDotParams aw_prep_audio stream overwrite afilters
 #' @return (Invisibly) a data frame with one row per input file, giving the
-#'   `infile` and `outfile` it was called with, whether it `success`ed, and the
-#'   `error` message if it did not. A file that fails is skipped with a warning
-#'   rather than aborting the batch.
+#'   `infile` and `outfile` it was called with, its `status`, whether it
+#'   `success`ed, and the `error` message if it did not. `status` is one of
+#'   `"ok"` (the operation completed), `"skipped"` (the file was deliberately
+#'   not processed) or `"failed"` (the operation raised an error); `success` is
+#'   `status == "ok"`, so a skipped file reads `FALSE`, and `error` carries the
+#'   reason for a skipped file as well as for a failed one. A file that fails
+#'   does not abort the batch: it is warned about, recorded as `"failed"`, and
+#'   the remaining files still run.
 #' @export
 #'
 aw_prep_audio_dir <- function(
@@ -291,12 +306,31 @@ aw_transcribe <- function(
   audio_args = list(),
   whisper_args = list()
 ) {
-  # Check for audio
-  has_audio <- tryCatch({
-    ffp_count_streams(infile)[['Audio']] > 0
-  }, error = function(e) FALSE)
-  if (is.na(has_audio) || !has_audio) {
-    cli::cli_alert_warning("Skipping {.file {basename(infile)}}: No audio streams detected.")
+  # Check for audio. The two facts this branch used to conflate now part
+  # company (M18). A file ffprobe could not probe is a FAILURE: nothing was
+  # learned about it, so calling it deliberately passed over would assert
+  # something false, and it aborts naming the file -- the same disposition
+  # `aw_prep_audio()` gives an unprobeable input just below. (`os_prep_audio()`
+  # does NOT: it never counts streams, so it has no such branch to match.)
+  # A file that probed cleanly and carries no audio stream is a genuine SKIP:
+  # the answer is known and there is nothing to transcribe.
+  streams <- ffp_count_streams(infile)
+  if (is.na(streams[["Audio"]])) {
+    cli::cli_abort(
+      "Cannot transcribe {.file {basename(infile)}}: its streams could not be
+       counted."
+    )
+  }
+  if (streams[["Audio"]] == 0) {
+    skip_file("No audio streams detected.")
+    # AFTER the signal, deliberately. Under `dir_walk()` the handler for the
+    # condition above is exiting, so it unwinds this call and this line never
+    # runs -- the batch prints its own line naming the file. Reaching here
+    # means nothing handled the skip, i.e. a direct call, which keeps exactly
+    # the message it has always printed.
+    cli::cli_alert_warning(
+      "Skipping {.file {basename(infile)}}: No audio streams detected."
+    )
     return(NULL)
   }
   # Preallocate temp
@@ -307,8 +341,11 @@ aw_transcribe <- function(
       temp <- TRUE
       wavfile <- tempfile(fileext = ".wav")
     }
-    # Prepare audio stream as wavfile/tempfile
-    do.call(
+    # Prepare audio stream as wavfile/tempfile. A skip here -- an
+    # `overwrite = FALSE` wav this batch already prepared -- is the fast path
+    # into the transcription below, never a reason to abandon the file, so it
+    # is absorbed rather than left to reach `dir_walk()`'s exiting handler.
+    absorb_skip(do.call(
       what = aw_prep_audio,
       args = c(
         list(
@@ -317,7 +354,7 @@ aw_transcribe <- function(
         ),
         audio_args
       )
-    )
+    ))
   } else {
     wavfile <- infile
   }
@@ -427,9 +464,14 @@ aw_transcribe_wav <- function(
 #'   - `"off"`: Suppresses progress signals via `progressr::without_progress()`.
 #' @inheritDotParams aw_transcribe model language audio_args whisper_args
 #' @return (Invisibly) a data frame with one row per input file, giving the
-#'   paths it was called with, whether it `success`ed, and the `error` message
-#'   if it did not. A file that fails is skipped with a warning rather than
-#'   aborting the batch.
+#'   paths it was called with, its `status`, whether it
+#'   `success`ed, and the `error` message if it did not. `status` is one of
+#'   `"ok"` (the operation completed), `"skipped"` (the file was deliberately
+#'   not processed) or `"failed"` (the operation raised an error); `success` is
+#'   `status == "ok"`, so a skipped file reads `FALSE`, and `error` carries the
+#'   reason for a skipped file as well as for a failed one. A file that fails
+#'   does not abort the batch: it is warned about, recorded as `"failed"`, and
+#'   the remaining files still run.
 #' @export
 #'
 aw_transcribe_dir <- function(

@@ -437,3 +437,36 @@ skips the probe rather than failing; package code under `R/` still may not use
 it. `curl` is a hard dependency of much of the R toolchain already, so the
 marginal install cost for a developer is near zero and for a user is nil —
 the same reasoning D-011 recorded for `withr`.
+
+### D-019 (2026-08-09): The skip channel is a non-error condition, and a nested skip stops at the call that raised it
+
+**Context:** M18 gave the batch outcome table a third state. Two choices had
+to be made, and both now bind code outside the milestone that made them: how a
+single-file function tells `dir_walk()` it declined a file, and what happens
+when the declining function is nested inside a larger per-file job. The second
+was not settled at planning time — M18's first review round MEASURED that a
+nested `overwrite = FALSE` skip inside `os_extract()` unwound the entire
+per-file call, so openSMILE never ran, no CSV was written, and the row reported
+a deliberate skip of work the caller did want done.
+**Decision:** (1) A skip is signalled as a non-error condition of class
+`openac_file_skipped` (`skip_file()`, `R/utils.R`). Considered and rejected: a
+sentinel return value — `dir_walk()` inspects no return value, and the
+`do.call` paths (`aw_transcribe_dir`, `os_extract_dir`) return heterogeneous
+values a sentinel would have to be told apart from. Considered and rejected:
+making a deliberate skip an error — re-running a completed batch would then
+report every already-finished file as failed. (2) `status` describes the
+batch's OWN job, so a skip raised by a nested prep call is absorbed at that
+call (`absorb_skip()`, `R/utils.R`) and never reaches `dir_walk()`. Considered
+and rejected: a calling handler in `dir_walk()` plus `rlang::cnd_muffle()` —
+the work would resume, but the row would read `"skipped"` for a file that was
+in fact processed, contradicting the definition M18 wrote for that word.
+**Consequences:** The two `*_prep_audio_dir()` wrappers pass the prep function
+to `dir_walk()` as `.f` directly, so their skip is the batch's own and reads
+`"skipped"`; `os_extract_dir()` and `aw_transcribe_dir()` reuse an existing wav
+and read `"ok"`. A direct call to any single-file function is unchanged,
+because an unhandled `rlang::signal()` simply returns. A new skip site must
+decide which of the two it is — and one added DEEPER than the prep call would
+be absorbed and reported as `"ok"`, so it needs its own handling rather than
+inheriting this one. The output-path-collision work parked on the ROADMAP is
+the first consumer of the channel, and would extend the condition to carry the
+offending path as a field.

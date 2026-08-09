@@ -64,8 +64,9 @@ future_walk2(
 
 For this common "every file in a directory" case you can skip the manual file
 bookkeeping entirely and let `os_prep_audio_dir()` find, pair, and process the
-files for you. A file that fails is skipped with a warning rather than stopping
-the run, and the returned data frame records the outcome of every file:
+files for you. A file that fails does not stop the run: it is warned about,
+recorded as `"failed"`, and the remaining files still go through. The returned
+data frame records the outcome of every file:
 
 ```{r}
 os_prep_audio_dir(

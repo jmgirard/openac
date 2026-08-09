@@ -18,7 +18,11 @@ file to create containing only the specified audio stream from \code{infile}.}
 default of 0 is the first stream. Defaults to 0.}
 
 \item{overwrite}{Should outfile be overwritten if it already exists? It will
-be silently skipped otherwise. Defaults to TRUE.}
+be skipped otherwise, silently for a direct call. In a batch the row
+depends on whose job the preparing is: under \code{aw_prep_audio_dir()} it is
+the whole job, so the row reads \code{"skipped"}; under \code{aw_transcribe_dir()}
+the existing file is reused and whisper still runs, so the row reads
+\code{"ok"}. Defaults to TRUE.}
 
 \item{afilters}{Should audio filters be used to try to improve audio quality?
 (See Details.) Defaults to FALSE.}

@@ -258,7 +258,10 @@ test_that("a directory with no matching files yields an empty result", {
   result <- of_extract_dir(indir, "avi", file.path(withr::local_tempdir(), "out"))
 
   expect_identical(nrow(result), 0L)
-  expect_identical(names(result), c("infile", "outfile", "success", "error"))
+  expect_identical(
+    names(result),
+    c("infile", "outfile", "status", "success", "error")
+  )
 })
 
 # --- GP6: skip and report ----------------------------------------------------
@@ -351,28 +354,32 @@ test_that("os_prep_audio_dir() records a failed conversion as a failed row", {
   expect_match(prep$error[[1]], "Invalid data found", fixed = TRUE)
 })
 
-test_that("KNOWN GAP: aw_transcribe_dir() records a skipped file as a success", {
-  # Pinning a wart, not a contract, and the last of the two NEWS names:
-  # `aw_transcribe()` skips an unprobeable file with a message and returns
-  # NULL, which dir_walk() cannot tell from a completed transcription. M17
-  # closed the `os_prep_audio_dir()` half above by reading the exit status;
-  # this half needs a third outcome state and is M18's.
+test_that("aw_transcribe_dir() no longer records a not-transcribed file as a success", {
+  # This was the KNOWN GAP the comment above pinned until M18: `aw_transcribe()`
+  # returned NULL for a file it had not transcribed, and dir_walk() -- which
+  # classified a row only by whether the call ERRORED -- could not tell that
+  # from a completed transcription, so the row read `success = TRUE`.
   #
-  # Asserted through `dir_walk_reports_failure()` rather than on `success`
-  # alone: M18 adds a `status` column, and an assertion on `success` alone
-  # would stay green under that fix while the NEWS entry it enforces went
-  # stale. When M18 lands, this test SHOULD red -- update it and NEWS together.
+  # The two dispositions the old branch conflated are now separate states, and
+  # both are asserted here so neither can silently collapse back into the
+  # other. The per-state detail lives in test-batch-skip-outcome.R; what this
+  # test pins is that NEITHER reads as a success.
   indir <- withr::local_tempdir()
-  file.create(file.path(indir, "b.mp4"))
+  file.create(file.path(indir, c("silent.mp4", "unprobeable.mp4")))
 
-  local_fake_tools(results = list(fake_nonzero_exit()))
+  # list.files() sorts, so `silent` runs first: it probes cleanly with a video
+  # stream and no audio, and `unprobeable` fails its probe outright.
+  local_fake_tools(results = list("video", fake_nonzero_exit()))
   suppressWarnings(suppressMessages(
     transcribed <- aw_transcribe_dir(
       indir, "mp4",
       model = structure(list(name = "tiny"), class = "whisper")
     )
   ))
-  expect_false(dir_walk_reports_failure(transcribed))
+
+  expect_identical(transcribed$status, c("skipped", "failed"))
+  expect_identical(transcribed$success, c(FALSE, FALSE))
+  expect_false(any(is.na(transcribed$error)))
 })
 
 test_that("every file failing still returns a full report rather than erroring", {

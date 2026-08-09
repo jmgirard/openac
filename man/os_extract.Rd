@@ -39,7 +39,11 @@ generated using \code{os_list_configs()}.}
     \item{\code{stream}}{(numeric, default=0) The index of the audio stream to extract
 (ffmpeg uses zero-indexing so 0 is the first stream).}
     \item{\code{overwrite}}{Should outfile be overwritten if it already exists? It will
-be skipped otherwise. Defaults to TRUE.}
+be skipped otherwise, silently for a direct call. In a batch the row
+depends on whose job the preparing is: under \code{os_prep_audio_dir()} it is
+the whole job, so the row reads \code{"skipped"}; under \code{os_extract_dir()} the
+existing file is reused and openSMILE still runs, so the row reads
+\code{"ok"}. Defaults to TRUE.}
   }}
 }
 \value{

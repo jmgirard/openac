@@ -46,14 +46,23 @@ generated using \code{os_list_configs()}.}
     \item{\code{stream}}{(numeric, default=0) The index of the audio stream to extract
 (ffmpeg uses zero-indexing so 0 is the first stream).}
     \item{\code{overwrite}}{Should outfile be overwritten if it already exists? It will
-be skipped otherwise. Defaults to TRUE.}
+be skipped otherwise, silently for a direct call. In a batch the row
+depends on whose job the preparing is: under \code{os_prep_audio_dir()} it is
+the whole job, so the row reads \code{"skipped"}; under \code{os_extract_dir()} the
+existing file is reused and openSMILE still runs, so the row reads
+\code{"ok"}. Defaults to TRUE.}
   }}
 }
 \value{
 (Invisibly) a data frame with one row per input file, giving the
-paths it was called with, whether it \code{success}ed, and the \code{error} message
-if it did not. A file that fails is skipped with a warning rather than
-aborting the batch.
+paths it was called with, its \code{status}, whether it
+\code{success}ed, and the \code{error} message if it did not. \code{status} is one of
+\code{"ok"} (the operation completed), \code{"skipped"} (the file was deliberately
+not processed) or \code{"failed"} (the operation raised an error); \code{success} is
+\code{status == "ok"}, so a skipped file reads \code{FALSE}, and \code{error} carries the
+reason for a skipped file as well as for a failed one. A file that fails
+does not abort the batch: it is warned about, recorded as \code{"failed"}, and
+the remaining files still run.
 }
 \description{
 Find all .wav files in a specified directory and then extract opensmile

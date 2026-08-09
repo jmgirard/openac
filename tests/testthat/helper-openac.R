@@ -869,20 +869,14 @@ fake_nonzero_exit <- function(status = 1L,
   }
 }
 
-# Does a `dir_walk()` outcome table report ANY row as not-processed?
-#
-# Deliberately broader than `any(!x$success)`. The known gap this exists to pin
-# -- two batch tables recording a skipped file as a success -- has two
-# contemplated fixes on the ROADMAP: make the per-file call abort, or add a
-# third outcome column. An assertion written against `success` alone stays green
-# under the second fix, so the test would go on passing while the NEWS entry it
-# enforces went stale. This reads `success` and treats ANY column beyond the
-# established four as a report of a non-success outcome, so either fix reddens
-# the caller.
-dir_walk_reports_failure <- function(x) {
-  known <- c("infile", "outfile", "wavfile", "rdsfile", "csvfile", "success", "error")
-  any(!x$success) || length(setdiff(names(x), known)) > 0L
-}
+# `dir_walk_reports_failure()` lived here until M18. It existed to pin a known
+# gap -- two batch tables recording a not-processed file as a success -- while
+# the fix was still undecided between two shapes, so it deliberately treated
+# any column beyond the then-established four as a report of a non-success
+# outcome rather than reading `success` alone. M18 settled the shape: the
+# outcome table now carries a `status` column of "ok"/"skipped"/"failed", so a
+# test asserts the state it means directly and the fix-agnostic proxy has
+# nothing left to be agnostic about. Its callers assert on `status`.
 
 # Every warning `expr` emits, in order, as a character vector, each collapsed
 # onto one line.
