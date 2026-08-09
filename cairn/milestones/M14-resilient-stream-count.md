@@ -93,6 +93,8 @@ opportunistic per DESIGN's Conventions. Argument-assembly changes → M13.
 
 - 2026-08-08: self-caught regression in the A1 fix, before the fix-delta reviewer reported: holding every warning for the exit-status decision also held `find_program()`'s `set_program()` hint, which `ffp_count_streams()` then threw away as `require_program()`'s error unwound — a user with no ffprobe lost the one message telling them how to point openac at it. MEASURED (0 warnings reached the caller). Held conditions are now released in an error handler that re-raises, and the existing missing-tool test asserts the hint survives; verified by removing the release and observing that test red.
 
+- 2026-08-08: fix-delta review (second round) — 10 findings, 5 actioned and fixed (F1, F4, F5, F8, F10), 3 more fixed though below the bar (F2, F6, and F4's AC4-note twin), 2 logged only (F3, F7, F9). F4 is a repeat of the defect class that returned this milestone: the corrected DESIGN paragraph asserted a message that does not exist. All six first-round fixes judged genuine. Suite 712 pass / 0 fail; check() 0/0/0.
+
 ## Decisions
 
 ## Review
@@ -278,3 +280,37 @@ Status back to `in-progress`. Defect returns for M14: 1.
   and a `KNOWN GAP` test in `test-batch-dirs.R` fails if `os_prep_audio_dir()`
   ever stops recording a skipped file as a success, so the changelog claim is
   enforced rather than asserted.
+
+### Fix-delta review (2026-08-08, second round)
+
+A fresh [O] reviewer read the fix commits; a fresh [S] scorer scored the ten new
+findings. It judged all six first-round fixes genuine and independently
+reproduced the regression the session had already self-caught and fixed
+(held warnings swallowed on the error path).
+
+**Actioned (>= 80):** F1 (92) a warning raised alongside a FAILED probe was
+dropped with R's status report — suppression now takes only the LAST held
+warning, on the measured premise that R signals the status last, and a test
+pins that a diagnostic raised beside a rejected file survives · F4 (90) DESIGN
+claimed `os_extract_dir()`'s message "names a tempfile"; the measured message is
+`file.exists(infile) is not TRUE`, which names nothing — corrected in DESIGN and
+in the AC4 note, which had repeated it · F10 (85) NEWS called
+`os_prep_audio_dir()`'s outcome a skip; it runs ffmpeg and never checks the exit
+status — reworded · F5 (82) the KNOWN GAP test covered one of the two entry
+points NEWS names — now covers both · F8 (80) the new scalar-`infile` guard
+tightened an exported contract undocumented — NEWS and `@return` now say so.
+
+**Logged, below the bar (5):** F2 (45) `integer(0)` status read as success —
+fixed anyway, one comparison · F3 (30) `stop(e)` re-raises from an unwound
+frame, shortening `traceback()` · F6 (60) the KNOWN GAP test reds under only one
+of the two contemplated fixes — addressed anyway via
+`dir_walk_reports_failure()` · F7 (75) `aw_transcribe()`'s pre-existing
+`tryCatch` swallows the new input-validation abort and reports it as
+"No audio streams detected"; reachable only through an already-invalid
+non-string `infile`, left to the candidate row · F9 (25) the whitespace collapse
+could theoretically join two cli bullets.
+
+F4 is the finding that matters most for what this milestone learned: the fix for
+an unverified-prose defect introduced another one, in the same paragraph. Both
+times the sentence described what the failure was ABOUT rather than what was
+actually observed.

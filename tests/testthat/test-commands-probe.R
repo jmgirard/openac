@@ -203,6 +203,30 @@ test_that("a failed probe warns once whatever language R speaks", {
   expect_no_match(warnings, "renvoie un statut", fixed = TRUE)
 })
 
+test_that("a diagnostic raised alongside a FAILED probe still reaches the caller", {
+  # Suppression is aimed at R's exit-status report and nothing else. An earlier
+  # cut dropped every warning held during a failed probe, which made this the
+  # one path where a diagnostic could vanish silently (fix-delta review F1).
+  infile <- local_media(".mp4")
+  chatty <- function(command, args) {
+    warning("ffprobe: this build is ancient")
+    # R raises its status warning last, after the command has returned; the
+    # fake reproduces that order because the suppression depends on it.
+    warning("l'exécution de la commande 'ffprobe' renvoie un statut 1")
+    structure("ffprobe: Invalid data", status = 1L)
+  }
+  local_fake_tools(results = list(chatty))
+
+  warnings <- collect_warnings(streams <- ffp_count_streams(infile))
+
+  expect_identical(streams, c(Video = NA_integer_, Audio = NA_integer_))
+  expect_length(warnings, 2L)
+  # The diagnostic survived; R's argv report did not.
+  expect_match(warnings[[1]], "this build is ancient", fixed = TRUE)
+  expect_match(warnings[[2]], "ffprobe exited with status 1")
+  expect_false(any(grepl("renvoie un statut", warnings, fixed = TRUE)))
+})
+
 test_that("a warning from a probe that SUCCEEDS still reaches the caller", {
   # Suppression is scoped to the failure it replaces. A warning raised on a
   # successful probe is not ours to swallow, so it is re-signalled unchanged --

@@ -48,8 +48,11 @@ ffp <- ffprobe
 #' indicating the number of video and audio streams in `infile`. A file that
 #' cannot be probed --- one that does not exist, or one ffprobe rejects ---
 #' returns `NA` for both counts with a warning naming it, rather than raising an
-#' error, so a batch records that file and carries on. A missing ffprobe still
-#' errors: it is a problem with the installation, not with the file.
+#' error, so a batch records that file and carries on. Two things still error,
+#' because neither is a fact about the file: a missing ffprobe, which is a
+#' problem with the installation, and an `infile` that is not a single file
+#' path. Note that a warning raised by ffprobe itself reaches you either way ---
+#' only R's own report of the exit status is replaced by the message above.
 #' @export
 #'
 ffp_count_streams <- function(infile) {
@@ -95,18 +98,17 @@ ffp_count_streams <- function(infile) {
   # ''ls' /nonexistent-zzz 2>&1' had status 1`. That is the argv the caller
   # never wrote, so it is replaced below by a message naming the file.
   #
-  # Every warning the call raises is held rather than matched, and released
-  # again only if the probe turns out to have SUCCEEDED. Keying on the exit
-  # status instead of on the message is what makes this work off an English
-  # host: R translates that warning, and an earlier cut of this code grepped
-  # for the literal "had status". MEASURED 2026-08-08 (R 4.6.1) --
+  # Every warning the call raises is HELD rather than matched, and what happens
+  # to it is decided afterwards, from the exit status: released on success,
+  # released-but-for-R's-own on failure (see below), released on error.
+  # Keying on the status instead of on the message is what makes this work off
+  # an English host: R translates that warning, and an earlier cut of this code
+  # grepped for the literal "had status". MEASURED 2026-08-08 (R 4.6.1) --
   # `LANGUAGE=fr` gives "l'exécution de la commande '...' renvoie un statut 1",
   # `LANGUAGE=de` "Ausführung von Kommando '...' ergab Status 1". Neither
   # contains the English phrase, so the grep missed and a French or German user
-  # got both warnings, including the argv dump (M14 review A1). Holding the
-  # conditions themselves, rather than their text, also keeps a warning that is
-  # NOT about the exit status -- and would otherwise be swallowed -- reaching
-  # the caller intact on the success path.
+  # got both warnings, including the argv dump (M14 review A1).
+  #
   # The error handler is not ceremony. `ffprobe()` aborts when the tool cannot
   # be resolved, and `find_program()` WARNS on its way there with the
   # `set_program()` hint -- a warning raised inside the held region. Without
@@ -145,6 +147,19 @@ ffp_count_streams <- function(infile) {
   probe_failed <- !is.null(status) &&
     (length(status) == 0L || !isTRUE(all(status == 0)))
   if (probe_failed) {
+    # Only R's own status report is ours to suppress -- it is what the message
+    # below replaces. Anything ELSE raised during the call is a diagnostic the
+    # caller should still see, and an earlier cut dropped all of them here,
+    # which made a failed probe the one path where a warning could vanish
+    # (M14 fix-delta review F1).
+    #
+    # Which one is R's cannot be decided from the text -- that is the
+    # locale trap A1 was returned for -- so it is decided by POSITION: R warns
+    # about the exit status after the command has run and returned its output,
+    # so its warning is the LAST one raised inside the call. Everything before
+    # it is released. If that premise ever breaks the cost is one stray argv
+    # line, not a lost diagnostic.
+    for (w in utils::head(held, -1L)) warning(w)
     cli::cli_warn(c(
       "!" = "Cannot count the streams in {.file {infile}}: ffprobe exited with
              status {status}.",

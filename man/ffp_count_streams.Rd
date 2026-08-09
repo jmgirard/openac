@@ -14,8 +14,11 @@ A named integer vector with two elements (\code{Video} and \code{Audio})
 indicating the number of video and audio streams in \code{infile}. A file that
 cannot be probed --- one that does not exist, or one ffprobe rejects ---
 returns \code{NA} for both counts with a warning naming it, rather than raising an
-error, so a batch records that file and carries on. A missing ffprobe still
-errors: it is a problem with the installation, not with the file.
+error, so a batch records that file and carries on. Two things still error,
+because neither is a fact about the file: a missing ffprobe, which is a
+problem with the installation, and an \code{infile} that is not a single file
+path. Note that a warning raised by ffprobe itself reaches you either way ---
+only R's own report of the exit status is replaced by the message above.
 }
 \description{
 Use ffprobe to count the number of audio and video streams in a media file.
