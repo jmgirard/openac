@@ -1,6 +1,6 @@
 # M14: A bad file is an outcome, not the end of the batch
 
-- **Status:** review
+- **Status:** in-progress
 - **Priority:** normal
 - **Depends on:** M13
 - **Driving RR:** —
@@ -46,7 +46,7 @@ opportunistic per DESIGN's Conventions. Argument-assembly changes → M13.
       for the bad file has `success = FALSE` and a non-`NA` `error`, and whose
       other two rows have `success = TRUE`. Evidence: a mocked-boundary batch
       test asserting those three rows.
-- [x] AC4 `cairn/DESIGN.md`'s "GP6 unevenly met" line (`:217-218`) is replaced by
+- [ ] AC4 `cairn/DESIGN.md`'s "GP6 unevenly met" line (`:217-218`) is replaced by
       a dated line naming what is now contractual — a failed probe is a per-file
       outcome — and which guards remain ad hoc, listing them.
 - [x] AC5 `devtools::test()` passes and `devtools::check()` reports 0 errors, 0
@@ -86,6 +86,8 @@ opportunistic per DESIGN's Conventions. Argument-assembly changes → M13.
 - 2026-08-08: T3 — `aw_prep_audio()` aborts naming the file on an NA count (dir_walk records a row as failed only on an error); `aw_transcribe()`'s existing `is.na(has_audio)` branch pinned by a test that discriminates it from the tryCatch fallback via the probe warning, verified by mutating the NA return to an abort and observing the test red on that assertion.
 - 2026-08-08: T4 — batch test added. MEASURED against the pre-M14 sources: aw_prep_audio_dir() already survived the bad file (dir_walk caught the stopifnot), so AC3's success/error columns passed before the change; what M14 fixes on this path is the diagnosis — a failed probe was parsed as "0 audio streams" and reported as `(stream + 1) <= ffp_count_streams(infile)[["Audio"]] is not TRUE`, naming neither the file nor the reason. The test's message assertion is the discriminating one and is the only one that reds against main.
 - 2026-08-08: T5 — DESIGN's GP6 known-issue line narrowed (guards still ad hoc listed from the stopifnot(file.exists()) sites in R/); NEWS entry added; document() no diff, test() 696 pass / 0 fail, check() 0 errors 0 warnings 0 notes.
+
+- 2026-08-08: review returned M14 to in-progress (defect return 1). AC4 unticked: DESIGN's replacement line and the NEWS entry both claim a per-file failure disposition across all four callers, and `aw_transcribe_dir()` and `os_prep_audio_dir()` were measured returning `success = TRUE, error = NA` for an unprobeable file (A4 92, A17 88). Also actioned: A1 (93) the `had status` muffle is locale-dependent and leaks R's raw argv warning on a non-English R, measured in fr and de; A2 (85) the test pinning it is tautological; A3 (90) four assertions match cli-wrapped text and depend on temp-path length; A9 (87) `ffp_count_streams()` lost its scalar-input validation. Candidate row added for the batch-table success=TRUE gap.
 
 ## Decisions
 
@@ -155,6 +157,12 @@ _Verified 2026-08-08 on branch `m14-resilient-stream-count`, PR #17._
   to its enclosing function, not composed from memory. `dir_outputs()`'s
   collision refusal is named as a deliberate pre-flight abort outside the set.
   No IP/GP principle text changed, so no impact report is owed.
+  **Corrected 2026-08-08, same review:** this evidence line was wrong about the
+  substance of the replacement. The line is dated and does list the ad-hoc
+  guards, but what it names as contractual — "each of its four callers turns
+  that into a per-file failure, so a `*_dir()` batch records the bad file" — is
+  false for `aw_transcribe_dir()` and `os_prep_audio_dir()` (A4, A17, both
+  measured). AC4 is unticked and the criterion is unmet.
 
 - AC5 — `devtools::test()`: 696 passing, 0 failing, 6 skipped (all pre-existing
   opt-in gates: four `OPENAC_INSTALLER_RUN` installer tests, one OpenFace-absent,
@@ -174,3 +182,70 @@ _Verified 2026-08-08 on branch `m14-resilient-stream-count`, PR #17._
   so that check no-ops; `NEWS.md` carries an entry for the user-visible change,
   with no milestone number in it; no new top-level files, so no
   `.Rbuildignore` entry owed; full `check()` clean as recorded under AC5.
+
+### Independent review (2026-08-08)
+
+Three fresh-context lenses (diff-bug [O], blame-history [S], prior-PR-comments
+[S]) reported 33 candidate findings; a fresh [S] scorer scored each. Seven
+scored >= 80 and are actioned; 26 scored below 80 and are logged below, not
+discarded.
+
+**Actioned (>= 80):**
+
+- A1 (93) — the `had status` muffle in `ffp_count_streams()` matches literal
+  English text, but R's own `system2` status warning is translated. MEASURED
+  independently at review: `LANGUAGE=fr` gives "l'execution de la commande '...'
+  renvoie un statut 1" and `LANGUAGE=de` "Ausfuehrung von Kommando '...' ergab
+  Status 1"; neither contains `had status`, so a non-English user gets BOTH
+  warnings, including the raw argv dump the muffle exists to suppress. B3 (90)
+  is the same defect from the history lens.
+- A4 (92) — `aw_transcribe_dir()` records an unprobeable file as
+  `success = TRUE, error = NA`: `aw_transcribe()` skips via
+  `cli_alert_warning()` (a message, not a condition `dir_walk()` records) and
+  returns NULL. MEASURED independently at review. Same substance as M07 review's
+  D11 (55), still open.
+- A17 (88) — the NEWS sentence "In a batch, the file appears in the returned
+  table as a failure you can read and re-run" and DESIGN's "each of its four
+  callers turns that into a per-file failure" are false for two of the four
+  batch entry points. MEASURED at review: `os_prep_audio_dir()` also returns
+  `success = TRUE, error = NA` with no wav written. Branch-added prose asserting
+  behavior that was never derived from an execution.
+- A3 (90) — four message assertions match text that `cli_warn()` hard-wraps, so
+  they depend on the infile path length and console width; a 19-character path
+  at width 80 reds them. They pass today only because macOS `tempdir()` is long.
+- A9 (87) — `ffp_count_streams()` lost its only input validation: a length-2
+  `infile` now errors "the condition has length > 1" and `character(0)` errors
+  "argument is of length zero", where `stopifnot(logical(0))` passed vacuously.
+- A2 (85) — `fake_nonzero_exit()` hand-writes the English "had status" string
+  the muffle greps for, so the "warns once" test is tautological with respect to
+  the property it claims to pin and is green in every locale.
+
+**Logged, below the action bar (26):** A5 (35) `aw_transcribe`'s collapsed skip
+message, pre-existing · A6 (55) the NA-branch test's discriminator is a proxy ·
+A7 (45) `os_prep_audio_dir` success=TRUE, pre-existing path · A8 (38)
+`os_extract_dir`'s tempfile-naming error, pre-existing · A10 (35) NA return is a
+caller hazard — the contract AC1 specifies · A11 (65) status-attribute edge
+cases (character, length>1) · A12 (30) no exit-status check for the other tools,
+Scope Out · A13 (32) second ffprobe call unmuffled, unmodified code · A14 (22)
+`os_check_audio`'s `dat[[3]]` unguarded, pre-existing · A15 (62) / B2 (62) the
+nonexistent-file branch is unreachable from three callers · A16 (40) three NA
+predicates for one contract · A18 (68) `expect_error(..., basename(infile))`
+treats a filename as a regex · A19 (20) batch test couples to future's plan ·
+A20 (40) DESIGN's "Calling the CLIs" omits the status attribute; Scope Out
+misnames `os_extract`'s guard · B1 (25), B4 (15), B5 (15), B7 (15) no-conflict
+reports · B6 (52) no test asserts the success-path return type · C0 (10) and
+five C bullets (15, 60, 10, 10, 10), the prior-review lens finding zero
+regressions.
+
+### Disposition — returned to implement
+
+Two actioned findings cross the return floor:
+- A1 (93) is a defect in what the package does for its users, in a mechanism
+  this branch introduced.
+- A17 (88) with A4 (92) falsifies **AC4**: the criterion requires DESIGN's line
+  to name "what is now contractual", and the line as written names a per-file
+  failure disposition across all four callers that two of the four do not have.
+  The criterion fails inside its own domain, so this is a defect return, not an
+  amendment return.
+
+Status back to `in-progress`. Defect returns for M14: 1.

@@ -9,7 +9,7 @@ _Released 0.1.0 (GitHub) 2026-07-11._
 | ID | Title | Status | Depends on | Priority | File/Archive |
 |---|---|---|---|---|---|
 | M13 | Quote at the process boundary, not at the call site | done | — | high | milestones/archive/M13-boundary-quoting.md |
-| M14 | A bad file is an outcome, not the end of the batch | review | M13 | normal | milestones/M14-resilient-stream-count.md |
+| M14 | A bad file is an outcome, not the end of the batch | in-progress | M13 | normal | milestones/M14-resilient-stream-count.md |
 | M15 | What Windows actually does to a path the shell can eat | done | — | high | milestones/archive/M15-windows-quoting-oracle.md |
 | M16 | The Windows installers, actually run | done | — | normal | milestones/archive/M16-windows-installers-real-run.md |
 | M12 | Does openac belong on top of tidymedia? — a fit assessment, and a decision | done | — | high | milestones/archive/M12-tidymedia-fit-assessment.md |
@@ -39,3 +39,4 @@ _Released 0.1.0 (GitHub) 2026-07-11._
 - Extend M14's per-file-outcome treatment to the other probe-and-abort guards (os_check_config, the stopifnot(file.exists()) guards in of_extract/os_extract) — added 2026-08-08 — M14 Out
 - Revisit the 8 names openac and tidymedia both export at the 1.0 API freeze — the README now warns users (2026-08-08); renaming is the other half and only makes sense once the API is frozen — added 2026-08-08 — M12 (cairn/references/tidymedia-fit.md, C1-C8)
 - Restore GP6 for output-path collisions — drop colliding files into the `*_dir` outcome table as per-file failures instead of aborting the batch pre-flight; needs plumbing the derivation result through `dir_walk` — added 2026-08-07 — hotfix batch-extension-case, PR #9
+- A skipped file is recorded as a success in two batch tables — `aw_transcribe_dir()` and `os_prep_audio_dir()` both return `success = TRUE, error = NA` for a file that was never processed (measured 2026-08-08), because `aw_transcribe()` skips via a message and returns NULL, and `os_prep_audio()` never checks ffmpeg's exit status; needs either an abort or a third outcome column — added 2026-08-08 — M14 Review A4/A17; M07 review D11
