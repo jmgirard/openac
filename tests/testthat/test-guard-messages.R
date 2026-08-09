@@ -641,6 +641,65 @@ test_that("os_extract_dir() pre-flights a config named by an abbreviation", {
   expect_identical(boundary_tools(state), character(0))
 })
 
+# --- review round 2: resolving a prefix may not lose an argument --------------
+
+test_that("two abbreviations of one argument are rejected, not silently merged", {
+  # F6: `pmatch()` is greedy, so `conf` and `confi` both resolve to `config` and
+  # the second was renamed onto the first and dropped by `names<-`. Plain R
+  # raises `formal argument "config" matched by multiple actual arguments` for
+  # that call; the helper turned that error into silence, and the batch ran with
+  # one of the two values the user supplied.
+  indir <- withr::local_tempdir()
+  file.create(file.path(indir, "clip.mp4"))
+  aggdir <- withr::local_tempdir()
+  state <- local_fake_tools(results = list())
+
+  msg <- collapsed_guard(
+    os_extract_dir(
+      indir, "mp4", aggdir = aggdir,
+      conf = "egemaps/v02", confi = "misc/emo_large"
+    )
+  )
+
+  # Backticked, because `conf` and `confi` are both substrings of `config`: a
+  # bare `expect_match(msg, "confi")` passes on any message naming the formal
+  # and so discriminates nothing.
+  expect_match(msg, "`config`", fixed = TRUE)
+  expect_match(msg, "`conf`", fixed = TRUE)
+  expect_match(msg, "`confi`", fixed = TRUE)
+  # Batch-wide, like the config check beside it: nothing runs, no rows.
+  expect_identical(boundary_tools(state), character(0))
+})
+
+test_that("match_formals() leaves a name alone when it matches no formal", {
+  # The complement of the case above: an abbreviation that is ambiguous between
+  # two DIFFERENT formals, and a name bound for `fn`'s own `...`, are both
+  # passed through untouched for `do.call()` to accept or reject as it would.
+  fn <- function(alpha, alphabet, ...) NULL
+
+  expect_identical(
+    names(openac:::match_formals(list(al = 1), fn)),
+    "al"
+  )
+  expect_identical(
+    names(openac:::match_formals(list(zeta = 1), fn)),
+    "zeta"
+  )
+})
+
+test_that("match_formals() does not abbreviate a formal that follows ...", {
+  # F5 (round 2, below the bar): R stops partial matching at `...` -- an
+  # argument after it must be named in full. The helper matched against every
+  # formal, so it would have renamed `ver` onto `verbose` where R would have
+  # left it in `...`.
+  fn <- function(config, ..., verbose = FALSE) NULL
+
+  expect_identical(
+    names(openac:::match_formals(list(conf = 1, ver = 2), fn)),
+    c("config", "ver")
+  )
+})
+
 test_that("os_extract_dir() pre-flights an explicit NULL config", {
   # F12: `config = NULL` was indistinguishable from `config` absent, so the
   # pre-flight validated the DEFAULT and the batch then failed per file with a

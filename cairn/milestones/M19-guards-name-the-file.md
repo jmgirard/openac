@@ -1,6 +1,6 @@
 # M19: A guard that names no file
 
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** normal
 - **Depends on:** —
 - **Driving RR:** —
@@ -104,7 +104,7 @@ messages; this milestone is scoped to what a batch row can carry.
       `os_fix_csv()` routed through `abort_file()` so round 1's fix reaches it,
       no ANSI escapes baked in by the eager format, and the property asserted
       over every guard case on the RAW message rather than the collapsed one.
-- [ ] T12 Review round 2, F6 (and F5, below the bar, same helper):
+- [x] T12 Review round 2, F6 (and F5, below the bar, same helper):
       `match_formals()` rejects two prefixes of one formal instead of swallowing
       the second, and does not partial-match formals declared after `...`.
 
@@ -138,6 +138,10 @@ messages; this milestone is scoped to what a batch row can carry.
 - 2026-08-09: implement gate chose (a) routing `os_fix_csv()` through `abort_file()` and letting its wording become the shared shape over keeping the bespoke wording with a second copy of the flattening, because a guard that opts out of the helper is exactly how F14's fix missed it; (b) rejecting a duplicate-prefix argument once, pre-flight, over leaving it for `do.call()` to reject per file, on the plan gate's own reasoning that a batch-wide argument error is not a per-file outcome; (c) fixing F5's post-`...` partial match in the same pass, three lines inside the helper already being rewritten.
 - 2026-08-09: T11 wrote the property test first over the same `guard_cases()` table the collapsed assertions read, at `cli.width = 40` and `cli.num_colors = 256` so a console-formatted message must misbehave, and MEASURED it red on both counts. F1 reproduced verbatim at those settings: `os_fix_csv()`'s `conditionMessage()` returned `"Could not tidy the openSMILE\noutput at\n'...clip.csv'.\n<glyph> openSMILE wrote no output there."` F3 reproduced across every `abort_file()` case as `\033[34m`-wrapped paths. Fixes: `os_fix_csv()` routed through `abort_file()` (its message becomes the shared shape, and AC4's two parts — the full path and the openSMILE attribution — survive the rewording, which is what its existing test asserts); `cli::ansi_strip()` as the last step of both formats in `abort_file()`, unconditional rather than an option set around the call. The round-1 F14 test gained the colour assertion it lacked.
 - 2026-08-09: T11 also corrected DESIGN's Known-issues sentence in place: it named `os_fix_csv()` as one of two guards outside `abort_file()`, which this task makes false, and omitted `os_check_config()`, which the round-2 review logged below the bar (F12) as the real third. It now names the two that are actually outside and why each is.
+- 2026-08-09: T12 wrote three tests red first. The duplicate-prefix one was rewritten before it counted as red: `conf` and `confi` are both substrings of `config`, so the obvious `expect_match(msg, "confi")` passes on any message naming the formal and discriminates nothing — the assertions read backticked `` `conf` ``/`` `confi` `` instead. Cause MEASURED on R 4.6.1: `pmatch()` at its default `duplicates.ok = FALSE` claims a formal once, returning one hit and one `NA`, so the survivor stayed `confi`, R's exact match consumed `config`, and `confi` fell into `...`; plain `do.call(f, list(conf = "x", confi = "y"))` raises `formal argument "config" matched by multiple actual arguments`. Fixed with `duplicates.ok = TRUE` plus a collision check that aborts pre-flight naming the formal and every argument matching it — batch-wide, like the `config` check beside it, asserted by `boundary_tools()` being `character(0)`. F5 fixed in the same lines: `targets` now stops at `...`, so a post-dots formal is not abbreviated where R would leave the name in `...`.
+- 2026-08-09: T12 adds no NEWS entry: `match_formals()` is this branch's own helper, so the swallowed argument was never released behavior — the round-2 finding is a defect in unmerged work, not a change to what users have.
+- 2026-08-09: T11-T12 verify slot MEASURED on R 4.6.1 / macOS 15: `devtools::document()` writes no diff, `devtools::test()` 1137 tests 0 failures 0 errors 6 skips, `devtools::check()` Status OK — 0 errors, 0 warnings, 0 notes in 43.8s. Against the 1009 the round-1 line records for the same command, this round adds 128.
+- 2026-08-09: status → review.
 
 ## Decisions
 

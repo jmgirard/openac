@@ -205,19 +205,59 @@ check_file_arg <- function(x,
 # Only unambiguous prefixes are expanded. Anything else -- an ambiguous
 # abbreviation, a name bound for `fn`'s own `...` -- is left exactly as it was,
 # for `do.call()` to accept or reject as it would have.
-match_formals <- function(args, fn) {
+#
+# Two details make the expansion match R's own rules rather than approximate
+# them (M19 review round 2).
+#
+# `pmatch()` at its default `duplicates.ok = FALSE` claims each formal once, so
+# two prefixes of one formal came back as one hit and one `NA`: the first was
+# renamed onto `config` and the second left as `confi`, whereupon R's exact
+# match consumed `config`, `confi` could no longer partial-match it, and it fell
+# into `...` and was ignored. MEASURED 2026-08-09 on R 4.6.1: plain
+# `do.call(f, list(conf = "x", confi = "y"))` raises `formal argument "config"
+# matched by multiple actual arguments`, so the helper was converting an error R
+# raises into a silently dropped argument (F6). Matching with
+# `duplicates.ok = TRUE` makes the collision visible, and it is reported here
+# rather than left for `do.call()`: these are batch-wide arguments, so this is
+# wrong for every file, and reporting it per file is the same shape the
+# pre-flight `config` check exists to avoid.
+#
+# Partial matching also STOPS at `...`: a formal declared after it must be named
+# in full, and R leaves anything shorter in `...`. Matching against every formal
+# would have renamed a caller's `ver =` onto a post-dots `verbose =` that R
+# would never have bound (F5, below the round-2 action bar, fixed here because
+# it is the same three lines).
+match_formals <- function(args, fn, call = rlang::caller_env()) {
   nms <- names(args)
   if (is.null(nms)) {
     return(args)
   }
-  targets <- setdiff(names(formals(fn)), "...")
+  formal_names <- names(formals(fn))
+  dots <- match("...", formal_names)
+  targets <- if (is.na(dots)) formal_names else formal_names[seq_len(dots - 1L)]
   idx <- which(nzchar(nms) & !(nms %in% targets))
-  if (length(idx)) {
-    hit <- pmatch(nms[idx], targets)
-    ok <- !is.na(hit)
-    nms[idx[ok]] <- targets[hit[ok]]
-    names(args) <- nms
+  if (!length(idx)) {
+    return(args)
   }
+  hit <- pmatch(nms[idx], targets, duplicates.ok = TRUE)
+  ok <- !is.na(hit)
+  if (!any(ok)) {
+    return(args)
+  }
+  resolved <- nms
+  resolved[idx[ok]] <- targets[hit[ok]]
+  named <- resolved[nzchar(resolved)]
+  clash <- unique(named[duplicated(named)])
+  if (length(clash)) {
+    supplied <- nms[resolved == clash[1] & nzchar(resolved)]
+    cli::cli_abort(
+      "{.arg {clash[1]}} is matched by more than one argument:
+       {.arg {supplied}}.",
+      class = "openac_bad_argument",
+      call = call
+    )
+  }
+  names(args) <- resolved
   args
 }
 
