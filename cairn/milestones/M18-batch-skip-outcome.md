@@ -89,11 +89,11 @@ plumbing that work needs, so it is planned after this one lands, not now.
       run `devtools::document()`.
 - [x] T5 Replace the KNOWN GAP test and update the helper and its comment.
 - [x] T6 NEWS entry; `devtools::test()`; `devtools::check()`.
-- [ ] T7 Review round 1, F1/F2: regression tests, red before the fix — a
+- [x] T7 Review round 1, F1/F2: regression tests, red before the fix — a
       batch reusing an already-prepared wav under `overwrite = FALSE` still
       runs its tool and records `"ok"`, for `os_extract_dir()` and
       `aw_transcribe_dir()` alike.
-- [ ] T8 Review round 1, F1/F2: a skip signalled by a NESTED prep call stops
+- [x] T8 Review round 1, F1/F2: a skip signalled by a NESTED prep call stops
       at that call, so only a batch whose own job was the prep records
       `"skipped"`.
 - [ ] T9 Review round 1, F3: the leaked `#'` out of the five `@return`
@@ -122,6 +122,7 @@ plumbing that work needs, so it is planned after this one lands, not now.
 - 2026-08-09: review round 1 RETURNED to in-progress under the return floor. F1 (scored 90) — `dir_walk()`'s `tryCatch` handler for `openac_file_skipped` is EXITING, so an `overwrite = FALSE` skip signalled by a NESTED `os_prep_audio()`/`aw_prep_audio()` unwinds the whole `.f` call: MEASURED, `os_extract_dir(wavdir=, aggdir=, overwrite = FALSE)` over a file whose wav already exists never calls openSMILE and writes no CSV, and F2 (88) is the same on the whisper path. F3 (95) — a literal `#'` leaks into the rendered prose of all five `@return` blocks and into all five `man/*_dir.Rd`. 11 further findings logged below the action bar. Criteria unticked with the return; gate checks were green and are recorded in the Review section.
 - 2026-08-09: implement round 2 gate chose that a batch reusing an already-prepared wav records `"ok"`, not `"skipped"` — `status` describes the batch's OWN job, so only a batch whose job was the prep skips; falsified by a caller who needs the table to surface that an internal stage was reused.
 - 2026-08-09: T7 three regression tests appended to `test-batch-skip-outcome.R` and RUN red before any source change — 8 failures: `os_extract_dir()` and `aw_transcribe_dir()` over a file whose wav already exists read `status = "skipped"` with the tool never reached and no output file written. The third test passes already and is the boundary the fix must not move (`os_prep_audio_dir()` still skips). Box unticked until the suite is green.
+- 2026-08-09: T8 `absorb_skip()` added beside `skip_file()`; the two NESTED prep calls (`os_extract()` at `R/use_opensmile.R:318`, `aw_transcribe()`'s `do.call` at `R/use_whisper.R:340`) wrap theirs in it, so a reused-wav skip stops at the prep call instead of unwinding the per-file job. The two `*_prep_audio_dir()` wrappers call the prep function as `.f` directly and are untouched, which is why their skip still reaches `dir_walk()`. T7's 8 failures now pass; full suite 813 pass, 0 fail.
 
 ## Decisions
 

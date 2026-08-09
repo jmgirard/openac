@@ -336,8 +336,11 @@ aw_transcribe <- function(
       temp <- TRUE
       wavfile <- tempfile(fileext = ".wav")
     }
-    # Prepare audio stream as wavfile/tempfile
-    do.call(
+    # Prepare audio stream as wavfile/tempfile. A skip here -- an
+    # `overwrite = FALSE` wav this batch already prepared -- is the fast path
+    # into the transcription below, never a reason to abandon the file, so it
+    # is absorbed rather than left to reach `dir_walk()`'s exiting handler.
+    absorb_skip(do.call(
       what = aw_prep_audio,
       args = c(
         list(
@@ -346,7 +349,7 @@ aw_transcribe <- function(
         ),
         audio_args
       )
-    )
+    ))
   } else {
     wavfile <- infile
   }

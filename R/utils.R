@@ -116,6 +116,29 @@ skip_file <- function(reason) {
   rlang::signal(reason, class = "openac_file_skipped")
 }
 
+# Run `expr`, absorbing a `skip_file()` raised inside it (M18 review round 1).
+#
+# `overwrite = FALSE` means "reuse the audio you already prepared". Where the
+# preparing is the WHOLE job -- `os_prep_audio_dir()`, `aw_prep_audio_dir()` --
+# there is then nothing to do and the batch records a skip. Where it is one
+# stage of a larger job -- `os_extract()` going on to run openSMILE,
+# `aw_transcribe()` going on to run whisper -- the reuse is the fast path, and
+# the skip must stop at the prep call.
+#
+# It must stop HERE rather than be sorted out in `dir_walk()`, because that
+# handler is EXITING: a signal reaching it unwinds the whole per-file job. It
+# did, and MEASURED before this fix, `os_extract_dir(wavdir=, aggdir=,
+# overwrite = FALSE)` over a file whose wav already existed never called
+# openSMILE, wrote no CSV, and recorded `status = "skipped"` -- a deliberate
+# skip of work the caller did want done.
+#
+# Returns what the prep functions return when they decline, so a direct call to
+# the wrapping function sees exactly what it saw before the skip channel
+# existed.
+absorb_skip <- function(expr) {
+  tryCatch(expr, openac_file_skipped = function(cnd) "Skipped")
+}
+
 # Run `.f` over the rows of `.l`, surviving a per-file failure (GP6).
 #
 # A batch that dies on file 412 of 500 overnight is the failure mode to design

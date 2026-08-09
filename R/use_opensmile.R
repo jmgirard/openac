@@ -314,12 +314,15 @@ os_extract <- function(
       temp <- TRUE
       wavfile <- tempfile(fileext = ".wav")
     }
-    # Prepare audio stream as wavfile/tempfile
-    x <- os_prep_audio(
+    # Prepare audio stream as wavfile/tempfile. A skip here -- an
+    # `overwrite = FALSE` wav this batch already prepared -- is the fast path
+    # into the extraction below, never a reason to abandon the file, so it is
+    # absorbed rather than left to reach `dir_walk()`'s exiting handler.
+    x <- absorb_skip(os_prep_audio(
       infile = infile,
       outfile = wavfile,
       ...
-    )
+    ))
   } else {
     wavfile <- infile
   }
