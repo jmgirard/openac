@@ -142,6 +142,7 @@ messages; this milestone is scoped to what a batch row can carry.
 - 2026-08-09: T12 adds no NEWS entry: `match_formals()` is this branch's own helper, so the swallowed argument was never released behavior — the round-2 finding is a defect in unmerged work, not a change to what users have.
 - 2026-08-09: T11-T12 verify slot MEASURED on R 4.6.1 / macOS 15: `devtools::document()` writes no diff, `devtools::test()` 1137 tests 0 failures 0 errors 6 skips, `devtools::check()` Status OK — 0 errors, 0 warnings, 0 notes in 43.8s. Against the 1009 the round-1 line records for the same command, this round adds 128.
 - 2026-08-09: status → review.
+- 2026-08-09: review round 3 actioned two findings and returned nothing. F3 (82): `match_formals()`'s collision scan only looked at names it had renamed, so `config` supplied twice under its own name reached `do.call()` and failed every file with R's raw text; fixed by scanning the names that will bind to a formal, whether renamed or not, which also closes the below-bar F4 (the old scan aborted on repeated `...` names R accepts). F5 (80): `ansi_strip()` after `format_inline()` removed the colour cli had chosen INSTEAD of quotation marks, so the `error` text differed by terminal; fixed by formatting under `cli.num_colors = 1` so the quoted branch is taken, with `ansi_strip()` kept as a backstop. Both reproduced in R by the reviewing session before being recorded, both written test-first and measured red.
 
 ## Decisions
 
@@ -488,3 +489,98 @@ the branch was cut, so the branch needed no merge._
   is not in the diff so nothing new is exported; NEWS.md carries this
   milestone's user-visible changes with no milestone number in them; no new
   top-level files; `check()` clean as recorded under AC5.
+
+### Independent review, round 3 (2026-08-09)
+
+Three fresh-context lenses. **Blame-history [S]** — no findings: M18's
+three-state `status` and abort-vs-skip split, M17's `run_checked()` contract and
+`source` idea, and M14's GP6 resilience all survive; it traced the three tests
+this branch deleted to pre-M13 wrapper-contract tests rather than to any
+milestone's regression test, so no bug-fix coverage was lost.
+**Prior-PR-comments [S]** — no findings; its probe
+(`gh api repos/jmgirard/openac/pulls/comments?per_page=1`) returned empty a
+third time, so the archived `## Review` sections were the whole surface, and it
+checked every round-1 and round-2 actioned finding as still fixed at HEAD.
+**Diff-bug [O]** — 20 candidate findings, 6 of them reproduced in R by the
+reviewer. Scored by a fresh [S] scorer holding the diff and this file. Two
+scored at or above the bar, and the reviewing session reproduced both itself
+before recording them.
+
+**Actioned (>= 80), 2 of 20 — both fixed on the branch, no status change:**
+
+- **F3 (82)** `R/utils.R:247`, `:253` — `match_formals()` closed only the
+  abbreviation half of round 2's F6. Its collision scan looked at the names it
+  had RENAMED, so one formal supplied twice under its own name never entered
+  the scan at all: the pre-flight read the first value through `$` and
+  `do.call()` then failed every file. MEASURED over a two-file batch:
+  `config = "misc/emo_large", config = "egemaps/v99/nope"` returned
+  `status = "failed", "failed"` with each `error` reading R's raw
+  `formal argument "config" matched by multiple actual arguments` — naming
+  neither the file nor the defect, the shape AC1 and the pre-flight both exist
+  to remove. Now aborts pre-flight with `` `config` is supplied more than
+  once. ``, no tool called.
+- **F5 (80)** `R/utils.R:150-158` — `ansi_strip()` after `format_inline()` was
+  the wrong half of the problem. cli colours `{.file}` where it can and quotes
+  it where it cannot, so stripping the colour afterwards left neither, and the
+  `error` column's text depended on the caller's terminal. MEASURED: with
+  `cli.num_colors = 1`, `Could not process 'x.wav': No file exists at
+  '/…/x.wav'.`; with `256`, the same message with every quote gone — while
+  NEWS.md documents the quoted form. Round 2's F3 test
+  (`identical(msg, ansi_strip(msg))`) passes on both variants and could not see
+  it. `abort_file()` now formats under `cli.num_colors = 1` so the branch is
+  fixed rather than its escapes stripped; `ansi_strip()` stays as a backstop.
+
+The F3 fix also closes **F4 (62)**, below the bar but the same three lines: the
+collision scan ran over every resolved name, so it aborted on repeated names
+bound for the callee's own `...`, which R accepts — and only when some
+unrelated argument happened to partial-match. It now scans only names that will
+bind to a formal, which is the cut that makes both halves right.
+
+**Logged, below the 80 bar (18 of 20), surfaced not dropped:**
+F1 (78) DESIGN's "a failed row reads the same way whether a guard or a tool
+stopped it" is false — `run_checked()` is untouched by this branch and still
+carries a glyph and a newline into `error`; the scorer placed the runtime half
+in M17's Out-of-scope territory and the claim half as documentation accuracy ·
+F2 (12) `os_fix_csv()` names the output csv rather than the row's input — the
+scorer read this as AC4 as written, and it is: the wording was chosen at this
+session's implement gate with the exact string shown to the user ·
+F6 (22) two NEWS.md lines exceed the file's 80-column wrap and one is an orphan ·
+F7 (12) the round-2 AC4 evidence paragraph describes the pre-T11 message — a
+dated record of its own commit, superseded by the round-3 paragraph, and history
+is not edited · F8 (32) `os_check_config()`'s two-bullet abort keeps the console
+shape, deliberately, being pre-`dir_walk()` · F9 (22) `check_file_arg()` and
+`match_formals()` also use lazy `cli_abort()`, both console-facing · F10 (40)
+`abort_file()` messages name the file twice, once as basename and once inside
+the path (round 1's F16, round 2's F10) · F11 (48) `abort_file()`'s `class`
+argument is dead and `openac_file_guard` is asserted nowhere (round 1 and 2's
+F9) · F12 (25) `e$defect` partial-matches (round 2's F19) · F13 (42)
+`abort_file()` accepts a vector `message` (round 2's F16) · F14 (45) the
+stream-index message pairs a 0-based index with a count (round 2's F13) ·
+F15 (32) `os_check_audio()`'s `length(dat) < 3` branch, whose serious half the
+round-2 scorer found pre-existing on `main` (round 2's F7) · F16 (45) the
+non-conforming-audio message recommends `os_prep_audio()` after openac ran it
+(round 1's F4) · F17 (42) `aw_transcribe_wav()`'s `source != infile` branch is
+untested (round 1's F10, round 2's F11) · F18 (32) `check_file_arg(source)` is
+unreachable in both callers (round 2's F8) · F19 (28) `aw_transcribe_dir()` has
+no equivalent pre-flight — pre-existing and outside Scope's In list · F20 (35)
+unnamed extras bypass the pre-flight; the scorer reproduced the stated example
+and found it binds to `wavdir` rather than reaching `config`, so the finding as
+written does not hold.
+
+**Disposition: no return.** Under the M130 return floor, neither actioned
+finding qualifies. Neither demonstrates an acceptance criterion failing as
+written inside its named domain — F3's duplicate argument is not one of the 38
+guards AC1's grep enumerates, and AC3's clauses are about resolving a `config`
+value, not about repeated argument names — and neither is scored >= 90. Both
+were fixed on the branch under the ordinary fix-now triage, tests-first and red
+before the change, with no status change. This is the third review round; the
+two prior rounds were defect returns, so the thrash rule's third-return
+threshold is not reached by this round, which returns nothing.
+
+_Re-verified after the two fixes, 2026-08-09: `devtools::document()` no diff,
+`devtools::test()` 1144 tests 0 failures 0 errors 6 skips, `devtools::check()`
+Status OK — 0 errors, 0 warnings, 0 notes in 50s. The AC1 and AC3 evidence above
+is unaffected: the fixes touch `match_formals()`'s collision scan and
+`abort_file()`'s formatting branch, and the 38 guard messages, the config
+pre-flight and the `boundary_tools()` assertions all re-ran green within that
+suite._

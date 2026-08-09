@@ -387,6 +387,27 @@ for (case in guard_cases()) {
   })
 }
 
+test_that("the message does not depend on whether the terminal has colour", {
+  # Round 3: `ansi_strip()` alone was not enough. cli quotes `{.file}` only when
+  # it CANNOT colour, so stripping the colour afterwards left neither -- the
+  # same batch produced `'clip.wav'` on a plain terminal and `clip.wav` on a
+  # colour one, and NEWS.md documents the quoted form. Asserting
+  # `identical(msg, ansi_strip(msg))` cannot see this: both variants pass it.
+  f <- file.path(tempdir(), "x.wav")
+  under <- function(n) {
+    withr::with_options(
+      list(cli.num_colors = n),
+      raw_guard({
+        local_fake_tools(results = list(), .env = parent.frame())
+        os_check_audio(f)
+      })
+    )
+  }
+
+  expect_identical(under(1), under(256))
+  expect_match(under(256), "'x.wav'", fixed = TRUE)
+})
+
 # --- the eight of_extract() flags, each its own guard -------------------------
 
 for (flag in c("fp2D", "fp3D", "pdm", "pose", "gaze", "aus", "wild", "multiview")) {
@@ -669,6 +690,46 @@ test_that("two abbreviations of one argument are rejected, not silently merged",
   expect_match(msg, "`confi`", fixed = TRUE)
   # Batch-wide, like the config check beside it: nothing runs, no rows.
   expect_identical(boundary_tools(state), character(0))
+})
+
+test_that("one argument supplied twice under its own name is rejected too", {
+  # Round 3: the collision scan only looked at names it had RENAMED, so an
+  # exactly duplicated `config =` slipped past, the pre-flight validated the
+  # first value via `$`, and `do.call()` then failed every file with R's raw
+  # `formal argument "config" matched by multiple actual arguments` -- a batch
+  # of N rows naming neither a file nor a defect, which is the shape AC1 and the
+  # pre-flight both exist to remove.
+  indir <- withr::local_tempdir()
+  file.create(file.path(indir, "a.mp4"))
+  file.create(file.path(indir, "b.mp4"))
+  aggdir <- withr::local_tempdir()
+  state <- local_fake_tools(results = list())
+
+  msg <- collapsed_guard(
+    os_extract_dir(
+      indir, "mp4", aggdir = aggdir,
+      config = "misc/emo_large", config = "egemaps/v99/nope"
+    )
+  )
+
+  expect_match(msg, "`config`", fixed = TRUE)
+  expect_no_match(msg, "matched by multiple actual arguments", fixed = TRUE)
+  expect_identical(boundary_tools(state), character(0))
+})
+
+test_that("duplicate names bound for the callee's own ... are left to R", {
+  # The complement, and the false positive the scan above must not become: R
+  # accepts repeated names that land in `...`, so the collision check considers
+  # only names that resolve to a real formal. It used to scan every resolved
+  # name, and so invented an error R does not raise -- but only when some
+  # unrelated argument happened to partial-match, which is a nasty way to fail.
+  f <- function(x, config = "d", ...) names(list(...))
+
+  expect_identical(
+    names(openac:::match_formals(list(conf = "x", foo = 1, foo = 2), f)),
+    c("config", "foo", "foo")
+  )
+  expect_identical(do.call(f, list(x = 1, foo = 1, foo = 2)), c("foo", "foo"))
 })
 
 test_that("match_formals() leaves a name alone when it matches no formal", {

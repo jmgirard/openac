@@ -145,6 +145,15 @@ abort_file <- function(file,
                        call = rlang::caller_env()) {
   caller <- rlang::caller_env()
   envir <- rlang::env(caller, guarded_name = basename(file), guarded_path = file)
+  # Format as if for a terminal that cannot colour. cli decides between colour
+  # and quotation marks for `{.file}` and `{.val}` -- it colours where it can
+  # and quotes where it cannot -- so stripping the colour AFTERWARDS left
+  # neither, and the same batch produced `'clip.wav'` on a plain terminal and
+  # `clip.wav` on a colour one, in a column that is data (M19 review round 3).
+  # Forcing the branch here fixes the text rather than the escapes; the
+  # `ansi_strip()` calls below stay as a backstop, no-ops under this option.
+  colours <- options(cli.num_colors = 1)
+  on.exit(options(colours), add = TRUE)
   # Source-formatting whitespace: these templates are wrapped and indented to
   # fit the R sources, and cli keeps that whitespace verbatim in inline output.
   defect <- cli::ansi_strip(
@@ -235,24 +244,32 @@ match_formals <- function(args, fn, call = rlang::caller_env()) {
   formal_names <- names(formals(fn))
   dots <- match("...", formal_names)
   targets <- if (is.na(dots)) formal_names else formal_names[seq_len(dots - 1L)]
-  idx <- which(nzchar(nms) & !(nms %in% targets))
-  if (!length(idx)) {
-    return(args)
-  }
-  hit <- pmatch(nms[idx], targets, duplicates.ok = TRUE)
-  ok <- !is.na(hit)
-  if (!any(ok)) {
-    return(args)
-  }
   resolved <- nms
-  resolved[idx[ok]] <- targets[hit[ok]]
-  named <- resolved[nzchar(resolved)]
-  clash <- unique(named[duplicated(named)])
+  idx <- which(nzchar(nms) & !(nms %in% targets))
+  if (length(idx)) {
+    hit <- pmatch(nms[idx], targets, duplicates.ok = TRUE)
+    ok <- !is.na(hit)
+    resolved[idx[ok]] <- targets[hit[ok]]
+  }
+  # The collision scan runs over the names that will BIND TO A FORMAL, and over
+  # those only, and it runs whether or not anything was renamed above (M19
+  # review round 3). Scanning every resolved name invented an error R does not
+  # raise -- repeated names landing in `fn`'s own `...` are legal, and R accepts
+  # them -- while scanning only the renamed ones missed the plainest case of
+  # all, one formal supplied twice under its own name, which then reached
+  # `do.call()` and failed every file in the batch with R's raw text.
+  bound <- resolved[resolved %in% targets]
+  clash <- unique(bound[duplicated(bound)])
   if (length(clash)) {
-    supplied <- nms[resolved == clash[1] & nzchar(resolved)]
+    # The first collision only, as R itself reports only the first.
+    supplied <- unique(nms[resolved == clash[1]])
     cli::cli_abort(
-      "{.arg {clash[1]}} is matched by more than one argument:
-       {.arg {supplied}}.",
+      if (length(supplied) == 1L) {
+        "{.arg {clash[1]}} is supplied more than once."
+      } else {
+        "{.arg {clash[1]}} is matched by more than one argument:
+         {.arg {supplied}}."
+      },
       class = "openac_bad_argument",
       call = call
     )
