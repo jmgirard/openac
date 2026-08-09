@@ -259,14 +259,24 @@ them without attaching the upstream packages.
   failed row naming it; `os_extract_dir()` records a failed row whose message is
   the bare `stopifnot()` deparse `file.exists(infile) is not TRUE`, naming no
   file at all — the input it concerns is a temporary wav that was never written;
-  `aw_transcribe_dir()` and
-  `os_prep_audio_dir()` record it as a **success** (ROADMAP candidate). A
+  and `aw_transcribe_dir()` records it as a **success**, because
+  `aw_transcribe()` skips such a file with a message and returns `NULL`, which
+  `dir_walk()` cannot tell from a completed transcription (M18). A
   per-file disposition is not a per-file outcome until the batch table shows it.
+  (`os_prep_audio_dir()` was the second such table until **M17, 2026-08-08**,
+  which made a non-zero ffmpeg exit that file's own failure — see below.)
   Resilience is ad hoc elsewhere: the `stopifnot(file.exists())` guards in
   `os_check_audio`, `os_prep_audio`, `os_extract_wav`, `os_fix_csv`,
   `aw_check_audio`, `aw_prep_audio`, `aw_transcribe_wav` and `of_extract` abort
   on a missing input; `os_check_config()` aborts on a config it cannot resolve;
-  and `run_tool()` inspects no tool's exit status, so an ffmpeg, openSMILE or
-  OpenFace failure is invisible to its caller — `ffp_count_streams()` is the
-  only place in the package that reads one. `dir_outputs()`'s collision refusal
+  and the abort messages name the file in only one of them (`aw_prep_audio`,
+  `R/use_whisper.R`), the rest being bare `stopifnot()` deparses (M19).
+  Exit status is no longer among the gaps (**corrected 2026-08-08, M17**, which
+  superseded the earlier "`run_tool()` inspects no tool's exit status" reading):
+  `run_checked()` reads the `status` attribute on behalf of the four per-file
+  wrappers and aborts naming the file, the program and what the tool said, so an
+  ffmpeg, openSMILE or OpenFace failure is that file's own failed row.
+  `run_tool()` itself still returns `system2()`'s value verbatim, which is what
+  keeps the four exported passthroughs a raw escape hatch.
+  `dir_outputs()`'s collision refusal
   is a deliberate pre-flight abort outside that set (see `R/utils.R`).

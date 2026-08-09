@@ -5,7 +5,7 @@
 - **Depends on:** —
 - **Driving RR:** —
 - **Principles touched:** GP6, GP9
-- **Branch/PR:** `m17-tool-exit-status`
+- **Branch/PR:** `m17-tool-exit-status` · https://github.com/jmgirard/openac/pull/18
 
 ## Goal
 
@@ -35,27 +35,27 @@ collisions → the standing ROADMAP candidate, behind M18.
 
 ## Acceptance criteria
 
-- [ ] AC1 The low-level passthroughs still return `system2()`'s value rather
+- [x] AC1 The low-level passthroughs still return `system2()`'s value rather
       than erroring on a non-zero exit. A test calls all eight exported
       bindings — `ffmpeg`/`ffm`, `ffprobe`/`ffp`, `openface`/`of`,
       `opensmile`/`os`, which D-010 records as separate bindings — under
       `fake_nonzero_exit()` (`tests/testthat/helper-openac.R:860`) and asserts
       each returns a value carrying a `status` attribute.
-- [ ] AC2 Each of the four per-file call sites T3 wires — `os_prep_audio()`,
+- [x] AC2 Each of the four per-file call sites T3 wires — `os_prep_audio()`,
       `aw_prep_audio()`, `os_extract_wav()` and `of_extract()` — raises an
       error on a non-zero tool exit whose message, with whitespace collapsed
       as `collect_warnings()` documents (`helper-openac.R:896-905`), contains
       the input file's basename, the program name and the exit status. One
       test per site, four in total.
-- [ ] AC3 `os_prep_audio_dir()` records a file whose ffmpeg conversion exits
+- [x] AC3 `os_prep_audio_dir()` records a file whose ffmpeg conversion exits
       non-zero as `success = FALSE` with that message in the `error` column;
       the `os_prep_audio_dir` half of the KNOWN GAP test
       (`tests/testthat/test-batch-dirs.R:334`) is rewritten to assert it.
-- [ ] AC4 The check reads the exit status from the `status` attribute and
+- [x] AC4 The check reads the exit status from the `status` attribute and
       never from R's warning text, which is translated (LESSONS, M14): a test
       drives it under `fake_nonzero_exit()`'s non-English default message and
       asserts the error still fires.
-- [ ] AC5 `devtools::document()` shows no drift, `devtools::test()` passes,
+- [x] AC5 `devtools::document()` shows no drift, `devtools::test()` passes,
       and `devtools::check()` reports 0 errors, 0 warnings and no NOTE other
       than the pre-existing `spelling` NOTE (PR #9's recorded baseline).
 
@@ -103,3 +103,47 @@ collisions → the standing ROADMAP candidate, behind M18.
 ## Decisions
 
 ## Review
+
+**AC1 — verified 2026-08-08.** `test-tool-exit-status.R` "every passthrough and
+alias returns a non-zero exit rather than erroring": 9 passing expectations —
+all eight bindings (`ffmpeg`/`ffm`, `ffprobe`/`ffp`, `openface`/`of`,
+`opensmile`/`os`) return a value whose `status` attribute is `3L` under
+`fake_nonzero_exit(status = 3L)`, plus the boundary-call count. No binding
+errors.
+
+**AC2 — verified 2026-08-08.** Four tests, one per wired site, 4 passing
+expectations each: `os_prep_audio()`, `aw_prep_audio()`, `os_extract_wav()` and
+`of_extract()` each raise `openac_tool_failed` whose whitespace-collapsed
+message contains the input basename, the program name and the exit status
+(254, 254, 1, 11 respectively).
+
+**AC3 — verified 2026-08-08.** `test-batch-dirs.R` "os_prep_audio_dir() records
+a failed conversion as a failed row": 3 passing expectations. Confirmed against
+the REAL ffmpeg outside the mocked boundary — a text file named `clip.mp4`
+yields `success = FALSE`, no wav written, and `error` reading
+`Could not process 'clip.mp4'. ffmpeg exited with status 183. ffmpeg said:
+… Error opening input: Invalid data found when processing input …`.
+
+**AC4 — verified 2026-08-08.** "a non-English status warning still produces the
+error" passes: the check fires under `fake_nonzero_exit()`'s French default
+message, so it cannot be keyed on R's English text. The companion test "R's own
+status warning is suppressed, and nothing else is" (3 expectations) shows the
+suppression is positional — a preceding unrelated warning survives, the trailing
+status warning does not.
+
+**AC5 — verified 2026-08-08.** `devtools::check()` 0 errors / 0 warnings /
+0 notes (43.3s, openac 0.1.0.9000). `devtools::test()` 753 pass / 0 fail /
+6 skips, all pre-existing (4 opt-in installer probes, OpenFace absent,
+audio.whisper absent). `devtools::document()` produces no drift.
+
+**Consistency gate — 2026-08-08.** `cairn_validate` exit 0, all checks passed.
+`cairn_impact --changed`: no changed principles (M17 works under GP6/GP9, it
+changes neither). Profile `consistency-gate` slot: `document()` no-diff
+verified; no generated file hand-edited.
+
+**Correction made at review.** `DESIGN.md`'s Known-issues GP6 entry asserted two
+things this milestone falsified — that `os_prep_audio_dir()` records a bad file
+as a success, and that "`run_tool()` inspects no tool's exit status … 
+`ffp_count_streams()` is the only place in the package that reads one".
+Corrected in place and marked (current knowledge, D-045). This is the defect
+class M14 was returned for twice; it was caught here rather than by a reviewer.
