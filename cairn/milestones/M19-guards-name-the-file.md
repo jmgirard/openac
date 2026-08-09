@@ -1,6 +1,6 @@
 # M19: A guard that names no file
 
-- **Status:** review
+- **Status:** in-progress
 - **Priority:** normal
 - **Depends on:** —
 - **Driving RR:** —
@@ -36,7 +36,7 @@ messages; this milestone is scoped to what a batch row can carry.
 
 ## Acceptance criteria
 
-- [x] AC1 Every guard T2's work-log enumeration classifies as batch-reachable
+- [ ] AC1 Every guard T2's work-log enumeration classifies as batch-reachable
       signals an error whose message names the file it stopped on and the
       defect, and a test per guard asserts the file's basename appears in it.
       That enumeration is the domain and is stated rather than assumed: its
@@ -48,7 +48,7 @@ messages; this milestone is scoped to what a batch row can carry.
       was never written. A test drives that path and asserts the row's `error`
       names the missing wav path and attributes it to ffmpeg having written no
       output there.
-- [x] AC3 `os_check_config()` signals an error whose message contains the
+- [ ] AC3 `os_check_config()` signals an error whose message contains the
       config value it could not resolve, and `os_extract_dir()` validates
       `config` before `dir_walk()` runs. Tests assert: the value appears in
       the message; an unresolvable config makes `os_extract_dir()` signal an
@@ -109,6 +109,7 @@ messages; this milestone is scoped to what a batch row can carry.
 - 2026-08-09: T7 MEASURED on R 4.6.1 / macOS 15 at commit before this one: `devtools::document()` writes no diff, `devtools::test()` 308 tests 0 failures 0 errors 6 skips, `devtools::check()` Status OK — 0 errors, 0 warnings, 0 notes; the pre-existing `spelling` NOTE AC5 allows for did not appear at all.
 - 2026-08-09: T7 also added `os_extract_dir()`'s `@return` note that an unresolvable `config` errors before any file is touched and returns no table — the abort T5 introduces was absent from its own documented contract, which is the shape of finding the M18 review logged against `aw_transcribe()`.
 - 2026-08-09: status → review.
+- 2026-08-09: review round 1 returned the milestone to `in-progress` (defect return 1). What failed: AC1, falsified by three guards that raise a raw R condition instead of reaching `abort_file()` — a typed `NA_integer_` `stream` (`use_opensmile.R:213`, `use_whisper.R:122`), a non-scalar `infile` (`use_opensmile.R:131`, `:206`, `use_whisper.R:115`, `use_openface.R:75`), and an `NA` field from the SECOND ffprobe query reaching `if (!os_check_audio(infile))` (`use_opensmile.R:410`, `use_whisper.R:422`); and AC3, falsified by `do.call()`'s partial matching letting `conf =` bypass the pre-flight check entirely (`use_opensmile.R:529`), by an unresolved openSMILE killing the whole batch on `dirname(NULL)` before `os_check_config()` can speak (`:531`), and by `config = NULL` pre-flighting the default instead. Also actioned: DESIGN/NEWS overclaim three behaviors the branch lacks, and `dir_walk()`'s `error` column now carries wrapped newlines, a glyph, and the filename twice. AC2, AC4, AC5 verified and unaffected.
 
 ## Decisions
 
@@ -178,3 +179,51 @@ _Evidence gathered 2026-08-09 on R 4.6.1 / macOS 15 (Darwin 25.6.0), at branch
   reference-index row is owed (nothing new is exported); NEWS.md carries two
   entries for this milestone's user-visible changes, with no milestone number
   in them; no new top-level files; `check()` clean as recorded under AC5.
+
+### Independent review, round 1 (2026-08-09)
+
+Three fresh-context lenses. **Blame-history [S]** — no findings: M18's
+abort-vs-skip split, M17's `source` idea and `run_checked()`'s
+value-interpolation rule are all preserved, and the deleted tests' coverage
+migrated. **Prior-PR-comments [S]** — no regressions; its probe
+(`gh api repos/jmgirard/openac/pulls/comments?per_page=1`) returned `[]`, so
+the archived `## Review` sections were the whole surface, and M17 finding B and
+M14's A3 whitespace trap are both honored by this diff. **Diff-bug [O]** — 18
+candidate findings, scored by a fresh [S] scorer that reproduced findings
+1, 2, 3, 4, 5, 6, 12 and 14 in R rather than accepting the claims.
+
+**Actioned (>= 80), 7 of 18:**
+
+- **F1 (93)** `R/use_opensmile.R:213`, `R/use_whisper.R:122` — `!is_integerish(stream, n = 1) || stream < 0` yields `NA` for a typed `NA_integer_`, because `is_integerish(NA_integer_, n = 1)` is TRUE; `if (NA)` then raises `missing value where TRUE/FALSE needed`, naming no file.
+- **F2 (92)** `R/use_opensmile.R:131`, `:206`, `R/use_whisper.R:115`, `R/use_openface.R:75` — `if (!file.exists(infile))` raises `the condition has length > 1` / `argument is of length zero` for a non-scalar `infile`, bypassing `abort_file()`; the `stopifnot()` it replaced tolerated both.
+- **F3 (90)** `R/use_opensmile.R:410`, `R/use_whisper.R:422` — `if (!os_check_audio(infile))` raises the same `NA` condition error when the SECOND ffprobe query returns an `NA` field; the `anyNA(streams)` early return covers only the stream count.
+- **F5 (92)** `R/use_opensmile.R:529` — the pre-flight reads `extra_args$config` exactly, but `do.call(os_extract, ...)` PARTIAL-matches, so `conf = "nope/missing"` bypasses the check entirely and the batch probes every file.
+- **F6 (90)** `R/use_opensmile.R:531` — with openSMILE unresolved, `os_list_configs()` calls `dirname(NULL)` and the whole batch dies on `a character vector argument expected` before `os_check_config()`'s own abort; pre-M19 this was a per-file failure the batch survived (GP6).
+- **F8 (85)** `cairn/DESIGN.md:279-291` and `NEWS.md` assert three things the branch does not do: that every per-file guard routes through `abort_file()` (`os_fix_csv()` does not), that config is resolved once rather than per file (`os_extract_wav()` still calls `os_check_config()` per file, N -> N+1), and that a bad config costs no ffprobe rounds (false under F5).
+- **F14 (82)** `R/utils.R:229-232` — messages now carry width-wrapped hard line breaks and a bullet glyph into the `error` column, and `dir_walk()`'s warning names the file twice.
+
+**Logged, below the 80 bar (11 of 18), surfaced not dropped:**
+F4 (68) the non-conforming-audio message tells the user to run `os_prep_audio()`
+after openac just ran it · F7 (62) `os_fix_csv()` hand-rolls its abort instead
+of using the shared helper · F9 (75) `abort_file()`'s `class` argument is never
+passed and neither condition class is asserted anywhere · F10 (70)
+`aw_transcribe_wav()`'s new `source` has no test covering `source != infile` ·
+F11 (52) `basename(character(0))` degrades to `Could not process .` · **F12 (78)
+`os_extract_dir(..., config = NULL)` pre-flights the DEFAULT and then fails per
+file with a message naming no file — below the bar but demonstrating AC3's
+clause, so it returns with the actioned set** · F13 (38) `eval(formals(...))`
+uses the wrong environment if the default ever stops being a literal · F15 (35)
+`get(flag)` resolves lexically · F16 (65) the basename assertions pass on a
+full-path substring, so they do not discriminate · F17 (42) the deleted tests'
+implicit "no boundary call before validation" proof is weaker now · F18 (45)
+the `.env = parent.frame()` idiom is load-bearing and undocumented.
+
+**Disposition: return to `in-progress` under the M130 return floor.** Six
+findings demonstrate an acceptance criterion failing as written — F1, F2, F3
+against AC1's "signals an error whose message names the file it stopped on and
+the defect", inside the domain AC1's own grep names; F5, F6, F12 against AC3's
+"`os_extract_dir()` validates `config` before `dir_walk()` runs" and "signals an
+error whose message contains the config value it could not resolve". AC1 and AC3
+are unticked: their evidence was real but tested a narrower domain than the
+criteria claim, and both are now falsified. AC2, AC4 and AC5 stand verified and
+are untouched by these findings. First defect return for this milestone.
