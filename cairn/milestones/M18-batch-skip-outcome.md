@@ -34,11 +34,11 @@ plumbing that work needs, so it is planned after this one lands, not now.
 
 ## Acceptance criteria
 
-- [ ] AC1 `dir_walk()` records three states: a test drives a `.f` that
+- [x] AC1 `dir_walk()` records three states: a test drives a `.f` that
       returns normally, one that signals the skip condition, and one that
       errors, and asserts the rows read `status` of `"ok"`, `"skipped"` and
       `"failed"` respectively, with `success` `TRUE`, `FALSE`, `FALSE`.
-- [ ] AC2 Every `*_dir()` wrapper returns a table carrying a `status` column,
+- [x] AC2 Every `*_dir()` wrapper returns a table carrying a `status` column,
       as does the zero-row table `dir_walk()` returns for an empty input
       (`R/utils.R:112-114`), and each wrapper's roxygen `@return` documents
       the three values. The test derives its wrapper list at run time from the
@@ -48,7 +48,7 @@ plumbing that work needs, so it is planned after this one lands, not now.
       vacuous exactly where it gates the merge), so a sixth wrapper reds the
       test until it is covered — the computed-domain shape D-010 adopted for
       the command contract.
-- [ ] AC3 The three deliberate-skip sites named in Scope signal the skip
+- [x] AC3 The three deliberate-skip sites named in Scope signal the skip
       condition instead of returning normally, and `aw_transcribe()`'s
       combined branch (`R/use_whisper.R:296-300`) is split so the two facts it
       currently conflates part company: a file with no audio stream is
@@ -56,14 +56,14 @@ plumbing that work needs, so it is planned after this one lands, not now.
       One test per site asserts `status == "skipped"`, `success == FALSE` and
       the reason in `error`; a fourth drives an unprobeable file through
       `aw_transcribe_dir()` and asserts `status == "failed"`.
-- [ ] AC4 The KNOWN GAP test in `tests/testthat/test-batch-dirs.R` — whatever
+- [x] AC4 The KNOWN GAP test in `tests/testthat/test-batch-dirs.R` — whatever
       M17 leaves of it, having rewritten its `os_prep_audio_dir` half — is
       replaced by tests asserting the skip state, and
       `dir_walk_reports_failure()` (`tests/testthat/helper-openac.R:882`) is
       updated or retired together with the comment that anticipates this fix
       (`:872-881`); a test pins that adding `status` has not made its
       `setdiff(names(x), known)` clause true for every table.
-- [ ] AC5 NEWS records the return-shape change and what a caller reading
+- [x] AC5 NEWS records the return-shape change and what a caller reading
       `success` must do differently; `devtools::document()` shows no drift,
       `devtools::test()` passes, and `devtools::check()` reports 0 errors, 0
       warnings and no NOTE other than the pre-existing `spelling` NOTE.
@@ -125,6 +125,7 @@ plumbing that work needs, so it is planned after this one lands, not now.
 - 2026-08-09: T8 `absorb_skip()` added beside `skip_file()`; the two NESTED prep calls (`os_extract()` at `R/use_opensmile.R:318`, `aw_transcribe()`'s `do.call` at `R/use_whisper.R:340`) wrap theirs in it, so a reused-wav skip stops at the prep call instead of unwinding the per-file job. The two `*_prep_audio_dir()` wrappers call the prep function as `.f` directly and are untouched, which is why their skip still reaches `dir_walk()`. T7's 8 failures now pass; full suite 813 pass, 0 fail.
 - 2026-08-09: T9 the leaked `#'` removed from all five `@return` blocks (5 replacements, asserted); `devtools::document()` re-run and `grep -rn "its #'" R/ man/` now matches nothing. Two round-1 findings logged below the action bar fixed in the same lines rather than left in text being rewritten anyway: the retained "a file that fails is skipped with a warning" sentence, which contradicted the `"skipped"`/`"failed"` vocabulary defined two sentences above it, and `R/use_whisper.R:310`'s claim that `os_prep_audio()` aborts an unprobeable input — it never counts streams and has no such branch.
 - 2026-08-09: T10 re-verified after the round-1 fixes — `devtools::document()` no drift, `devtools::test()` 813 pass / 0 fail (10 more than round 1's 803, the three new regression tests), `devtools::check()` **Status: OK** 0/0/0 with the spelling comparison clean. NEWS narrowed in the same pass: it named the three skip sites without saying that `status` describes the batch's OWN job, so a reader would have expected `os_extract_dir(wavdir=, overwrite = FALSE)` to report a skip where it now reports `"ok"`. Status back to review.
+- 2026-08-09: review round 2 — gate re-run clean (`cairn_validate` exit 0, `check()` Status: OK 0/0/0, `document()` no drift, 813 tests pass) and all five criteria re-ticked against fresh round-2 evidence; CI green on all five platforms. Fresh-context review in flight.
 
 ## Decisions
 
@@ -259,3 +260,57 @@ exists to walk. 14 candidate findings scored; three at or above 80.
 **Disposition: return floor (M130) — F1 at 90 is a defect in what this
 package does for its users, so the milestone goes back to `in-progress`.**
 Defect returns for M18: 1.
+
+---
+
+_Round 2 — 2026-08-09, at cb757ae, `origin/main` unmoved since the branch was
+cut. Fresh evidence, re-executed; nothing carried over from round 1._
+
+### Acceptance-criterion evidence
+
+- **AC1** — `test_local(filter = "batch-skip-outcome")` green, 50 assertions
+  (40 in round 1, plus the 10 the F1/F2 regression tests add).
+  `test-batch-skip-outcome.R:16-40` drives one `.f` over three inputs and
+  asserts `status` `c("ok", "skipped", "failed")` with `success`
+  `c(TRUE, FALSE, FALSE)`, `error` `NA` for the ok row and the reason for the
+  other two.
+- **AC2** — same run. `:120-156` computes the wrapper domain from
+  `ls(asNamespace("openac"))` and asserts `status` in each of the five
+  wrappers' tables; `:82-98` pins the zero-row table's columns identical to a
+  populated one. The five `@return` blocks now render clean — round 1's
+  leaked `#'` is gone (`grep -rn "its #'" R/ man/` matches nothing) and each
+  of the five `man/*_dir.Rd` `\value{}` sections names `status` three times
+  (the vocabulary, the `success` identity, the `error` note).
+- **AC3** — same run, `:160-238`: the two `overwrite = FALSE` sites and the
+  no-audio site each read `"skipped"`/`success = FALSE` with the reason in
+  `error` and nothing reaching the tool boundary beyond the deciding probe;
+  the unprobeable file reads `"failed"` with `"could not be counted"`.
+- **AC4** — `test_local(filter = "batch-dirs")` green, 62 assertions. The
+  KNOWN GAP test is replaced (`test-batch-dirs.R:357-385`, both split states,
+  both `success = FALSE`); `dir_walk_reports_failure()` is retired with a
+  comment in its place, and its column-set guarantee is re-pinned by the
+  all-ok batch test (`test-batch-skip-outcome.R:100-118`).
+- **AC5** — `NEWS.md` carries the return-shape entry, narrowed in round 2 so
+  it no longer implies a reused-wav batch reports a skip. `document()`
+  re-run: no drift (`git status` clean). `devtools::test()` 813 pass / 0 fail.
+  `devtools::check()` **Status: OK** — 0 errors, 0 warnings, 0 notes.
+
+### Consistency gate
+
+- `cairn_validate.py` exit 0 — 16 CHECKs PASS, 8 advisories OK.
+- No `DESIGN.md` IP/GP principle changed, so `cairn_impact --changed` no-ops.
+- `r-package` `consistency-gate` slot: `document()` no diff · generated files
+  regenerate clean · `README.Rmd`/`README.md` untouched by this branch · no
+  `_pkgdown.yml` · `NEWS.md` has this milestone's entry, no milestone numbers
+  in it · no new top-level files · `check()` clean.
+
+### Round-1 fixes, verified
+
+The three actioned findings are closed and each has a test that fails
+without its fix. F1/F2: `absorb_skip()` (`R/utils.R:122-142`) stops a skip
+raised by a nested prep call, and the two nested sites wrap theirs; the
+regression tests were run red first (8 failures, both batches recording
+`"skipped"` with the tool never reached and no output written) and now
+assert the tool ran and the output landed, not `status` alone. The boundary
+the fix must not move has its own test: `os_prep_audio_dir()`, where the prep
+IS the job, still skips. F3: the leaked `#'` is out of all five blocks.
