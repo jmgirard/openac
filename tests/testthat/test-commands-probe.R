@@ -272,6 +272,57 @@ test_that("ffp_count_streams() still aborts when ffprobe itself is unavailable",
   )
 })
 
+# --- ffp_run -----------------------------------------------------------------
+
+test_that("ffp_run() forwards its tokens to ffprobe unchanged", {
+  # The command test the contract gate asks of every boundary-reaching function.
+  # `ffp_run()` builds no command of its own -- it exists for the exit status and
+  # the warnings, and what it owes the argv is identity.
+  state <- local_fake_tools(results = list("audio"))
+
+  openac:::ffp_run(c("-v", "error", "-show_entries", "stream=codec_type"))
+
+  expect_identical(boundary_tools(state), "ffprobe")
+  expect_identical(
+    boundary_argv(state),
+    list(shQuote(c("-v", "error", "-show_entries", "stream=codec_type")))
+  )
+})
+
+test_that("ffp_run() releases every warning when the probe succeeds", {
+  local_fake_tools(results = list(function(command, args) {
+    warning("a diagnostic the caller should still see")
+    "audio"
+  }))
+
+  warnings <- collect_warnings(
+    out <- openac:::ffp_run(c("-v", "error", "x.wav"))
+  )
+
+  expect_identical(as.character(out), "audio")
+  expect_match(warnings, "a diagnostic the caller should still see")
+})
+
+test_that("ffp_run() drops only R's own status warning when the probe fails", {
+  # Two warnings are raised inside the call: a diagnostic, then R's report of
+  # the exit status (LAST, which is the position rule the release depends on --
+  # its text is translated and cannot be matched). The first survives; the
+  # second is the argv dump the caller's own message replaces.
+  local_fake_tools(results = list(function(command, args) {
+    warning("the set_program() hint, or any other diagnostic")
+    warning("l'exécution de la commande 'ffprobe' renvoie un statut 1")
+    structure("ffprobe: Invalid data", status = 1L)
+  }))
+
+  warnings <- collect_warnings(
+    out <- openac:::ffp_run(c("-v", "error", "x.wav"))
+  )
+
+  expect_true(openac:::ffp_failed(out))
+  expect_length(warnings, 1L)
+  expect_match(warnings, "any other diagnostic")
+})
+
 # --- os_check_audio ----------------------------------------------------------
 
 test_that("os_check_audio() issues both ffprobe queries in order", {
@@ -347,6 +398,46 @@ test_that("os_check_audio(verbose = TRUE) names the file it could not probe", {
   expect_length(warnings, 2L)
   expect_true(all(grepl(basename(infile), warnings, fixed = TRUE)))
   expect_match(warnings[[2]], "Could not count the streams")
+})
+
+test_that("os_check_audio() reports a SECOND query that exited non-zero", {
+  # The first query succeeds, so the `anyNA(streams)` branch above is not the
+  # one under test: this is the file whose stream types ffprobe can read and
+  # whose codec/rate/channels query it cannot. Before this fix the exit status
+  # of that second call was never read, so its error text arrived looking like
+  # ordinary output and was reported as "No audio stream found" -- the file
+  # diagnosed as non-conforming when it was in fact unreadable.
+  infile <- local_media()
+  local_fake_tools(results = list("audio", fake_nonzero_exit()))
+
+  # At DEFAULT verbosity: the warning is not verbose-gated, because a bare FALSE
+  # for a file that could not be read reads as "not ready", which is the other
+  # half of this bug. The file is named in full, as `ffp_count_streams()` names
+  # it for the first query.
+  warnings <- collect_warnings(result <- os_check_audio(infile))
+
+  expect_false(result)
+  expect_true(any(grepl(infile, warnings, fixed = TRUE)))
+  expect_true(any(grepl("ffprobe exited with status 1", warnings, fixed = TRUE)))
+  expect_false(any(grepl("No audio stream", warnings, fixed = TRUE)))
+  # R's own warning quotes the whole command line back at a user who never
+  # wrote it. The first query already suppresses it; the second must too.
+  expect_false(any(grepl("renvoie un statut", warnings, fixed = TRUE)))
+})
+
+test_that("aw_check_audio() reports a SECOND query that exited non-zero", {
+  infile <- local_media()
+  local_fake_tools(results = list("audio", fake_nonzero_exit()))
+
+  # Default verbosity, as above: this one returned a SILENT FALSE before the
+  # fix, since its length branch is verbose-gated and nothing else spoke.
+  warnings <- collect_warnings(result <- aw_check_audio(infile))
+
+  expect_false(result)
+  expect_true(any(grepl(infile, warnings, fixed = TRUE)))
+  expect_true(any(grepl("ffprobe exited with status 1", warnings, fixed = TRUE)))
+  expect_false(any(grepl("No audio stream", warnings, fixed = TRUE)))
+  expect_false(any(grepl("renvoie un statut", warnings, fixed = TRUE)))
 })
 
 test_that("os_check_audio(verbose = TRUE) warns about a non-44.1kHz rate", {
