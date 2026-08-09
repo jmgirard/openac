@@ -355,3 +355,29 @@ reports **no findings**: it verified the `capture_warnings()` rewrite still
 identifies each warning by matcher rather than weakening to a bare capture, that
 `raw_is_markup()` is byte-identical to the function it split, and that D-018 is
 consistent with D-005/D-011 and accurately describes what the code does.
+
+The diff-bug lens returned 15 findings, **none scoring ≥80**, so the actioned
+list is empty and no return floor fires. Logged, highest first: N10 [78]
+`if (size < floor)` errors rather than returning `FALSE` when `file.size()`
+gives `NA`, which Windows can do on a stat race — MEASURED by the scorer;
+N13 [78] `skip_if_not_installed("curl")` sits in the shared gate, so a
+maintainer without `curl` who opts in loses all four tests rather than the one
+probe that uses it; N6 [66] under `options(warn = 2)` the first model's warning
+becomes an error, so T9's attempt-all-four property and the documented
+`logical` return both collapse — MEASURED; N2 [65] NEWS says the refusal names
+the link and no test asserts the URL is in the message; N12 [55] see below;
+N4 [55] the archive-download path in the same function stayed base `warning()`;
+N1 [45] the real-run assertion now asks the shipped guard about its own failure
+mode, having traded an independent oracle for consistency; N3 [45] the new
+`cli_warn()` calls carry no condition class where `require_os()` sets one;
+N5 [45]; N15 [42] this Coverage map does not list T5–T9; N7 [38]; N14 [38];
+N11 [32]; N9 [32]; N8 [28].
+
+**One correction made this pass, not triaged as a finding.** N12 [55] showed
+the `NEWS.md` entry asserting the OneDrive links "had stopped serving the
+models" — which claims they once worked, where this milestone's own record says
+"How long they had been dead is unknowable from here" and the work log notes
+openac had copied only upstream's *fallback* links. A branch-added claim is
+derived from what was measured, never composed, so the sentence was rewritten
+to what the run actually shows and the unknowability stated outright. This is a
+record repaired before it ships, not a finding deferred.

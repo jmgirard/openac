@@ -2,10 +2,10 @@
 
 * `install_openface_win()` was silently installing an OpenFace that cannot
   track faces. The four model files it downloads separately from the main
-  release came from links that had stopped serving the models and started
-  serving a sign-in page instead — and because that page arrives as a
-  successful download, the installer wrote four web pages where the models
-  belong and reported success. **If you installed OpenFace through openac,
+  release came from links that were serving a sign-in page instead of the
+  models — and because that page arrives as a successful download, the
+  installer wrote four web pages where the models belong and reported success.
+  How long that had been true is not something we can tell from here. **If you installed OpenFace through openac,
   re-run `install_openface_win()`.** The models now come from the same
   location the OpenFace project itself uses first, and a download that is too
   small or is a web page is refused with a message naming the link, instead of
