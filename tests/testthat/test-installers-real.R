@@ -72,23 +72,12 @@ installer_floors <- function() {
   )
 }
 
-# Read the first bytes and ask whether they open a markup document. Bytes, not
-# characters: a `.dat` model is binary and `rawToChar()` aborts on the embedded
-# nul it is certain to contain.
-looks_like_markup <- function(path) {
-  con <- file(path, "rb")
-  on.exit(close(con))
-  head_raw <- readBin(con, "raw", n = 512L)
-  hex <- paste(sprintf("%02x", as.integer(head_raw)), collapse = "")
-  # "<!DOCTYPE", "<html", "<HTML", "<?xml", "<!--" -- the last because the
-  # live.com sign-in page MEASURED on 2026-08-08 opens with a copyright comment
-  # rather than a doctype, and a sniff that missed it would miss the case.
-  any(vapply(
-    c("3c21444f43545950", "3c68746d6c", "3c48544d4c", "3c3f786d6c", "3c212d2d"),
-    function(needle) grepl(needle, hex, fixed = TRUE),
-    logical(1)
-  ))
-}
+# The markup sniff is NOT re-implemented here. `openac:::starts_with_markup()`
+# and `openac:::raw_is_markup()` are the shipped guard, and asserting a local
+# copy of the rule would leave this file green over a production sniff that had
+# stopped matching -- which is the whole failure mode the guard exists for.
+# `raw_is_markup()` takes bytes, so the probe below can use it on a response
+# body without writing the body to disk first.
 
 # The size of a whole extracted tree, which is what an archive URL delivers --
 # the downloaded archive itself is `unlink()`ed by the installer before it
@@ -148,19 +137,16 @@ test_that("every URL pinned in programs_install.R delivers a real file", {
     response <- curl::curl_fetch_memory(urls[[name]], handle = handle)
     headers <- curl::parse_headers_list(response$headers)
 
-    total <- sub("^bytes [0-9]+-[0-9]+/", "", headers[["content-range"]] %||% "")
-    hex <- paste(sprintf("%02x", as.integer(utils::head(response$content, 512))),
-                 collapse = "")
-    markup <- any(vapply(
-      c("3c21444f43545950", "3c68746d6c", "3c48544d4c", "3c3f786d6c", "3c212d2d"),
-      function(needle) grepl(needle, hex, fixed = TRUE),
-      logical(1)
-    ))
+    content_range <- headers[["content-range"]]
+    if (is.null(content_range)) content_range <- ""
+    total <- sub("^bytes [0-9]+-[0-9]+/", "", content_range)
+    # The shipped rule, on the response body -- not a copy of it.
+    markup <- openac:::raw_is_markup(utils::head(response$content, 512))
 
     record_measurement(
       "URL ", name,
       " | status=", response$status_code,
-      " | type=", headers[["content-type"]] %||% "-",
+      " | type=", if (is.null(headers[["content-type"]])) "-" else headers[["content-type"]],
       " | total-bytes=", if (nzchar(total)) total else "-",
       " | markup=", markup,
       " | final=", substr(response$url, 1L, 120L)
@@ -248,7 +234,7 @@ test_that("install_openface_win() really installs OpenFace and its patch experts
     if (!file.exists(path)) next
 
     bytes <- file.size(path)
-    markup <- looks_like_markup(path)
+    markup <- openac:::starts_with_markup(path)
     record_measurement(
       "INSTALL patch_expert ", scale, " | bytes=", bytes, " | markup=", markup
     )

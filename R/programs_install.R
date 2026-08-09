@@ -216,25 +216,33 @@ download_model <- function(url, destfile, floor = model_byte_floor()) {
   TRUE
 }
 
-# Do the first bytes of `path` open an HTML or XML document?
+# Does this run of bytes open an HTML or XML document?
 #
-# Read as raw: a model file is binary and `readLines()`/`rawToChar()` choke on
-# the embedded nul it is certain to contain. The `<!--` needle is not padding:
-# the live.com sign-in page measured on 2026-08-08 opens with a copyright
-# comment, so a sniff for `<!DOCTYPE` alone would have missed the exact page
-# this guard exists for.
-starts_with_markup <- function(path) {
-  con <- file(path, "rb")
-  on.exit(close(con))
-  hex <- paste(
-    sprintf("%02x", as.integer(readBin(con, "raw", n = 512L))),
-    collapse = ""
-  )
+# THE one markup rule. It lives here, in the package rather than the test file,
+# because the real-network test asserts the guard that ships -- a second copy
+# written beside the test would let the two drift and leave the test green over
+# a production sniff that had stopped matching (the divergence M09 removed from
+# the download helper, found again by M16's review).
+#
+# Bytes, not characters: a model file is binary and `readLines()`/`rawToChar()`
+# choke on the embedded nul it is certain to contain. The `<!--` needle is not
+# padding -- the live.com sign-in page measured on 2026-08-08 opens with a
+# copyright comment, so a sniff for `<!DOCTYPE` alone would have missed the
+# exact page this guard exists for.
+raw_is_markup <- function(bytes) {
+  hex <- paste(sprintf("%02x", as.integer(bytes)), collapse = "")
   any(vapply(
     c("3c21444f43545950", "3c68746d6c", "3c48544d4c", "3c3f786d6c", "3c212d2d"),
     function(needle) grepl(needle, hex, fixed = TRUE),
     logical(1)
   ))
+}
+
+# The file-shaped view over `raw_is_markup()`, for a download that has landed.
+starts_with_markup <- function(path) {
+  con <- file(path, "rb")
+  on.exit(close(con))
+  raw_is_markup(readBin(con, "raw", n = 512L))
 }
 
 
