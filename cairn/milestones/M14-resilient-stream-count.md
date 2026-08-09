@@ -1,11 +1,11 @@
 # M14: A bad file is an outcome, not the end of the batch
 
-- **Status:** planned
+- **Status:** in-progress
 - **Priority:** normal
 - **Depends on:** M13
 - **Driving RR:** —
 - **Principles touched:** GP6, GP9
-- **Branch/PR:** —
+- **Branch/PR:** `m14-resilient-stream-count`
 
 ## Goal
 

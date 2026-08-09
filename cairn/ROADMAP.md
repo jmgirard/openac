@@ -9,7 +9,7 @@ _Released 0.1.0 (GitHub) 2026-07-11._
 | ID | Title | Status | Depends on | Priority | File/Archive |
 |---|---|---|---|---|---|
 | M13 | Quote at the process boundary, not at the call site | done | — | high | milestones/archive/M13-boundary-quoting.md |
-| M14 | A bad file is an outcome, not the end of the batch | planned | M13 | normal | milestones/M14-resilient-stream-count.md |
+| M14 | A bad file is an outcome, not the end of the batch | in-progress | M13 | normal | milestones/M14-resilient-stream-count.md |
 | M15 | What Windows actually does to a path the shell can eat | done | — | high | milestones/archive/M15-windows-quoting-oracle.md |
 | M16 | The Windows installers, actually run | done | — | normal | milestones/archive/M16-windows-installers-real-run.md |
 | M12 | Does openac belong on top of tidymedia? — a fit assessment, and a decision | done | — | high | milestones/archive/M12-tidymedia-fit-assessment.md |
