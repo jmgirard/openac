@@ -41,10 +41,13 @@ plumbing that work needs, so it is planned after this one lands, not now.
 - [ ] AC2 Every `*_dir()` wrapper returns a table carrying a `status` column,
       as does the zero-row table `dir_walk()` returns for an empty input
       (`R/utils.R:112-114`), and each wrapper's roxygen `@return` documents
-      the three values. The test derives its wrapper list from
-      `grep -n "_dir <- function" R/*.R` at run time rather than hand-listing
-      it, so a sixth wrapper reds the test until it is covered — the computed
-      -domain shape D-010 adopted for the command contract.
+      the three values. The test derives its wrapper list at run time from the
+      `_dir$` names in `asNamespace("openac")`, not from the `R/*.R` sources
+      (an installed package's `R/` holds only the lazy-load database, so a
+      source grep matches nothing under `R CMD check` and the test would go
+      vacuous exactly where it gates the merge), so a sixth wrapper reds the
+      test until it is covered — the computed-domain shape D-010 adopted for
+      the command contract.
 - [ ] AC3 The three deliberate-skip sites named in Scope signal the skip
       condition instead of returning normally, and `aw_transcribe()`'s
       combined branch (`R/use_whisper.R:296-300`) is split so the two facts it
@@ -93,6 +96,10 @@ plumbing that work needs, so it is planned after this one lands, not now.
 - 2026-08-08: criteria audit ([O], fresh context) returned three findings on this file — AC3 tickable in a state recording an unprobeable file as "skipped" (the `is.na(has_audio) || !has_audio` branch conflates two facts), AC2 blind to `dir_walk()`'s zero-row column set and hand-listing what its own grep enumerates, AC4 anchored on a line M17 rewrites first; all three fixed before the gate, none deferred.
 - 2026-08-08: plan gate chose a third outcome state over treating a deliberate skip as a failure because re-running a completed batch would then report every already-done file as failed; falsified by a user reading `success` for whom skip and failure are the same disposition.
 - 2026-08-08: plan gate chose a skip *condition class* over a sentinel return value because `dir_walk()` inspects no return value and the `do.call` paths (`aw_transcribe_dir`, `os_extract_dir`) return heterogeneous values a sentinel would have to be distinguished from; falsified by a skip needing to carry structured data a condition cannot.
+
+- 2026-08-09: implement gate chose a non-error skip condition (a direct call still returns as it always did), an abort for a file ffprobe cannot read, and an informational rather than warning line per skipped file.
+- 2026-08-09: T1 `tests/testthat/test-batch-skip-outcome.R` written and RUN red before any source change — 10 failures, each on the absent `status` column or on `skip_file` not existing; box unticked until the suite is green.
+- 2026-08-09: amendment — AC2's run-time wrapper list moves from a `R/*.R` grep to `asNamespace("openac")`; MEASURED an installed package's `R/` holds only the lazy-load DB (withr: `withr`, `withr.rdb`, `withr.rdx`), so the grep would match nothing under `R CMD check` and the criterion would be vacuous there.
 
 ## Decisions
 
