@@ -249,5 +249,14 @@ them without attaching the upstream packages.
 - 2026-07-11: GP5 unmet — high-level functions build their command strings
   internally with no way for users to inspect/report them; retrofit when
   touched.
-- 2026-07-11: GP6 unevenly met — some `_dir` functions skip bad files
-  (audio-less inputs), but resilience is ad hoc, not a designed contract.
+- 2026-07-11 (**narrowed 2026-08-08, M14**): GP6 unevenly met — a failed
+  ffprobe is now a per-file outcome by contract, not by accident:
+  `ffp_count_streams()` returns `NA` counts with a warning naming the file, and
+  each of its four callers turns that into a per-file failure, so a `*_dir()`
+  batch records the bad file and goes on to the next. Resilience is still ad
+  hoc everywhere else: the `stopifnot(file.exists())` guards in
+  `os_check_audio`, `os_prep_audio`, `os_extract_wav`, `os_fix_csv`,
+  `aw_check_audio`, `aw_prep_audio`, `aw_transcribe_wav` and `of_extract` abort
+  on a missing input, and `os_check_config()` aborts on a config it cannot
+  resolve. `dir_outputs()`'s collision refusal is a deliberate pre-flight abort
+  and not part of that set (see `R/utils.R`).

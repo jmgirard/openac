@@ -1,5 +1,16 @@
 # openac (development version)
 
+* A media file that ffprobe cannot read is now reported as that file's own
+  result rather than being mistaken for a file with no audio. `ffp_count_streams()`
+  returns `NA` counts and a warning naming the file instead of stopping, and the
+  functions built on it act on that: `os_check_audio()` and `aw_check_audio()`
+  return `FALSE`, `aw_prep_audio()` stops with a message naming the file, and
+  `aw_transcribe()` skips it. In a batch, the file appears in the returned table
+  as a failure you can read and re-run, where before it was reported with a
+  message about an audio stream index that said nothing about what went wrong.
+  A missing ffprobe still stops the run, because that is a problem with the
+  installation rather than with any one file.
+
 * `install_openface_win()` was silently installing an OpenFace that cannot
   track faces. The four model files it downloads separately from the main
   release came from links that were serving a sign-in page instead of the
