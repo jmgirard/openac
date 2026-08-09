@@ -1,7 +1,7 @@
 # Roadmap
 
 _The only authority on milestone status. Grouped by status, not ID._
-_Last hygiene check: 2026-08-08 (M16 merged and archived after a two-pass review — the first pass returned it for a missing changelog entry and an unheld dependency gate; one candidate added for the two findings that landed just under the action bar)_
+_Last hygiene check: 2026-08-08 (M14 merged and archived after two review rounds — the first returned it for prose in NEWS and DESIGN asserting batch behavior two of four paths lack, the second caught the fix repeating that defect; one candidate added, two lessons captured)_
 _Released 0.1.0 (GitHub) 2026-07-11._
 
 ## Milestones
@@ -9,11 +9,10 @@ _Released 0.1.0 (GitHub) 2026-07-11._
 | ID | Title | Status | Depends on | Priority | File/Archive |
 |---|---|---|---|---|---|
 | M13 | Quote at the process boundary, not at the call site | done | — | high | milestones/archive/M13-boundary-quoting.md |
-| M14 | A bad file is an outcome, not the end of the batch | review | M13 | normal | milestones/M14-resilient-stream-count.md |
+| M14 | A bad file is an outcome, not the end of the batch | done | M13 | normal | milestones/archive/M14-resilient-stream-count.md |
 | M15 | What Windows actually does to a path the shell can eat | done | — | high | milestones/archive/M15-windows-quoting-oracle.md |
 | M16 | The Windows installers, actually run | done | — | normal | milestones/archive/M16-windows-installers-real-run.md |
 | M12 | Does openac belong on top of tidymedia? — a fit assessment, and a decision | done | — | high | milestones/archive/M12-tidymedia-fit-assessment.md |
-| M11 | A wholly-skipped test file cannot exist — the coverage gate's blind spot, closed at the door | done | M10 | normal | milestones/archive/M11-forbid-top-level-skips.md |
 
 ## Candidates
 <!-- unnumbered ideas; one line each: idea — added YYYY-MM-DD — links -->
