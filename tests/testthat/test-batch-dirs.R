@@ -294,6 +294,43 @@ test_that("the failure warning names the file that was skipped", {
   expect_warning(os_prep_audio_dir(indir, "mp4", outdir), "clip\\.mp4")
 })
 
+test_that("one unprobeable file among three is a row, not the end of the batch", {
+  # The milestone case, pinned to the failure it actually is. MEASURED against
+  # the pre-M14 sources: the batch already survived this file, because
+  # dir_walk() caught aw_prep_audio()'s abort and recorded the row. What it
+  # recorded was the defect --
+  #   x | (stream + 1) <= ffp_count_streams(infile)[["Audio"]] is not TRUE
+  # -- because a probe that FAILED was parsed as a file with zero audio streams.
+  # So the report named neither the file nor the reason, and asserted something
+  # false about the input: nothing was ever learned about its streams. The
+  # message assertion below is the discriminating one; the success column passes
+  # against the old code too.
+  indir <- withr::local_tempdir()
+  file.create(file.path(indir, c("a.mp4", "b.mp4", "c.mp4")))
+  outdir <- file.path(withr::local_tempdir(), "wavs")
+  # list.files() sorts, so the queue runs a, b, c. `b` fails its probe and never
+  # reaches ffmpeg; the other two spend a probe and a conversion each.
+  state <- local_fake_tools(
+    results = list("audio", "ok", fake_nonzero_exit(), "audio", "ok")
+  )
+
+  warnings <- collect_warnings(
+    result <- aw_prep_audio_dir(indir, "mp4", outdir)
+  )
+
+  expect_identical(basename(result$infile), c("a.mp4", "b.mp4", "c.mp4"))
+  expect_identical(result$success, c(TRUE, FALSE, TRUE))
+  expect_match(result$error[[2]], "could not be counted")
+  expect_true(all(is.na(result$error[c(1, 3)])))
+  # The batch really ran the other two: two conversions, not three and not one.
+  expect_identical(
+    boundary_tools(state),
+    c("ffprobe", "ffmpeg", "ffprobe", "ffprobe", "ffmpeg")
+  )
+  # And it said so at the time, naming the file it skipped.
+  expect_true(any(grepl("b.mp4", warnings, fixed = TRUE)))
+})
+
 test_that("every file failing still returns a full report rather than erroring", {
   indir <- local_input_tree()
   outdir <- file.path(withr::local_tempdir(), "faces")

@@ -72,7 +72,7 @@ opportunistic per DESIGN's Conventions. Argument-assembly changes → M13.
 - [x] T3 Give `aw_prep_audio` its `NA` branch (`R/use_whisper.R:102`, replacing
       the `stopifnot` comparison that `NA` would otherwise poison) and pin
       `aw_transcribe`'s existing branch (`R/use_whisper.R:266`); tests first.
-- [ ] T4 Add the three-input batch test for AC3 against `aw_prep_audio_dir()`.
+- [x] T4 Add the three-input batch test for AC3 against `aw_prep_audio_dir()`.
 - [ ] T5 Update DESIGN's GP6 known-issue line; `devtools::document()`,
       `devtools::test()`, `devtools::check()`.
 
@@ -84,6 +84,7 @@ opportunistic per DESIGN's Conventions. Argument-assembly changes → M13.
 - 2026-08-08: T1 — `ffp_count_streams()` returns NA counts with a warning on a nonexistent file and on a non-zero ffprobe exit, read from the `status` attribute `system2(stdout = TRUE)` sets (measured, R 4.6.1); R's own status warning is muffled so one warning naming the file reaches the caller. A missing ffprobe still aborts (question gate).
 - 2026-08-08: T2 — `os_check_audio()` and `aw_check_audio()` return FALSE on an NA count, before their second ffprobe query (which would fail on the same file); their own message is verbose-gated per the question gate, matching the sibling "no audio stream" warning. Added a `collect_warnings()` test helper: nested `expect_warning()` is order-dependent and misreported which of the two warnings was missing.
 - 2026-08-08: T3 — `aw_prep_audio()` aborts naming the file on an NA count (dir_walk records a row as failed only on an error); `aw_transcribe()`'s existing `is.na(has_audio)` branch pinned by a test that discriminates it from the tryCatch fallback via the probe warning, verified by mutating the NA return to an abort and observing the test red on that assertion.
+- 2026-08-08: T4 — batch test added. MEASURED against the pre-M14 sources: aw_prep_audio_dir() already survived the bad file (dir_walk caught the stopifnot), so AC3's success/error columns passed before the change; what M14 fixes on this path is the diagnosis — a failed probe was parsed as "0 audio streams" and reported as `(stream + 1) <= ffp_count_streams(infile)[["Audio"]] is not TRUE`, naming neither the file nor the reason. The test's message assertion is the discriminating one and is the only one that reds against main.
 
 ## Decisions
 
