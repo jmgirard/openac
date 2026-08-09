@@ -215,6 +215,119 @@ test_that("aw_transcribe_dir() records a file with no audio stream as skipped", 
   expect_identical(boundary_tools(state), "ffprobe")
 })
 
+# --- a NESTED skip is not the batch's skip (review round 1, F1/F2) -----------
+#
+# `overwrite = FALSE` means "reuse the audio you already prepared", and in a
+# batch whose job is NOT the preparing -- extracting features, transcribing --
+# reusing it is the fast path, not a reason to stop. The signal `os_prep_audio()`
+# raises must therefore stop at the call that raised it, because `dir_walk()`'s
+# handler is exiting and would otherwise unwind the whole per-file job: the tool
+# would never run, no output would be written, and the row would report a
+# deliberate skip of work the caller did want done.
+#
+# The discriminating assertions are on the TOOL and the OUTPUT, not on `status`
+# alone: a row reading "ok" while openSMILE was never called is the same defect
+# wearing a better label.
+
+# A model object, as far as `aw_transcribe_wav()`'s class check is concerned.
+skip_fixture_model <- function() structure(list(name = "tiny"), class = "whisper")
+
+test_that("os_extract_dir() reuses an existing wav and still extracts features", {
+  indir <- withr::local_tempdir()
+  file.create(file.path(indir, "a.mp4"))
+  wavdir <- withr::local_tempdir()
+  # The wav a previous run of this same batch already prepared.
+  file.create(file.path(wavdir, "a.wav"))
+  aggdir <- withr::local_tempdir()
+
+  writer <- function(command, args) {
+    for (path in boundary_value(args, "-csvoutput")) write_fake_os_output(path)
+    "ok"
+  }
+  state <- local_fake_tools(results = c(
+    # os_check_audio(infile): an mp4, so not already a conforming wav.
+    list("audio", c("mp3", "44100", "2")),
+    # os_check_audio(wavfile), inside os_extract_wav(): the reused wav is.
+    list("audio", c("pcm_s16le", "44100", "1")),
+    list(writer)
+  ))
+  suppressMessages(
+    result <- os_extract_dir(
+      indir, "mp4", wavdir = wavdir, aggdir = aggdir, overwrite = FALSE
+    )
+  )
+
+  expect_identical(result$status, "ok")
+  expect_identical(result$success, TRUE)
+  # openSMILE ran and its output landed. Without these two the status assertion
+  # above passes on a batch that did nothing.
+  expect_true("opensmile" %in% boundary_tools(state))
+  expect_identical(list.files(aggdir), "a.csv")
+})
+
+test_that("aw_transcribe_dir() reuses an existing wav and still transcribes", {
+  indir <- withr::local_tempdir()
+  file.create(file.path(indir, "a.mp4"))
+  wavdir <- withr::local_tempdir()
+  file.create(file.path(wavdir, "a.wav"))
+  rdsdir <- withr::local_tempdir()
+
+  local_fake_tools(results = c(
+    # aw_transcribe()'s own audio-stream check on the input.
+    list("audio"),
+    # aw_check_audio(infile): an mp4, so it is not already whisper-ready.
+    list("audio", c("mp3", "44100", "2")),
+    # aw_check_audio(wavfile), inside aw_transcribe_wav(): the reused wav is.
+    list("audio", c("pcm_s16le", "16000", "1"))
+  ))
+  calls <- new.env(parent = emptyenv())
+  calls$n <- 0L
+  # whisper is reached through `do.call(what = predict, ...)`, and the binding
+  # resolves through openac's imports environment -- so the mock goes in
+  # openac's namespace, not in stats.
+  local_mocked_bindings(
+    predict = function(...) {
+      calls$n <- calls$n + 1L
+      list(data = data.frame(
+        segment = 1L, from = "00:00:00.000", to = "00:00:01.000",
+        text = " Hello.", stringsAsFactors = FALSE
+      ))
+    },
+    .package = "openac"
+  )
+  suppressMessages(
+    result <- aw_transcribe_dir(
+      indir, "mp4",
+      wavdir = wavdir, rdsdir = rdsdir,
+      model = skip_fixture_model(),
+      audio_args = list(overwrite = FALSE)
+    )
+  )
+
+  expect_identical(result$status, "ok")
+  expect_identical(result$success, TRUE)
+  expect_identical(calls$n, 1L)
+  expect_identical(list.files(rdsdir), "a.rds")
+})
+
+test_that("os_prep_audio_dir() still skips: there the prep IS the job", {
+  # The boundary the fix must not move. Same inputs, same `overwrite = FALSE`,
+  # but the batch's own job is preparing the audio -- so there is genuinely
+  # nothing to do and the row is a skip, not an "ok" for work never done.
+  indir <- withr::local_tempdir()
+  file.create(file.path(indir, "a.mp4"))
+  outdir <- withr::local_tempdir()
+  file.create(file.path(outdir, "a.wav"))
+
+  state <- local_fake_tools(results = list())
+  suppressMessages(
+    result <- os_prep_audio_dir(indir, "mp4", outdir, overwrite = FALSE)
+  )
+
+  expect_identical(result$status, "skipped")
+  expect_identical(boundary_tools(state), character(0))
+})
+
 test_that("aw_transcribe_dir() records an unprobeable file as failed", {
   # The other half of the old combined branch, and the reason it had to be
   # split: nothing was learned about this file, so recording it as
