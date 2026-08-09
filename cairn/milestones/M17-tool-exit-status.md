@@ -41,7 +41,7 @@ collisions → the standing ROADMAP candidate, behind M18.
       `opensmile`/`os`, which D-010 records as separate bindings — under
       `fake_nonzero_exit()` (`tests/testthat/helper-openac.R:860`) and asserts
       each returns a value carrying a `status` attribute.
-- [ ] AC2 Each of the four per-file call sites T3 wires — `os_prep_audio()`,
+- [x] AC2 Each of the four per-file call sites T3 wires — `os_prep_audio()`,
       `aw_prep_audio()`, `os_extract_wav()` and `of_extract()` — raises an
       error on a non-zero tool exit whose message, with whitespace collapsed
       as `collect_warnings()` documents (`helper-openac.R:896-905`), contains
@@ -194,6 +194,52 @@ success; G (55) the positional last-warning drop is unconditional; R (45) the
 mechanism is duplicated rather than shared; L (45) OpenFace is mocked-only by
 recorded plan decision; O (42) `infile` unvalidated; J (30) and P (25)
 pre-existing; K (5) stale — the DESIGN correction is committed in `b94a29b`.
+
+**Round 2 — fix delta `5d01530`, reviewed [O] fresh-context, scored [S].**
+The reviewer confirmed A and B genuinely fixed and B's test genuinely
+discriminating, both mutation-verified independently. Eleven findings on the
+delta; three scored ≥80, all records-or-tests rather than shipped behavior, so
+none tripped the return floor and all three were fixed in place:
+
+- **1 (90) — the new error-path test claimed four wrappers and reached two.**
+  MEASURED: with nothing resolvable, `aw_prep_audio()` aborts inside
+  `ffp_count_streams()` and `os_extract_wav()` inside `os_check_audio()`, so
+  neither reached `run_checked()`. Rewritten so each case starves only its own
+  tool; `os_extract_wav()` is now excluded WITH ITS REASON — `os_check_config()`
+  resolves the config directory relative to the openSMILE binary, so
+  `run_tool()`'s not-found abort is unreachable from it. Three is the whole
+  domain, not a sample of four, and the test title says three. Re-verified:
+  the inverted nesting now reds all three cases.
+- **4 (90) — the round-1 DESIGN correction introduced a new false claim.**
+  "Exit status is now read at the four per-file wrapper sites and nowhere else"
+  — `ffp_count_streams()` reads it too, as M17's own Scope says. The same
+  defect class round 1 corrected in that very paragraph. Now: "read at exactly
+  two places", both named.
+- **5 (83) — a DESIGN claim this branch falsified and the delta walked past.**
+  `os_extract_dir()` was described as recording the bare deparse
+  `file.exists(infile) is not TRUE`. MEASURED 2026-08-09 with real ffmpeg: it
+  now reads `Could not process 'clip.mp4'. ffmpeg exited with status 183. …`.
+  Corrected in place and marked.
+
+Two sub-threshold findings were fixed anyway, being one-line hardenings of
+tests authored this session: 3 (73) the four status assertions were substring
+matches with no right boundary, so appending a digit to the status left them
+green — MEASURED; they now carry the trailing period, and the same mutation
+reds all four. 2 (66) the loop reported every case at one source line; each
+case now carries `info`.
+
+Logged, not actioned: 6 (50) `-instname` still labels output rows with the temp
+wav — pre-existing, same class as B, now visible beside `source`; 8 (50) an
+abort leaks the temp wav because `unlink()` follows the call rather than sitting
+in `on.exit()`; 7 (52) the B test drives an explicit `wavfile`, so the literal
+`tempfile()` default is not exercised on the failure path (the code path is
+identical — `source = infile` in both branches); 10 (57) a direct
+`os_extract(x)` with both outputs NULL was a silent success and is now an abort,
+which NEWS does not mention; 11 (40) and 9 (32) minor.
+
+**Gate re-run on the delta.** `devtools::test()` 762 pass / 0 fail / 6
+pre-existing skips. `devtools::check()` 0 errors / 0 warnings / 0 notes.
+`devtools::document()` no drift. `cairn_validate` exit 0.
 
 **Correction made at review.** `DESIGN.md`'s Known-issues GP6 entry asserted two
 things this milestone falsified — that `os_prep_audio_dir()` records a bad file

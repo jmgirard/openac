@@ -84,7 +84,7 @@ test_that("os_prep_audio() aborts when ffmpeg exits non-zero, naming the file", 
   msg <- collapsed_error(os_prep_audio(infile, outfile))
 
   expect_match(msg, basename(infile), fixed = TRUE)
-  expect_match(msg, "ffmpeg exited with status 254", fixed = TRUE)
+  expect_match(msg, "ffmpeg exited with status 254.", fixed = TRUE)
 })
 
 test_that("aw_prep_audio() aborts when ffmpeg exits non-zero, naming the file", {
@@ -96,7 +96,7 @@ test_that("aw_prep_audio() aborts when ffmpeg exits non-zero, naming the file", 
   msg <- collapsed_error(aw_prep_audio(infile, outfile))
 
   expect_match(msg, basename(infile), fixed = TRUE)
-  expect_match(msg, "ffmpeg exited with status 254", fixed = TRUE)
+  expect_match(msg, "ffmpeg exited with status 254.", fixed = TRUE)
 })
 
 test_that("os_extract_wav() aborts when openSMILE exits non-zero, naming the file", {
@@ -108,7 +108,7 @@ test_that("os_extract_wav() aborts when openSMILE exits non-zero, naming the fil
   msg <- collapsed_error(openac:::os_extract_wav(infile))
 
   expect_match(msg, basename(infile), fixed = TRUE)
-  expect_match(msg, "opensmile exited with status 1", fixed = TRUE)
+  expect_match(msg, "opensmile exited with status 1.", fixed = TRUE)
 })
 
 test_that("of_extract() aborts when OpenFace exits non-zero, naming the file", {
@@ -119,7 +119,7 @@ test_that("of_extract() aborts when OpenFace exits non-zero, naming the file", {
   msg <- collapsed_error(of_extract(infile, outfile))
 
   expect_match(msg, basename(infile), fixed = TRUE)
-  expect_match(msg, "openface exited with status 11", fixed = TRUE)
+  expect_match(msg, "openface exited with status 11.", fixed = TRUE)
 })
 
 test_that("os_extract() names the user's file, not the temp wav it converted to", {
@@ -160,7 +160,7 @@ test_that("os_extract() names the user's file, not the temp wav it converted to"
 
 # --- the error path: run_tool() itself aborting ------------------------------
 
-test_that("the set_program() hint survives an abort from every wired wrapper", {
+test_that("the set_program() hint survives an abort from the three wrappers that can reach it", {
   # `run_tool()` does not only return -- it ABORTS when `require_program()`
   # cannot resolve the tool, and `find_program()` warns with the
   # `set_program()` pointer on its way there, from inside the region where
@@ -175,22 +175,54 @@ test_that("the set_program() hint survives an abort from every wired wrapper", {
   # This is the counterpart to the sibling's pin at
   # test-commands-probe.R:258-273 ("It was, until this test"), which existed
   # for `ffp_count_streams()` and had none here.
+  # Each case must actually REACH `run_checked()`, which is not automatic:
+  # `aw_prep_audio()` counts streams first, so resolving nothing at all makes
+  # it abort inside `ffp_count_streams()` -- re-testing M14's already-correct
+  # handler and never touching this one. MEASURED at M17's round-2 review: a
+  # first cut of this test resolved nothing and reached the code under test in
+  # only two of its four cases while claiming all four. So the ffprobe-dependent
+  # case resolves ffprobe and starves only its own tool, and carries the
+  # `results` its preceding probe consumes.
   infile <- local_media(".mp4")
   outfile <- file.path(withr::local_tempdir(), "out.wav")
   outcsv <- file.path(withr::local_tempdir(), "faces.csv")
 
   cases <- list(
-    function() os_prep_audio(infile, outfile),
-    function() aw_prep_audio(infile, outfile),
-    function() openac:::os_extract_wav(local_media()),
-    function() of_extract(infile, outcsv)
+    list(
+      label = "os_prep_audio",
+      resolve = character(),
+      results = list(),
+      run = function() os_prep_audio(infile, outfile)
+    ),
+    list(
+      label = "aw_prep_audio",
+      resolve = "ffprobe",
+      results = list("audio"),
+      run = function() aw_prep_audio(infile, outfile)
+    ),
+    # `os_extract_wav()` is deliberately absent, and cannot be added: it calls
+    # `os_check_config()`, which resolves the config directory relative to the
+    # openSMILE binary, so an unresolvable openSMILE aborts there -- before
+    # `run_checked()` is reached and with a different message. `run_tool()`'s
+    # not-found abort is unreachable from that wrapper, so three is the whole
+    # domain here, not a sample of four. Its non-zero-exit path is covered by
+    # its own test above.
+    list(
+      label = "of_extract",
+      resolve = character(),
+      results = list(),
+      run = function() of_extract(infile, outcsv)
+    )
   )
 
-  for (run in cases) {
-    local_fake_tools(resolve = character())
+  for (case in cases) {
+    local_fake_tools(resolve = case$resolve, results = case$results)
+    # `info` names the wrapper: a bare loop over closures reports every case at
+    # the same source line, so a red says nothing about which one broke.
     expect_warning(
-      expect_error(run(), "could not be found"),
-      "set_program"
+      expect_error(case$run(), "could not be found", info = case$label),
+      "set_program",
+      info = case$label
     )
   }
 })

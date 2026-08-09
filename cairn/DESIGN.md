@@ -256,9 +256,11 @@ them without attaching the upstream packages.
   `aw_prep_audio` aborts naming the file, `aw_transcribe` skips it). What that
   buys at the BATCH level is uneven, and MEASURED 2026-08-08 rather than
   inferred from the callers: `aw_prep_audio_dir()` records the bad file as a
-  failed row naming it; `os_extract_dir()` records a failed row whose message is
-  the bare `stopifnot()` deparse `file.exists(infile) is not TRUE`, naming no
-  file at all — the input it concerns is a temporary wav that was never written;
+  failed row naming it; `os_extract_dir()` records a failed row naming the file and
+  the tool (**corrected 2026-08-09, M17**: it previously carried the bare
+  `stopifnot()` deparse `file.exists(infile) is not TRUE`, about a temporary wav
+  that was never written — MEASURED 2026-08-09, it now reads `Could not process
+  'clip.mp4'. ffmpeg exited with status 183. …`);
   and `aw_transcribe_dir()` records it as a **success**, because
   `aw_transcribe()` skips such a file with a message and returns `NULL`, which
   `dir_walk()` cannot tell from a completed transcription (M18). A
@@ -271,11 +273,12 @@ them without attaching the upstream packages.
   on a missing input; `os_check_config()` aborts on a config it cannot resolve;
   and the abort messages name the file in only one of them (`aw_prep_audio`,
   `R/use_whisper.R`), the rest being bare `stopifnot()` deparses (M19).
-  Exit status is now read at the four per-file wrapper sites and nowhere else
-  (**corrected 2026-08-08, M17**, superseding the earlier "`run_tool()` inspects
-  no tool's exit status" reading): `run_checked()` reads the `status` attribute
-  for them and aborts naming the file, the program and what the tool said, so an
-  ffmpeg, openSMILE or OpenFace failure is that file's own failed row. Two
+  Exit status is read at exactly two places (**corrected 2026-08-08, M17**,
+  superseding the earlier "`run_tool()` inspects no tool's exit status"
+  reading): `ffp_count_streams()` reads it for its own contractual `NA` return
+  (M14), and `run_checked()` reads it on behalf of the four per-file wrappers,
+  aborting with the file, the program and what the tool said — so an ffmpeg,
+  openSMILE or OpenFace failure is that file's own failed row. Two
   ffprobe calls remain unchecked — the codec/rate/channel query in
   `os_check_audio()` and `aw_check_audio()`, where `ffp_count_streams()` guards
   only the first probe; `os_check_audio()` has no length guard on the result, so
