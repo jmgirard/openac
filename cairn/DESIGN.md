@@ -283,8 +283,12 @@ them without attaching the upstream packages.
   messages name the file in only one of them, the rest being bare `stopifnot()`
   deparses"): every guard inside a per-file function that has one file to name
   now aborts through `abort_file()` (`R/utils.R`), whose message leads with the
-  file and states the defect on one line, so a failed row reads the same way
-  whether a guard or a tool stopped it. Two kinds sit outside that helper and
+  file and states the defect on one line (**corrected 2026-08-09, M19 review
+  round 3**, superseding "so a failed row reads the same way whether a guard or
+  a tool stopped it" — measured false: `run_checked()` is untouched and still
+  puts a wrapped, glyphed message and no `defect` field into the same column,
+  so the tool path still reads differently and names the file twice).
+  Two kinds sit outside that helper and
   are not defects in it (**corrected 2026-08-09, M19 review round 2**,
   superseding a reading that counted `os_fix_csv()` among them and omitted
   `os_check_config()`): `check_file_arg()` rejects an `infile` that is not one

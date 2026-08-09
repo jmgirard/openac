@@ -1,7 +1,7 @@
 # Roadmap
 
 _The only authority on milestone status. Grouped by status, not ID._
-_Last hygiene check: 2026-08-09 (M18 merged and archived after two review rounds — the first caught the new skip signal cancelling the work `overwrite = FALSE` was meant to preserve, plus a `#'` leaked into five rendered `@return` blocks; the second, a self-contradicting man page and three stale vignettes. D-019 recorded; 2 candidates, 2 lessons; 2 lessons and the M13 row pruned at their caps)_
+_Last hygiene check: 2026-08-09 (M19 merged and archived after three review rounds — the first two returned it, on guards never reached and on a config check `do.call()` partial-matched past, then on a hand-rolled abort and a swallowed duplicate argument; the third returned nothing. 2 candidates, 2 lessons; the M14 row pruned at the terminal-row cap and 2 stale lessons at theirs)_
 _Released 0.1.0 (GitHub) 2026-07-11._
 
 ## Milestones
@@ -10,13 +10,14 @@ _Released 0.1.0 (GitHub) 2026-07-11._
 |---|---|---|---|---|---|
 | M17 | A tool that exited non-zero is a failed file | done | — | high | milestones/archive/M17-tool-exit-status.md |
 | M18 | A skipped file is a skip, not a success | done | M17 | normal | milestones/archive/M18-batch-skip-outcome.md |
-| M19 | A guard that names no file | review | — | normal | milestones/M19-guards-name-the-file.md |
-| M14 | A bad file is an outcome, not the end of the batch | done | M13 | normal | milestones/archive/M14-resilient-stream-count.md |
+| M19 | A guard that names no file | done | — | normal | milestones/archive/M19-guards-name-the-file.md |
 | M15 | What Windows actually does to a path the shell can eat | done | — | high | milestones/archive/M15-windows-quoting-oracle.md |
 | M16 | The Windows installers, actually run | done | — | normal | milestones/archive/M16-windows-installers-real-run.md |
 
 ## Candidates
 <!-- unnumbered ideas; one line each: idea — added YYYY-MM-DD — links -->
+- The tool path still writes console formatting into the batch `error` column — `run_checked()` was outside M19's scope, so it keeps a wrapped, glyphed message and carries no `defect` field, and `dir_walk()`'s warning names the file twice for a tool failure where a guard failure now names it once — added 2026-08-09 — M19 review round 3, F1 (78); M17 Out
+- Five guard-message findings the M19 reviews logged below the action bar in all three rounds: `abort_file()` messages name the file twice, once as basename and once inside the path (40); `abort_file()`'s `class` argument is dead and `openac_file_guard` is asserted nowhere (48); `aw_transcribe_wav()`'s `source != infile` branch is untested (42); the stream-index message pairs a 0-based index with a count (45); `os_extract_wav()` recommends `os_prep_audio()` on a file openac just ran it on (45) — added 2026-08-09 — M19 review rounds 1-3
 - Validate `os_read` fixtures against a real openSMILE run (name quoting, `frameTime` in functionals output) — added 2026-07-11 — M01 review F5
 - Evaluate wrapping modern ML tools (e.g., HuggingFace models) against the add-tool bar — added 2026-07-11 — DESIGN "Purpose & Scope"
 - Drop/rework `os_fix_csv` on-disk normalization once `os_read` proves it redundant — added 2026-07-11 — M01
