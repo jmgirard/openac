@@ -10,7 +10,7 @@ _Released 0.1.0 (GitHub) 2026-07-11._
 |---|---|---|---|---|---|
 | M17 | A tool that exited non-zero is a failed file | done | — | high | milestones/archive/M17-tool-exit-status.md |
 | M18 | A skipped file is a skip, not a success | done | M17 | normal | milestones/archive/M18-batch-skip-outcome.md |
-| M19 | A guard that names no file | review | — | normal | milestones/M19-guards-name-the-file.md |
+| M19 | A guard that names no file | in-progress | — | normal | milestones/M19-guards-name-the-file.md |
 | M14 | A bad file is an outcome, not the end of the batch | done | M13 | normal | milestones/archive/M14-resilient-stream-count.md |
 | M15 | What Windows actually does to a path the shell can eat | done | — | high | milestones/archive/M15-windows-quoting-oracle.md |
 | M16 | The Windows installers, actually run | done | — | normal | milestones/archive/M16-windows-installers-real-run.md |

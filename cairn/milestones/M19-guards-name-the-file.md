@@ -1,6 +1,6 @@
 # M19: A guard that names no file
 
-- **Status:** review
+- **Status:** in-progress
 - **Priority:** normal
 - **Depends on:** —
 - **Driving RR:** —
@@ -126,6 +126,7 @@ messages; this milestone is scoped to what a batch row can carry.
 - 2026-08-09: T10 F14 — `abort_file()` now formats its message eagerly with `cli::format_inline()` and signals it through `rlang::abort()`. cli formats LAZILY and for a terminal, so a `cli_abort()` template was still being wrapped at the console width and given an "x" glyph when `conditionMessage()` ran, and setting `cli.width` around the call could not reach it. MEASURED 2026-08-09 on R 4.6.1 / cli 3.6.6: the old form returned `"Could not process 'clip.mp4'.\n<glyph> No file exists at '/nope/clip.mp4'."`; it now returns that text on one line, joined by a colon. The condition also carries `defect` — the message without the leading file — which `dir_walk()`'s warning uses so the basename it already prints is not printed twice.
 - 2026-08-09: T10 F8 — the DESIGN Known-issues sentence and the NEWS entries narrowed to what the branch does. Two claims were false and are gone: that EVERY per-file guard routes through `abort_file()` (`os_fix_csv()` hand-rolls one, and `check_file_arg()` names no file), and that `config` is resolved once rather than per file (`os_extract_wav()` still resolves it, so the count is N+1). The third, that a bad `config` costs no ffprobe rounds, was false only under F5 and is now true and asserted.
 - 2026-08-09: T8-T10 verify slot MEASURED on R 4.6.1 / macOS 15: `devtools::document()` writes no diff, `devtools::test()` 1009 tests 0 failures 0 errors 6 skips, `devtools::check()` Status OK — 0 errors, 0 warnings, 0 notes. The round's own delta was measured by stashing it: the same command at commit 882df74 reports 928 passing, so this round adds 81. That 928 supersedes the `308` the T7 line above records for the same command — T7's figure is not reproducible at the commit it names and the procedure behind it is unknown, so it is superseded rather than relied on.
+- 2026-08-09: review round 2 returned the milestone to `in-progress` (defect return 2). No acceptance criterion failed — all five verified with fresh evidence — but two findings scored >= 90 on user-facing defects: `os_fix_csv()` hand-rolls its abort, so round 1's F14 fix never reached the one guard whose message still carries a newline and a bullet glyph into the `error` column (falsifying NEWS, DESIGN and the AC4 evidence line the branch itself added), and `match_formals()` turns R's duplicate-argument error into silence, swallowing a second supplied argument into `...`. Also actioned: `abort_file()` bakes ANSI colour codes into the same column, and no test could have caught any of it because `collapsed_guard()` deletes the newline under test.
 
 ## Decisions
 
@@ -312,3 +313,87 @@ the branch was cut, so the branch needed no merge._
   row no-op; NEWS.md carries this milestone's user-visible changes with no
   milestone number in them; no new top-level files; `check()` clean as recorded
   under AC5.
+
+### Independent review, round 2 (2026-08-09)
+
+Three fresh-context lenses. **Blame-history [S]** — no findings: the
+`abort_file()` rewrite has no pre-M19 contract to undo (the helper is this
+branch's own), M18's skip/failure split and M14's GP6 resilience survive the
+`dir_walk()` edit, and `ffp_count_streams()`'s guard moved into
+`check_file_arg()` with the same message and position. **Prior-PR-comments [S]**
+— no regressions; its probe (`gh api repos/jmgirard/openac/pulls/comments?per_page=1`)
+returned `[]` again, so the archived `## Review` sections were the whole
+surface, and M14's A3 wrap trap and A9 scalar-guard finding are both honored.
+**Diff-bug [O]** — 20 candidate findings, scored by a fresh [S] scorer that
+reproduced the 80+ set in R. Four scored at or above the bar; all four were then
+re-reproduced by the reviewing session itself before being recorded.
+
+**Actioned (>= 80), 4 of 20:**
+
+- **F1 (95)** `R/use_opensmile.R:604-613` — `os_fix_csv()` hand-rolls a
+  two-element `cli::cli_abort()`, so round 1's F14 fix never reached it, and it
+  is batch-reachable through `os_extract_wav()` (`:444`, `:447`). MEASURED: a
+  row's `error` reads `Could not tidy the openSMILE output at
+  '<...>/clip.csv'.\n<glyph> openSMILE wrote no output there.` — the newline and
+  glyph F14 removed, in the one guard it did not cover. This falsifies three
+  claims the branch itself added: NEWS.md's "one line, so it stays readable in
+  the `error` column", DESIGN's "an abort of the same shape", and the round-2
+  AC4 evidence line above.
+- **F2 (90)** `tests/testthat/test-guard-messages.R:646-673`, `:41-47` — nothing
+  could have caught F1: the one-line test drives only the `abort_file()` path,
+  and every guard-case assertion runs through `collapsed_guard()`, whose
+  `gsub("\\s+", " ", ...)` deletes the newline under test.
+- **F3 (85)** `R/utils.R:139-143` — `abort_file()`'s eager `format_inline()`
+  bakes ANSI colour codes into the `error` column whenever colours are on.
+  MEASURED with `cli.num_colors = 256`: `"Could not process \033[34mclip.wav\033[39m:
+  No file exists at \033[34m/nope/clip.wav\033[39m."` Same class as the glyph
+  and the wrap, and the F14 test asserts on neither.
+- **F6 (92)** `R/utils.R:202-204` — `match_formals()` uses `pmatch()`, which is
+  greedy, so two distinct prefixes of one formal resolve to one rename and one
+  survivor. MEASURED against live R: `f(1, conf = "x", confi = "y")` raises
+  `formal argument "config" matched by multiple actual arguments`; after
+  `match_formals()` the `do.call()` succeeds with `config = "x"` and `confi`
+  swallowed into `...`. The helper turns an error R would raise into silence,
+  and a user's second argument is ignored rather than rejected. The scorer's
+  stated consequence — N per-file duplicate-argument errors — did NOT reproduce
+  and is recorded here as overstated; the measured consequence is the silent
+  swallow.
+
+**Logged, below the 80 bar (16 of 20), surfaced not dropped:**
+F5 (78) `match_formals()` also partial-matches formals sitting AFTER `...`,
+which R does not — latent, since `os_extract()`'s `config` precedes `...` ·
+F12 (78) DESIGN's corrected sentence names two exceptions to `abort_file()` and
+`os_check_config()` inside `os_extract_wav()` is a third · F14-rate (70)
+`!isTRUE(dat[[2]] == "44100")` now recommends a sampling rate for a value it
+could not read · F10 (68) the basename assertion does not discriminate for the
+nine cases whose defect clause already carries the full path (round 1's F16) ·
+F9 (65) `abort_file()`'s `class` argument is never passed and
+`openac_file_guard` is asserted nowhere (round 1's F9) · F11 (60)
+`aw_transcribe_wav()`'s `source != infile` branch is untested (round 1's F10) ·
+F7 (55) `os_check_audio()`'s new `length(dat) < 3` branch says "no audio stream"
+for a truncated probe, its query having no `-select_streams a` — the scorer
+found its serious half pre-existing on `main` · F8 (55) `check_file_arg(source)`
+is unreachable in both callers · F13 (55) the stream-index message pairs a
+0-based index with a count · F15 (55) `os_list_configs()`'s `@return` does not
+record the new abort, and `require_program()` now runs twice per
+`os_check_config()` · F16 (50) `abort_file()` accepts a vector `message`, which
+would reintroduce F14 · F4 (45) the batch now dies when openSMILE is
+unresolved — the scorer found this intentional, logged at the plan gate and
+tested this round, with only the `@return` gap unaddressed · F17 (40)
+`eval(formals(...))` frame (round 1's F13) · F18 (35) `get(flag)` resolves
+lexically (round 1's F15) · F20 (35) the whitespace collapse runs pre-
+interpolation — the scorer showed `format_inline()`'s own `strip_newline`
+default already backs the invariant · F19 (30) `e$defect` partial-matches.
+
+**Disposition: return to `in-progress` under the M130 return floor.** No
+acceptance criterion fails: all five were verified above and none of the four
+actioned findings falsifies one as written — F1's one-line property was actioned
+"beyond the criteria" at T10 and appears in no criterion's text, and F6's
+duplicate-prefix call resolves a config that IS resolvable, so no clause of AC3
+is touched. The return is under the floor's other limb: **F1 (95) and F6 (92)
+are both scored at or above 90 on defects in what the package does for its
+users** — a batch row's `error` column carrying a newline and a glyph, and a
+supplied argument being silently ignored. Second defect return for this
+milestone; the thrash rule's third-return threshold is not yet reached, and its
+same-criterion trigger does not fire, since round 1's failures were AC1 and AC3
+and this round's findings rest on neither.
