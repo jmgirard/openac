@@ -108,6 +108,7 @@ candidate row. Branch protection → existing candidate row.
 - 2026-08-09: T7 — `NEWS.md` gained two development-version bullets, one for the documentation site and one for the issue tracker `BugReports:` names; T7 added to Tasks as a discovered sub-task (minor amendment, Coverage untouched — AC6 stays mapped to T1/T2/T6).
 - 2026-08-09: T7 verification — AC6 re-run. `devtools::document()` left `git status --porcelain` showing only the hand-edited `NEWS.md`; `devtools::test()` 0 fail / 1161 pass / 6 skip. The first `devtools::check()` returned `Status: 1 NOTE` — the `spelling` test's `spelling.Rout` diverged from its `.Rout.save` on `Potential spelling errors: WORD README FOUND IN NEWS.md:3`, the new word my bullet introduced. Fixed at its generator, `spelling::update_wordlist(confirm = FALSE)`, which added exactly `README` to `inst/WORDLIST`; the re-run reported `Status: OK` — 0 errors, 0 warnings, 0 notes.
 - 2026-08-09: round 2 complete; status → review. PR #22.
+- 2026-08-09: review round 2 — all six criteria re-executed at a65ab65 with fresh evidence; consistency gate fully green, the changelog check that returned round 1 now passing. Three lenses returned 20 / 0 / 0 findings, none scoring ≥80, so nothing was actioned and the return floor is not met; one diff-lens finding (the concurrency group being inverted) was refuted on the facts by the scorer. Defect-return count for M20 stays at 1.
 
 ## Decisions
 
@@ -234,3 +235,124 @@ All six acceptance criteria passed on the evidence above, recorded at 2d651bd.
 **Round 2 must re-run AC6** — the fix edits `NEWS.md`, which `R CMD check`
 parses, so AC6's `check()` evidence does not survive the change. AC1–AC5 are
 untouched by a changelog edit.
+
+Round 2 — 2026-08-09. Branch at a65ab65, `origin/main` still at eddcfcd
+(merge-base equal, nothing to merge in). All six criteria were re-executed
+rather than the one round 1 required, so no evidence here is inherited.
+
+### Acceptance-criteria evidence
+
+- AC1 — `grep -c '^reference:' _pkgdown.yml` = 1, so the index is explicit;
+  `pkgdown::check_pkgdown()` "✔ No problems found."
+- AC2 — `docs/` removed, `pkgdown::build_site(preview = FALSE)` re-run: exit
+  status 0, zero `Error`/`Warning` lines in its log. A scripted `file.exists()`
+  over `list.files("vignettes", pattern = "[.]Rmd$")` found the same-stem
+  `docs/articles/*.html` for all three.
+- AC3 — DESCRIPTION lines 9/10/34 carry `URL:`, `BugReports:` and
+  `Config/Needs/website: pkgdown`. First `URL:` element compared to
+  `gh api repos/jmgirard/openac/pages --jq .html_url`, trailing slashes
+  stripped, by `identical()`: TRUE (`https://jmgirard.github.io/openac`).
+- AC4 — run 31327134261, job 93279194849, at head_sha a65ab65 (the merge
+  candidate; round 1's evidence was at 88157ab). Step conclusions from the jobs
+  API: `Confirm audio.whisper is absent` success, `Deploy to GitHub pages`
+  **skipped** on the `pull_request` event. Workflow source: the assert sits at
+  line 52, after `setup-r-dependencies` at line 42; the deploy carries
+  `if: github.event_name != 'pull_request'`. Job log grepped for
+  `audio.whisper`: its only occurrences in the dependency step are inside pak's
+  DESCRIPTION-parse JSON (`"type": "Suggests"`), never an install line; the
+  assert step printed `audio.whisper absent, as intended` and its
+  `rownames(installed.packages())` listing carries `openac` and `pkgdown` and
+  not `audio.whisper`.
+- AC5 — `gh api .../pages`: `source.branch=gh-pages`, `source.path=/`,
+  `status=built`, `html_url=https://jmgirard.github.io/openac/`. `curl` → HTTP
+  200 for both `reference/index.html` and `articles/index.html`. The reference
+  body was probed for one export per `_pkgdown.yml` group (`find_program`,
+  `ffp_count_streams`, `of_extract_dir`, `os_extract_dir`, `aw_transcribe`,
+  `of_read`, `handlers`) — all present. The articles body was checked against
+  the `title:` field read out of each `vignettes/*.Rmd` rather than a
+  hand-copied list — all three present.
+- AC6 — `devtools::document()` left `git status --porcelain` empty;
+  `devtools::test()` 0 fail / 1161 pass / 6 skip; `devtools::check()`
+  **0 errors, 0 warnings, 0 notes** (`Status: OK`). No NOTE stands on the merge
+  candidate. One NOTE arose mid-round and was fixed before commit: the first
+  `check()` after the `NEWS.md` edit reported `Status: 1 NOTE` on the
+  `spelling` test, whose `spelling.Rout` diverged from its `.Rout.save` with
+  `Potential spelling errors: WORD README FOUND IN NEWS.md:3` — "README" was
+  new to the package's prose. Justification for the remedy rather than the
+  NOTE: it was fixed at the file's generator,
+  `spelling::update_wordlist(confirm = FALSE)`, which added exactly that one
+  word to `inst/WORDLIST`, so no generated file was hand-edited.
+
+### Consistency gate
+
+- `cairn_validate.py` exit 0 — 16 PASS, 8 advisory OK, no FAIL.
+- `cairn_impact.py` not run: `Principles touched:` is `—`, `cairn/DESIGN.md` is
+  absent from `git diff --name-only origin/main..HEAD`, and DESIGN declares no
+  numbered IP/GP block.
+- Profile `consistency-gate` slot: `document()` no-diff ✔ · generated files not
+  hand-edited ✔ (`man/openac-package.Rd` is roxygen output; `inst/WORDLIST` was
+  written by its own generator) · README.Rmd/README.md absent from the diff ✔ ·
+  `check_pkgdown()` passes ✔ · new top-level file `_pkgdown.yml` has its
+  `.Rbuildignore` entry and `check()` reports no non-standard-file NOTE ✔ ·
+  **changelog entry ✔ — the round-1 failure is closed**: `NEWS.md` gains two
+  development-version bullets, for the site and for `BugReports:`, naming no
+  milestone number · `check()` clean ✔.
+
+### Independent review — three lenses, then a scorer
+
+[O] diff-bug 20 findings · [S] blame-history 0 ("no evidence that this diff
+silently undoes, contradicts or resurrects any past deliberate decision") ·
+[S] prior-PR-comments 0 (the `gh api .../pulls/comments` probe returned `[]`
+again, so the thread walk was skipped; the archived `## Review` sections and
+this file's round-1 section show the diff remediating F5/F18 rather than
+regressing anything). 20 scored by a fresh [S] scorer holding the diff and this
+plan.
+
+**Actioned (≥80): none.** No finding reached the action bar, and none meets the
+return floor — no acceptance criterion is demonstrated failing, and nothing
+scored ≥90 against what the package does for its users.
+
+**Logged below the action bar (20 findings, none actioned).** Most are round-1
+findings re-raised against content round 2 does not touch — the round-2
+increment (`git diff 2d651bd..HEAD`) reaches only `NEWS.md`, `inst/WORDLIST`
+and this file. Notable:
+
+- One finding was **refuted on the facts** by the scorer (8): the claim that the
+  workflow's concurrency group is inverted relative to its own comment. In
+  GitHub Actions `||` returns the first truthy operand, so
+  `github.event_name != 'pull_request' || github.run_id` yields the constant
+  `pkgdown-true` for non-PR events — serialized, exactly as the comment says —
+  and a unique run-id group for PRs. The reviewer had it backwards.
+- F4 (68) `clean: false` never deletes removed pages, and F1 (55) no
+  `development: mode`, are round 1's F3 and F9 carried forward; both earn the
+  candidate rows round 1 said they should get, added at post-merge hygiene.
+- F9 (48) the CLAUDE.md decision names `search.json` where the site also serves
+  `llms.txt`; the scorer measured `llms.txt` as not currently listing CLAUDE, so
+  the decision is conservative rather than wrong.
+- F2 (45) the deploy `if` tests the event, not the ref, so a
+  `workflow_dispatch` on any branch can publish; F11 (35) the build job holds
+  `contents: write` on PR events too; F12 (30) the third-party deploy action is
+  pinned to a mutable tag. All three are the stock r-lib template shape.
+- F5 (35) `gh-pages` currently lags branch HEAD (built at T4, before T6 and T7),
+  so the live site does not yet show the NEWS entries announcing it — a state of
+  the deployed artifact, not of the diff, and it self-heals on the merge push.
+- F17 (42) this Review section had no round-2 block when the reviewer read it
+  mid-review — closed by this block.
+- F18 (25) Coverage does not list T7 under AC6; `cairn_validate`'s
+  `coverage complete` PASSes either way, since AC6 maps to tasks that exist.
+- F6/F7/F8 (28/25/18) the NEWS prose enumerates seven of eight index groups,
+  describes the deploy surface more narrowly than the workflow's triggers, and
+  does not mention the published `CLAUDE.html`.
+- F10 (15) `Config/Needs/website` is read (`needs: website` is set at workflow
+  line 50, so D-020's Consequences claim holds and its falsifier is not
+  triggered) but is redundant with `any::pkgdown` in `extra-packages`.
+- F13 (25), F14 (12), F15 (10), F16 (18), F19 (33), F20 (28) — round 1's F4,
+  F13, F16, the WORDLIST remedy, the missing `paths:` filter, and the absent
+  README site link.
+
+### Round 2 — gate passed
+
+All six criteria verified on fresh evidence at a65ab65, the full consistency
+gate green including the changelog check that returned round 1, and no actioned
+finding. Defect-return count for M20 stands at 1; no amendment return was
+convened.
