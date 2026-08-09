@@ -1,5 +1,14 @@
 # openac (development version)
 
+* `os_check_audio()` and `aw_check_audio()` now tell you when a file cannot be
+  read at all, instead of reporting it as one that simply is not ready. Each
+  runs two ffprobe queries, and only the first was checked: a file whose second
+  query ffprobe rejected came back `FALSE` — silently in `aw_check_audio()`, and
+  in `os_check_audio()` under a message claiming no audio stream was found, next
+  to a raw dump of the command line you never typed. Both now warn naming the
+  file and the exit status, so an unreadable input is distinguishable from a
+  merely non-conforming one.
+
 * When a file is rejected before any tool runs, the message now says which file
   and what was wrong with it. Previously most of these checks reported the
   failed R expression instead — a batch row's `error` column read

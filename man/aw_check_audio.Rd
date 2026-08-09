@@ -13,7 +13,10 @@ check.}
 \item{verbose}{An optional logical indicating whether to print warnings.}
 }
 \value{
-A logical indicating whether \code{infile} is ready for whisper.
+A logical indicating whether \code{infile} is ready for whisper. A file
+ffprobe cannot read is not a pass: either query failing returns \code{FALSE}
+with a warning naming the file and the exit status, so an unreadable file
+is never reported as merely non-conforming.
 }
 \description{
 Check if an audio file has the proper format for Whisper, i.e., the pcm_s16le

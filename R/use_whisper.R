@@ -8,7 +8,10 @@
 #' @param infile A required string indicating the filepath of the audio file to
 #'   check.
 #' @param verbose An optional logical indicating whether to print warnings.
-#' @return A logical indicating whether `infile` is ready for whisper.
+#' @return A logical indicating whether `infile` is ready for whisper. A file
+#'   ffprobe cannot read is not a pass: either query failing returns `FALSE`
+#'   with a warning naming the file and the exit status, so an unreadable file
+#'   is never reported as merely non-conforming.
 #' @export
 aw_check_audio <- function(infile, verbose = FALSE) {
   # Validate input
@@ -43,8 +46,29 @@ aw_check_audio <- function(infile, verbose = FALSE) {
     "-of", "default=noprint_wrappers=1:nokey=1",
     infile
   )
-  # Run ffprobe command
-  dat <- ffprobe(arg)
+  # Run ffprobe command. `ffp_run()` reads the exit status and holds R's own
+  # argv-quoting warning about it, the same treatment the stream count above
+  # gets: the first query succeeding says nothing about the second, and a file
+  # whose format query ffprobe rejects is UNREADABLE, not non-conforming.
+  # Without this the status went unread and the length branch below reported
+  # "No audio stream found" -- silently, since it is verbose-gated, so the
+  # caller was told "not ready" about a file that could not be read at all.
+  dat <- ffp_run(arg)
+  if (ffp_failed(dat)) {
+    # NOT verbose-gated, unlike every other warning in this function. Those
+    # report a file openac could read and found wanting, which is what the
+    # returned logical already says; this one reports a file it could not read
+    # at all, and a bare FALSE calls that "not ready" -- the same conflation the
+    # first query avoids by having `ffp_count_streams()` warn unconditionally.
+    # Named in full rather than by basename, for the same reason it is there: a
+    # batch over subdirectories has many `clip.wav`s and only one of them failed.
+    cli::cli_warn(c(
+      "!" = "Cannot read the audio format of {.file {infile}}: ffprobe exited
+             with status {attr(dat, 'status')}.",
+      "i" = "Returning {.code FALSE}."
+    ))
+    return(FALSE)
+  }
   # Validate ffprobe output
   if (length(dat) < 3) {
     if (verbose) {
