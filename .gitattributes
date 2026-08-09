@@ -1,0 +1,9 @@
+# Line endings are LF in the repository, for every text file, on every host.
+#
+# Before this file existed the tree carried a mix: editing a file on the
+# maintainer's Windows machine could rewrite it whole in CRLF, so a two-line
+# change showed up as a four-hundred-line diff and `git blame` on that file
+# pointed at whichever commit last touched it rather than at the milestone that
+# wrote the line. `text=auto` lets git detect text vs. binary per file, and
+# `eol=lf` fixes what lands in the working tree on checkout.
+* text=auto eol=lf

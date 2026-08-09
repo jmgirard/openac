@@ -1,6 +1,6 @@
 # M15: What Windows actually does to a path the shell can eat
 
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** high
 - **Depends on:** —
 - **Driving RR:** —
@@ -107,6 +107,9 @@ command-display surface → existing candidate.
 - 2026-08-08: plan gate chose two milestones (M15 quoting, M16 installers) over one Windows branch, because a combined goal needs an "and" and the two cross the acceptance-criteria and task tripwires together; falsified by the installer run proving to depend on M15's quoting change.
 - 2026-08-08: plan gate chose composing `shQuote("cmd")` with `"cmd2"` as the fallback fix over hand-rolling a quoter, because `?shQuote` documents that composition as the intended Windows form and a hand-rolled quoter has no local test loop on a platform this session cannot run; falsified by the composed form measuring mangled on the host.
 - 2026-08-08: plan chose a real-ffmpeg round-trip oracle over asserting `shQuote()` output alone, because the open question is whether `system2()` puts `cmd.exe` in the loop at all — `?system2` says it "allows redirection of output without needing to invoke a shell on Windows" — which no assertion over quoting output can answer; falsified by the round trip proving unable to distinguish an expanded name from an absent tool.
+- 2026-08-08: review — status was still `in-progress` when review opened; the Windows session finished T6 without the completion transition, so review made it here and logged it rather than treating it as an override.
+- 2026-08-08: review fan-out — [O] diff-bug 16 findings, [S] blame-history 6, [S] prior-PR-comments 0; scorer actioned F1 (85) and F5 (80), both fixed on the branch. Five below-bar findings fixed as well because each was a false statement this branch wrote (F2, F15, F11, F10, F3/F4); F9 rejected on checking; the rest logged. Full triage in Review.
+- 2026-08-08: review — maintainer directed repo-wide LF line endings at the gate, closing F8/B4 (78) properly rather than by reverting: five remaining CRLF files normalized and `.gitattributes` added so a Windows edit cannot reintroduce the mix.
 - 2026-08-08: criteria audit ([O], fresh context) returned findings on all five drafted criteria — AC1 satisfiable by skipping everywhere, AC2's per-entry record unobtainable from one aborting `test_that`, AC3 missing the not-repairable branch and contradicting AC4, AC4 presupposing a single base type, AC5 unsatisfiable if the lesson proves true — plus a flag that both AC2s could be satisfied by prose alone. All were fixed in the wording above before the gate; none became a gate question.
 
 ## Decisions
@@ -176,6 +179,118 @@ All five `R-CMD-check` jobs green on #15 (run 31286088382, 2026-08-08):
 binaries, so `test-real-tools.R` skipped on every runner — the green
 `windows-latest` job evidences the suite and never AC2's measurement, exactly
 as AC6 says.
+
+### Review verification (macOS host, 2026-08-08)
+
+Fresh evidence gathered at review. Every AC box was already ticked by the
+implementing session, so each is re-verified here and its tick stands on the
+line below rather than on that earlier pass.
+
+- **AC1** — `devtools::test()` runs all eight hostile-name tests and passes
+  them (646 pass, 0 fail, 2 skips: OpenFace absent, whisper model absent).
+  Gates are per-test; grepping `test-real-tools.R` for `skip_on_os`,
+  `OS.type` and `sysname` returns nothing, so no gate is OS-conditional and no
+  entry can pass by skipping. The T1 work-log line records the mutation that
+  reddens it.
+- **AC2** — the Windows round trip cannot be re-derived from macOS, so what is
+  verified here is the record's internal consistency: its eight rows match
+  `hostile_names()` exactly, and its `type = "cmd"` column reproduces
+  character-for-character on this host, that column being the platform-
+  independent half of the record. The round-trip column rests on the
+  implementing session's transcription from the host, as AC2 provides for.
+- **AC3** — behavior-unchanged measured rather than read:
+  `identical(quote_tokens(x, quote_type()), shQuote(x))` is `TRUE` for a vector
+  carrying both `%TEMP%` and an apostrophe, and the length-1 form returns its
+  input untouched. `R/run_tool.R`'s comment cites the dated measurement, and at
+  review gained the boundary of what that measurement does not cover.
+- **AC4** — `quote_type()` and `quote_tokens()` exist, `run_tool()` calls them,
+  and their tests pass on macOS, which is the criterion's whole point. The
+  `quote_type()` oracle was strengthened at review (F11).
+- **AC5** — `LESSONS.md`'s M13 line is corrected in place and marked;
+  DESIGN's "Calling the CLIs" paragraph states the rule the code ends with.
+  Both were further corrected at review (F15, F3, F4).
+- **AC6** — `devtools::test()` clean; `devtools::check()` **Status: OK** on
+  macOS — 0 errors, 0 warnings, 0 notes — both before and after the review
+  fixes; all five `R-CMD-check` jobs pass on #15 (run 31286205053). The Windows
+  host's own check reported one error, the pre-existing OpenFace failure that
+  fails on `main` there too; AC6 names no host, it is met on this one, and that
+  Windows error now has a candidate row rather than no owner.
+
+### Consistency gate
+
+`cairn_validate` — 16 PASS, 8 advisory OK, exit 0. `devtools::document()`
+produces no diff. README unchanged by this branch; no pkgdown site. NEWS.md
+carries the user-visible correction. No principle changed, so `cairn_impact`
+was not run. `.gitattributes` is the one new top-level file and `check()` is
+clean with it present.
+
+### Independent review — three lenses, then a scorer
+
+[O] diff-bug returned 16 findings, [S] blame-history 6 (one a defect, five
+clean verdicts), [S] prior-PR-comments zero — that lens confirmed M13's B1, B2,
+B5 and B9 are not regressed, and its GitHub inline-comment probe returned empty
+so no thread walk was paid for.
+
+**Actioned (scored ≥80):**
+
+- **F1 (85) — NEWS.md still ships the falsified `%TEMP%` claim to users.**
+  T5 swept LESSONS, DESIGN and the four `@param arg` blocks; NEWS was not among
+  them, leaving the package asserting both the corrected and the falsified
+  claim, with the falsified one on its most user-facing surface. FIXED — the
+  note now records that the earlier warning was wrong and what was measured
+  instead.
+- **F5 (80) — the corrected paragraph still calls the length-1 path "passed
+  through to the shell".** All four `@param arg` blocks and DESIGN retained the
+  model M15 had just falsified, in the same paragraph as the correction. FIXED
+  in all five places.
+
+**Below the bar, fixed anyway** — each is a statement this branch wrote that is
+false as written, which is not a matter of taste:
+
+- F2 (72) — the roxygen claimed `%TEMP%`, `&`, `^`, `!` "were measured reaching
+  the tool intact" for openface and opensmile; the measurement went through
+  ffmpeg and ffprobe only, and OpenFace is the one tool that produced no
+  positive evidence on that host. Rewritten to state what openac does, which is
+  true of all four, and the provenance moved to `run_tool.R` and DESIGN.
+- F15 (72) — LESSONS said M13's "first sentence held" when only its first
+  clause was measured; the cmd.exe-expands-`%VAR%` clause, which is the one the
+  falsified conclusion rode on, never was. Re-marked.
+- F11 (75) — the `quote_type()` test's second expectation compared
+  `shQuote(c("-i", "a b.mp4"))` against itself under the named type, which a
+  regression to `"csh"` would satisfy. The reviewer's suggested repair (a
+  `!`-bearing name) was MEASURED not to work — no single table entry separates
+  `sh` from `csh` — but the table taken as a vector does, because the
+  apostrophe entry pushes both styles off the single-quote branch and they then
+  diverge on `$`. Re-pointed at the whole table.
+- F10 (65) — `quote_type()`'s comment described `quote_tokens()`'s callers and
+  contradicted itself. Rewritten.
+- F3 (58) and F4 (42) — the mechanism claim was stated with no scope, and
+  "eight names round-tripped" read as eight independent confirmations when
+  `cmd.exe` would have left seven of them alone anyway (`^`, `&` and a backtick
+  are inert inside double quotes; `!` needs delayed expansion). One entry,
+  `a %TEMP% token.wav`, carries the conclusion. Both `run_tool.R` and DESIGN now
+  say so and name the axes the measurement does not cover.
+
+**Logged, not actioned:**
+
+- F8 / B4 (78, reached independently by two lenses) — partial CRLF→LF
+  conversion of two files inflated the diff by ~330 lines and re-pointed their
+  blame. Below the action bar, but the maintainer directed the fix at the
+  review gate: every tracked file is now LF and `.gitattributes` pins it, so
+  the mixed state that caused it is gone rather than merely reverted.
+- F7 (65) — the OpenFace-writes-no-CSV defect had no home outside this file.
+  Now a ROADMAP candidate row.
+- F9 (30) — asserted `quote_tokens()`'s stated rationale is false because
+  `run_tool()` is directly testable. Checked: `quote_tokens()` is exercised
+  without `local_fake_tools()` while `run_tool()` is not, so the rationale
+  holds. Rejected.
+- F6 (62) — AC6 ticked against a Windows check reporting one error. AC6 names
+  no host and is met on macOS with 0/0/0; the Windows error is pre-existing and
+  now owned by a candidate row. No amendment convened.
+- F13 (62) — `run_tool()`'s wiring to the two internals reddens only on
+  `windows-latest`. Real, and that job runs on every PR. Left.
+- F12 (55), F14 (30), F16 (12) — a redundant-but-harmless assertion, a
+  set-vs-list edge case with no trigger, and line lengths. Left.
 
 ### Out of scope, observed on the same host
 

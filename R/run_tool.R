@@ -30,12 +30,22 @@
 # `^`, `&` and `!` bare, all of which `cmd.exe` acts on -- and M13 recorded that
 # as an open Windows hole by analogy with the `$` bug it had just fixed. M15
 # MEASURED the analogy false: on that host all eight hostile names round-tripped
-# through real ffmpeg and ffprobe intact, `a %TEMP% token.wav` included. Nothing
-# expands them because nothing interprets them -- R's `system2()` does not put
-# `cmd.exe` in the loop on Windows, so the `cmd2` escaping style (`^%`, `^&`,
-# `^!`), which exists for command lines that DO reach the interpreter, would be
-# escaping against a shell that is not there. Hence `cmd` alone, on measurement
-# rather than on `shQuote`'s documented default.
+# through real ffmpeg and ffprobe intact, `a %TEMP% token.wav` included. That one
+# entry is what carries the conclusion -- `cmd.exe` leaves `^`, `&` and a
+# backtick alone inside double quotes and expands `!` only under delayed
+# expansion, so those four would have survived an interpreter too, while `%VAR%`
+# is the one thing `cmd.exe` DOES expand inside double quotes. It arrived
+# unexpanded, so nothing interpreted it: `system2()` put no `cmd.exe` between
+# openac and the tool, and the `cmd2` escaping style (`^%`, `^&`, `^!`), which
+# exists for command lines that DO reach the interpreter, would be escaping
+# against a shell that is not there. Hence `cmd` alone, on measurement rather
+# than on `shQuote`'s documented default.
+#
+# What that measurement does NOT cover, so the next maintainer knows where its
+# edge is: it is one Windows build, one R version, two tools, and openac's own
+# `stdout = TRUE, stderr = TRUE` call shape -- and `?system2` ties the no-shell
+# property to redirection handling specifically. Re-measure with the same
+# hostile-name table before widening the claim to a different call shape.
 #
 # Resolution stays in `require_program()` rather than moving here, because that
 # guard is what stops `system2(NULL, args)` from executing `args` as a shell
@@ -51,8 +61,9 @@ opt_arg <- function(test, ...) {
 }
 
 # The quoting rule as a value, so a test can ask for the Windows one from any
-# host (M15, AC4). `run_tool()` is the only caller and passes the running
-# platform's; every other caller is a test naming a style deliberately.
+# host (M15, AC4). `run_tool()` is the only caller in package code; a test that
+# wants a specific style names it to `quote_tokens()` directly rather than going
+# through here, which is the whole point of the split.
 quote_type <- function() {
   if (.Platform$OS.type == "windows") "cmd" else "sh"
 }

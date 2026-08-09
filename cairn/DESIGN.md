@@ -165,7 +165,9 @@ binaries.
 `ffprobe()`, `openface()`, `opensmile()`), and all four delegate to the
 internal `run_tool()`, which is **the one place openac quotes for the shell**
 (D-017). `system2()` does not quote its `args` — it pastes them into a command
-string the shell re-splits — so `run_tool()` decides by length: a **length-1**
+string that is re-split downstream (by the shell on unix; on Windows by the
+tool's own command-line parsing, per the measurement below) — so `run_tool()`
+decides by length: a **length-1**
 `arg` is the legacy raw string and is passed through untouched, while a
 **longer character vector** is one CLI token per element, each `shQuote()`d
 individually by the internal `quote_tokens()` under the style `quote_type()`
@@ -174,9 +176,13 @@ made explicit so the Windows rule can be asserted from any host. `cmd` style
 quotes and escapes nothing further, leaving `%`, `^`, `&` and `!` bare; that is
 sufficient because **nothing interprets them** — MEASURED 2026-08-08 on Windows
 11 (build 26100, R 4.6.1), eight hostile filenames round-tripped through real
-ffmpeg and ffprobe intact, so `system2()` puts no `cmd.exe` between openac and
-the tool and `shQuote`'s `cmd2` escaping would guard against a shell that is not
-there (M15). It then runs `system2(require_program(<tool>), args = …, stdout = TRUE,
+ffmpeg and ffprobe intact, `a %TEMP% token.wav` the one of the eight that
+discriminates (`cmd.exe` leaves `^`, `&` and a backtick alone inside double
+quotes, and expands `!` only under delayed expansion). So on that host
+`system2()` puts no `cmd.exe` between openac and the tool, and `shQuote`'s
+`cmd2` escaping would guard against a shell that is not there (M15). The claim
+is stamped rather than standing: it rests on one host, one R version, and
+openac's own `stdout`/`stderr`-capturing call shape. It then runs `system2(require_program(<tool>), args = …, stdout = TRUE,
 stderr = TRUE)` and returns captured output as a character vector.
 `require_program()` aborts when the tool is absent, because `system2(NULL, …)`
 would otherwise run the argument string as a shell command (M06). Typed

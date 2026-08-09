@@ -10,7 +10,7 @@ _Released 0.1.0 (GitHub) 2026-07-11._
 |---|---|---|---|---|---|
 | M13 | Quote at the process boundary, not at the call site | done | — | high | milestones/archive/M13-boundary-quoting.md |
 | M14 | A bad file is an outcome, not the end of the batch | planned | M13 | normal | milestones/M14-resilient-stream-count.md |
-| M15 | What Windows actually does to a path the shell can eat | in-progress | — | high | milestones/M15-windows-quoting-oracle.md |
+| M15 | What Windows actually does to a path the shell can eat | review | — | high | milestones/M15-windows-quoting-oracle.md |
 | M16 | The Windows installers, actually run | planned | — | normal | milestones/M16-windows-installers-real-run.md |
 | M12 | Does openac belong on top of tidymedia? — a fit assessment, and a decision | done | — | high | milestones/archive/M12-tidymedia-fit-assessment.md |
 | M11 | A wholly-skipped test file cannot exist — the coverage gate's blind spot, closed at the door | done | M10 | normal | milestones/archive/M11-forbid-top-level-skips.md |
@@ -34,6 +34,7 @@ _Released 0.1.0 (GitHub) 2026-07-11._
 - Add the `test-coverage` / Codecov workflow (usethis `use_github_action("test-coverage")`); needs a `CODECOV_TOKEN` repository secret only the maintainer can add, so an unauthenticated job would block every later merge — added 2026-08-07 — M06 review 2; the check-standard half became M08 on 2026-08-07
 - Turn on branch protection with the CI checks required on the default branch — GitHub repository settings, not files, so no milestone can land it — added 2026-08-07 — M08
 - Show the constructed command — GP5's remaining half; once M13 makes commands token vectors, a display/return surface is cheap (tidymedia renders both from one structure via ffm_compile/ffm_args, R/ffm.R:1152,1164) — added 2026-08-08 — M13 Out; D-017
+- OpenFace writes no `.csv` on Windows for a face-less input — it tracks to completion and writes `faces_of_details.txt` beside the requested `faces.csv`, where the same input on macOS yields a header-only CSV; `test-real-tools.R`'s OpenFace test fails on Windows on `main` as well as on the branch, so `devtools::check()` errors there — added 2026-08-08 — M15 review, out of scope
 - Run `install_opensmile_mac()` for real on macOS — the mac half of the gap M16 closes on Windows; the installers have only ever been exercised against a mocked download environment — added 2026-08-08 — M16 Out
 - Extend M14's per-file-outcome treatment to the other probe-and-abort guards (os_check_config, the stopifnot(file.exists()) guards in of_extract/os_extract) — added 2026-08-08 — M14 Out
 - Revisit the 8 names openac and tidymedia both export at the 1.0 API freeze — the README now warns users (2026-08-08); renaming is the other half and only makes sense once the API is frozen — added 2026-08-08 — M12 (cairn/references/tidymedia-fit.md, C1-C8)

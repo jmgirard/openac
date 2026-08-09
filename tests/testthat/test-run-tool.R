@@ -85,9 +85,17 @@ test_that("quote_type() names the style base shQuote() would have chosen", {
     openac:::quote_type(),
     if (.Platform$OS.type == "windows") "cmd" else "sh"
   )
+  # Asserted over the whole hostile-name table, not a lone `a b.mp4`: review
+  # F11. For that sample `shQuote(type = "csh")` is character-for-character
+  # identical to `type = "sh"`, so a `quote_type()` that regressed to `"csh"`
+  # would satisfy this and only the tautological assertion above would stand.
+  # MEASURED: over the table as a vector the two styles DIVERGE -- the
+  # apostrophe entry pushes both off the single-quote branch, and sh then
+  # backslash-escapes the `$` where csh splits the string instead -- so this is
+  # an independent oracle over the table and is not one over that sample.
   expect_identical(
-    shQuote(c("-i", "a b.mp4"), type = openac:::quote_type()),
-    shQuote(c("-i", "a b.mp4"))
+    shQuote(unname(hostile_names()), type = openac:::quote_type()),
+    shQuote(unname(hostile_names()))
   )
 })
 
