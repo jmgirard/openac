@@ -76,7 +76,7 @@ candidate row. Branch protection → existing candidate row.
       DESCRIPTION.
 - [x] T3 Run `pkgdown::check_pkgdown()` then `pkgdown::build_site()`; close
       every gap either reports until both are clean.
-- [ ] T4 Deploy the built site to a new `gh-pages` branch
+- [x] T4 Deploy the built site to a new `gh-pages` branch
       (`pkgdown::deploy_to_branch()`) and enable GitHub Pages against it via
       `gh api`; confirm the two AC5 URLs serve.
 - [ ] T5 Add `.github/workflows/pkgdown.yaml` from the r-lib/actions pkgdown
@@ -95,8 +95,28 @@ candidate row. Branch protection → existing candidate row.
 - 2026-08-09: T1 — `_pkgdown.yml` authored with an explicit `reference:` index of eight groups mirroring DESIGN's Function Families, covering all 37 Rd topics listed by `list.files("man", pattern = "[.]Rd$")`; `.Rbuildignore` gained `^_pkgdown\.yml$`, `^docs$`, `^pkgdown$` and `.gitignore` gained `docs`. `devtools::test()` 0 fail / 1161 pass / 6 skip.
 - 2026-08-09: T2 — DESCRIPTION gained `URL:` (site + repo), `BugReports:` and `Config/Needs/website: pkgdown` (D-020). These edits were staged before T1's checkpoint and so landed in commit e26e9ac rather than their own; recorded here rather than re-cut.
 - 2026-08-09: T3 — `pkgdown::check_pkgdown()` "No problems found"; `pkgdown::build_site()` finished with no error and, for each of the three `.Rmd` returned by `list.files("vignettes", pattern = "[.]Rmd$")`, the same-stem `docs/articles/*.html` was confirmed present by a scripted `file.exists()` over that list. No index gap to close — the reference index was complete on its first run.
+- 2026-08-09: T4 — `pkgdown::deploy_to_branch()` first failed on `library(openac)` (the package was not installed locally; `devtools::install()` fixed it) and, on the run before that, surfaced that pkgdown renders `CLAUDE.md` into the site — gated to the user, who chose to leave it published (see Decisions). Deploy pushed `gh-pages` at 964b583 and enabled Pages; `gh api repos/jmgirard/openac/pages` reports `source.branch: gh-pages`, `status: built`, `html_url: https://jmgirard.github.io/openac/`, matching DESCRIPTION's `URL:`.
+- 2026-08-09: T4 verification — `curl` returned HTTP 200 for the site root, `reference/index.html` and `articles/index.html`; the reference page's body was grepped for six exports spanning every index group (`os_extract_dir`, `aw_transcribe`, `of_read`, `find_program`, `ffp_count_streams`, `handlers`), all present, and the articles page carries all three vignette titles.
 - 2026-08-09: criteria audit ([O], fresh context) returned five findings plus an AC1 vacuity note; findings 2, 4, 5 and the AC1 note were fixed in the wording before this file was written (assert placement pinned after dependency install; the unbounded "never compiles whisper.cpp" narrowed to the named run's install log; the unexercisable deploy-path claim narrowed to a YAML condition read plus a green PR build; an explicit `reference:` section required). Findings 1 and 3 went to the question gate as one question and were settled by the user choosing to publish during the work.
 
 ## Decisions
+
+### 2026-08-09: The site publishes `CLAUDE.md`, and that is accepted
+
+`pkgdown:::package_mds()` renders every top-level `*.md` except a hardcoded
+list (`README`, `LICENSE`/`LICENCE`, `NEWS`, `cran-comments`, the two GitHub
+templates), and exposes no configuration to extend it — so `CLAUDE.md` builds
+to `CLAUDE.html` and its text enters `search.json`. Not a disclosure: the repo
+is public (`isPrivate: false`, observed 2026-08-09), so the file was already
+readable on GitHub. **Decision (user, at the implementation gate): leave it
+published.** Considered and rejected: (1) moving the file to
+`.claude/CLAUDE.md` — a supported project-memory location that pkgdown does
+not scan, but `cairn_validate.py:74` reads `<root>/CLAUDE.md` and
+`claude_section_line_count()` returns `None` for a missing file (measured), so
+the 30-line cairn-section cap check would pass vacuously forever; (2)
+deleting the built page after each build — it would have to run locally and in
+CI, leaves the search index to rebuild, and breaks silently whenever pkgdown
+changes its build order. Revisit if pkgdown ever gains an exclusion option, or
+if the page confuses a real user.
 
 ## Review
