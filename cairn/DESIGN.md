@@ -208,10 +208,25 @@ them without attaching the upstream packages.
   (M01–M03). The prep/extract wrappers and program discovery now have
   command-construction tests at the mocked `system2` boundary; the `install_*`
   family, the `*_dir` batch wrappers and `aw_transcribe*` still have none.
-- 2026-07-11: **OneDrive model URLs** — `install_openface_win` downloads
-  model files from hard-coded OneDrive links with embedded authkeys
-  (`programs_install.R`); links of that shape die silently. A time bomb in
-  the install path.
+- 2026-07-11 (**detonated and defused 2026-08-08, M16**): **OneDrive model
+  URLs** — `install_openface_win` downloaded its four patch experts from
+  hard-coded OneDrive links with embedded authkeys; links of that shape die
+  silently. They had. MEASURED on 2026-08-08, all four answered **HTTP 200 with
+  a 34 KB `login.live.com` sign-in page**: `download.file()` reported success,
+  four HTML documents landed named `.dat`, and the installer returned `TRUE`.
+  Repointed to the Dropbox links OpenFace's own `download_models` scripts try
+  *first* (openac had copied only upstream's fallback), all four measured alive
+  and serving 60.6–154.3 MB of binary. The shape of the hazard is unchanged, so
+  `download_model()` now refuses anything below a 40 MB floor or opening with
+  markup — the installer fails naming the URL instead of succeeding onto a login
+  page. Same run: `install_opensmile_win()`'s pinned
+  `opensmile-3.0.2-win-x64.zip` measured **404** — the v3.0.2 release never
+  carried that asset name — and was repointed to `-windows-x86_64.zip`.
+- 2026-08-08: **`install_ffmpeg_win()` is not pinned** — its gyan.dev URL is a
+  `-release-essentials` alias that MEASURED redirecting to
+  `ffmpeg-9.0-essentials_build.7z` on 2026-08-08, so the version installed moves
+  with upstream. Deliberate for now (it is how the tool stays current), recorded
+  because it means no two installs are guaranteed alike.
 - 2026-07-11: **audio.whisper volatility** — the `aw_*` family rests on a
   GitHub-only upstream package (≥ 0.4.1) whose API and maintenance cadence
   openac does not control; upstream changes could break it without warning.

@@ -18,8 +18,9 @@ Imports:
     rlang,
     tibble,
     tools
-Suggests: 
+Suggests:
     audio.whisper (>= 0.4.1),
+    curl,
     knitr,
     rmarkdown,
     spelling,
