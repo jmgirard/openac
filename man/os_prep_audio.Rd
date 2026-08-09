@@ -16,8 +16,11 @@ to import?}
 (ffmpeg uses zero-indexing so 0 is the first stream).}
 
 \item{overwrite}{Should outfile be overwritten if it already exists? It will
-be skipped otherwise --- silently for a direct call, and as a \code{"skipped"}
-row when run under one of the \verb{*_dir()} batch wrappers. Defaults to TRUE.}
+be skipped otherwise, silently for a direct call. In a batch the row
+depends on whose job the preparing is: under \code{os_prep_audio_dir()} it is
+the whole job, so the row reads \code{"skipped"}; under \code{os_extract_dir()} the
+existing file is reused and openSMILE still runs, so the row reads
+\code{"ok"}. Defaults to TRUE.}
 }
 \value{
 A character vector containing the output of ffmpeg. Errors, naming

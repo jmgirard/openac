@@ -126,6 +126,7 @@ plumbing that work needs, so it is planned after this one lands, not now.
 - 2026-08-09: T9 the leaked `#'` removed from all five `@return` blocks (5 replacements, asserted); `devtools::document()` re-run and `grep -rn "its #'" R/ man/` now matches nothing. Two round-1 findings logged below the action bar fixed in the same lines rather than left in text being rewritten anyway: the retained "a file that fails is skipped with a warning" sentence, which contradicted the `"skipped"`/`"failed"` vocabulary defined two sentences above it, and `R/use_whisper.R:310`'s claim that `os_prep_audio()` aborts an unprobeable input — it never counts streams and has no such branch.
 - 2026-08-09: T10 re-verified after the round-1 fixes — `devtools::document()` no drift, `devtools::test()` 813 pass / 0 fail (10 more than round 1's 803, the three new regression tests), `devtools::check()` **Status: OK** 0/0/0 with the spelling comparison clean. NEWS narrowed in the same pass: it named the three skip sites without saying that `status` describes the batch's OWN job, so a reader would have expected `os_extract_dir(wavdir=, overwrite = FALSE)` to report a skip where it now reports `"ok"`. Status back to review.
 - 2026-08-09: review round 2 — gate re-run clean (`cairn_validate` exit 0, `check()` Status: OK 0/0/0, `document()` no drift, 813 tests pass) and all five criteria re-ticked against fresh round-2 evidence; CI green on all five platforms. Fresh-context review in flight.
+- 2026-08-09: review round 2 findings — 21 scored, two at or above the action bar and both fixed here (the `@param overwrite` text contradicting the `@return` block in the same man page; three vignettes still calling a failure a skip). No return-floor trigger: no criterion fails and neither is scored 90 or above. 19 logged below the bar, two follow-up candidate rows added (search-first, no existing row covered either), and the skip-channel choices promoted to D-019. Re-verified after the fixes: `document()` no drift, 813 tests pass, `check()` Status: OK, CI green on five platforms.
 
 ## Decisions
 
@@ -314,3 +315,67 @@ regression tests were run red first (8 failures, both batches recording
 assert the tool ran and the output landed, not `status` alone. The boundary
 the fix must not move has its own test: `os_prep_audio_dir()`, where the prep
 IS the job, still skips. F3: the leaked `#'` is out of all five blocks.
+
+### Fresh-context review — round 2
+
+Three lenses again, then a scorer that generated none of the findings. The
+prior-review lens read round 1's own Review section as well as the M14 and M17
+archives, re-probed `pulls/comments` (`[]` again), and found no round-1 finding
+reintroduced or contradicted. The blame lens reported one item: `aw_transcribe()`
+now aborting on an unprobeable file reverses M14's stated "such a file is
+skipped" disposition — flagged as a deliberate, paper-trailed reversal, which is
+what AC3 requires. The diff-bug lens could not break `absorb_skip()`: it verified
+by measurement that direct callers are unchanged, the `os_prep_audio_dir()`
+boundary holds, the parallel path returns `ok,skipped,failed`, a file named
+`clip{1}.mp4` skips cleanly, and no path reports `"ok"` for work that did not
+happen or `"skipped"` for work that did. 21 findings scored; two at or above 80.
+
+**No return-floor trigger: no criterion fails, and neither actioned finding is
+scored ≥90.** Both are doc text this branch itself wrote, so both were fixed
+here rather than deferred.
+
+- **F1 (85) — fixed now.** The `@param overwrite` text this branch added to
+  `os_prep_audio()` and `aw_prep_audio()` promised a `"skipped"` row "when run
+  under one of the `*_dir()` batch wrappers", and `os_extract_dir()` /
+  `aw_transcribe_dir()` inherit it via `@inheritDotParams` — where the round-2
+  gate makes the row read `"ok"`. The same man page contradicted itself. Both
+  `@param` blocks now name the two cases apart; `document()` re-run.
+- **F4 (80) — fixed now.** `vignettes/ffmpeg_wav.Rmd`,
+  `vignettes/opensmile_parallel.Rmd` and `vignettes/openface_parallel.Rmd` still
+  read "A file that fails is skipped with a warning" — the exact sentence T9
+  deleted from the five `@return` blocks, because `"skipped"` and `"failed"` are
+  now disjoint states. All three rewritten;
+  `grep -rn "skipped with a warning" vignettes/ R/ man/` matches nothing.
+
+**Logged below the action bar — 19 findings, surfaced not dropped.** Two
+follow-up candidate rows were added for the substantive clusters (search-first:
+no existing row covered either).
+
+- (75) `aw_prep_audio()`'s abort-over-skip comment reasons from a premise M18
+  removed · (75) `of_extract_dir()`'s `@return` documents a `"skipped"` state
+  `of_extract()` cannot produce · (72) NEWS's "a missing ffprobe stops the run"
+  on the `aw_transcribe_dir()` path · (62) `aw_transcribe()`'s new abort absent
+  from its own `@return` — **all four → candidate row.**
+- (58) the wrapper test exercises only the zero-row branch · (48) no populated
+  `*_dir()` table has its column set pinned — **both → candidate row.**
+- (55) no durable record of the skip-channel choices — **actioned as D-019**,
+  which promotes both to `DECISIONS.md` rather than leaving them in work-log
+  history the archive drops.
+- (45) the direct path signals and warns, and its comment says otherwise ·
+  (40) `success = FALSE` makes an undocumented re-run loop non-terminating ·
+  (35) `overwrite = FALSE` does not protect the batch's real output ·
+  (35) an error inside the skip handler escapes `dir_walk()` when `.l` has no
+  `infile` column (unreachable through all five wrappers) · (28) the
+  does-not-warn test depends on the handler being exiting · (25)
+  `absorb_skip()` catches by class over a whole expression · (20) `error` is no
+  longer NA-iff-success · (20) a dead `x <-` assignment · (15) the zero-row
+  branch omits `stringsAsFactors = FALSE` · (15) `os_prep_audio_dir()` has no
+  `progress` argument · (10) a guard naming no file — **already M19's scope** ·
+  (10) the M14 reversal — **AC3 requires it.**
+
+### Post-fix re-verification
+
+`devtools::document()` no drift · `devtools::test()` 813 pass / 0 fail ·
+`devtools::check()` **Status: OK**, 0 errors / 0 warnings / 0 notes with the
+spelling comparison clean · `cairn_validate` exit 0 · CI green on all five
+platforms (macOS release, Windows release, Ubuntu release/devel/oldrel-1).

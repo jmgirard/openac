@@ -44,8 +44,11 @@ render using any available handler.
 \code{infile} to convert or extract. Note that ffmpeg uses zero-indexing so the
 default of 0 is the first stream. Defaults to 0.}
     \item{\code{overwrite}}{Should outfile be overwritten if it already exists? It will
-be skipped otherwise --- silently for a direct call, and as a \code{"skipped"}
-row when run under one of the \verb{*_dir()} batch wrappers. Defaults to TRUE.}
+be skipped otherwise, silently for a direct call. In a batch the row
+depends on whose job the preparing is: under \code{aw_prep_audio_dir()} it is
+the whole job, so the row reads \code{"skipped"}; under \code{aw_transcribe_dir()}
+the existing file is reused and whisper still runs, so the row reads
+\code{"ok"}. Defaults to TRUE.}
     \item{\code{afilters}}{Should audio filters be used to try to improve audio quality?
 (See Details.) Defaults to FALSE.}
   }}
