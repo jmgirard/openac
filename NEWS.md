@@ -3,9 +3,12 @@
 * File paths containing a `$` are now handled correctly. Previously a file such
   as `my $clip.mp4` was passed to ffmpeg, ffprobe, OpenFace or openSMILE with
   the `$clip` part removed, so the tool was asked for a file that did not
-  exist. Paths containing spaces were already handled and are unaffected. One
-  gap remains, on Windows only: a path containing a token such as `%TEMP%` can
-  still be expanded by the command interpreter.
+  exist. Paths containing spaces were already handled and are unaffected. An
+  earlier version of this note warned that a Windows path containing a token
+  such as `%TEMP%` could still be expanded; that turned out not to be so. Such
+  paths — and ones containing `&`, `^` or `!` — were run against the real tools
+  on Windows and reached them unchanged, because openac starts a tool directly
+  rather than through a command interpreter.
 
 * `ffmpeg()`, `ffprobe()`, `openface()` and `opensmile()` now also accept a
   character vector giving one command-line argument per element, and quote each

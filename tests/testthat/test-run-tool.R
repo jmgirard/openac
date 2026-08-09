@@ -75,6 +75,84 @@ test_that("a path containing an apostrophe is quoted, and read back, correctly",
   expect_identical(boundary_value(argv, "-i"), path)
 })
 
+# --- the Windows rule, asserted from any host (M15) ---------------------------
+
+test_that("quote_type() names the style base shQuote() would have chosen", {
+  # The extraction must be behavior-preserving: `run_tool()` used to call
+  # `shQuote()` bare. If the named style ever diverged from the platform default,
+  # every command openac builds would change under it.
+  expect_identical(
+    openac:::quote_type(),
+    if (.Platform$OS.type == "windows") "cmd" else "sh"
+  )
+  # Asserted over the whole hostile-name table, not a lone `a b.mp4`: review
+  # F11. For that sample `shQuote(type = "csh")` is character-for-character
+  # identical to `type = "sh"`, so a `quote_type()` that regressed to `"csh"`
+  # would satisfy this and only the tautological assertion above would stand.
+  # MEASURED: over the table as a vector the two styles DIVERGE -- the
+  # apostrophe entry pushes both off the single-quote branch, and sh then
+  # backslash-escapes the `$` where csh splits the string instead -- so this is
+  # an independent oracle over the table and is not one over that sample.
+  expect_identical(
+    shQuote(unname(hostile_names()), type = openac:::quote_type()),
+    shQuote(unname(hostile_names()))
+  )
+})
+
+test_that("the Windows rule quotes every hostile name to a known literal", {
+  # AC4. `run_tool()` reaches the Windows style only when RUNNING on Windows, so
+  # a bare `run_tool()` test can never redden on macOS or Linux for a Windows
+  # quoting regression -- and this repository's Windows evidence is one manual
+  # run (AC2), not CI. Naming the style makes the rule assertable everywhere.
+  #
+  # Literals, not `shQuote(..., type = "cmd")` recomputed: an assertion against
+  # the function under test's own implementation would pass whatever base R did.
+  # These strings were MEASURED on the Windows host of AC2, 2026-08-08.
+  expected <- c(
+    space      = "\"a space.wav\"",
+    dollar     = "\"a $dollar.wav\"",
+    percent    = "\"a %TEMP% token.wav\"",
+    caret      = "\"a ^caret.wav\"",
+    ampersand  = "\"a &ampersand.wav\"",
+    bang       = "\"a !bang.wav\"",
+    apostrophe = "\"a Jeff's clip.wav\"",
+    backtick   = "\"a `backtick`.wav\""
+  )
+  # The table is the oracle's, so an entry added there without an expected
+  # literal here is a failure rather than a silently untested name.
+  expect_setequal(names(expected), names(hostile_names()))
+
+  for (case in names(expected)) {
+    quoted <- openac:::quote_tokens(
+      c("-i", hostile_names()[[case]]),
+      type = "cmd"
+    )
+    expect_identical(quoted[[2]], expected[[case]], info = case)
+    # `cmd` style is quoting only: nothing inside the name is rewritten. This is
+    # the property AC2 measured sufficient, and what a switch to `cmd2` -- which
+    # would emit `a ^%TEMP^% token.wav` -- would break here first.
+    expect_identical(
+      substr(quoted[[2]], 2L, nchar(quoted[[2]]) - 1L),
+      hostile_names()[[case]],
+      info = case
+    )
+  }
+})
+
+test_that("the length rule survives the extraction under either style", {
+  # D-017's contract is the internal's now, so it is pinned on the internal.
+  for (type in c("sh", "cmd")) {
+    expect_identical(
+      openac:::quote_tokens("-v error -i in.mp4", type = type),
+      "-v error -i in.mp4"
+    )
+    expect_identical(
+      openac:::quote_tokens(c("-i", "a b.mp4"), type = type),
+      shQuote(c("-i", "a b.mp4"), type = type)
+    )
+  }
+})
+
 # --- validation --------------------------------------------------------------
 
 test_that("run_tool rejects an argument that is not a character vector", {

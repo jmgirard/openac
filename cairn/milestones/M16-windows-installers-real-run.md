@@ -1,6 +1,6 @@
 # M16: The Windows installers, actually run
 
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** normal
 - **Depends on:** —
 - **Driving RR:** —
@@ -101,6 +101,8 @@ not this milestone.
 - 2026-08-08: T4 done — DESIGN's OneDrive known issue annotated with the measurement rather than deleted (the hazard shape is unchanged; only these four links were fixed), PR #16 opened, all five R-CMD-check jobs green. `curl` had to join Suggests: without it `R CMD check` warns `'::' or ':::' import not declared from: 'curl'`.
 - 2026-08-08: plan gate chose a full real install of all three tools, OpenFace included, over ffmpeg+openSMILE with the model links probed separately, because the OneDrive authkey links are the flagged time bomb and a probe cannot show whether the extracted tree puts `model/patch_experts` where the download expects it; falsified by the OpenFace download proving too large to run on the host.
 - 2026-08-08: plan chose temp config and data dirs via the existing `local_fake_config()`/`local_fake_data_dir()` helpers over letting the installers write the machine's real rappdirs config, because the run happens on the maintainer's working Windows machine and `set_*()` would overwrite the tool locations openac is actually used with there; falsified by an installer path that ignores the redirection.
+- 2026-08-08: catch-up — all four tasks were committed and CI was green, but the status was left at `in-progress`; set to `review` at the start of /milestone-review.
+- 2026-08-08: merged `main` (M15) into the branch. The only conflicts were M15's LF normalization of `R/programs_install.R` (resolved to the branch's content re-written LF, `--ignore-cr-at-eol` confirming main changed no content there) and the ROADMAP's M15 row and candidate list.
 - 2026-08-08: criteria audit ([O], fresh context) returned findings on all five drafted criteria — AC1 contradicting AC3's failure branch, AC2 measuring a size after the file is `unlink()`ed and hand-counting seven URLs, AC3 blind to a 200-with-sign-in-page, AC4 resting on a false claim about `download.file()`'s status and a floor of mere non-emptiness, AC5 deleting a still-true known issue — all fixed in the wording above before the gate; none became a gate question.
 
 ## Decisions
