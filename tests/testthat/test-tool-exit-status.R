@@ -84,8 +84,7 @@ test_that("os_prep_audio() aborts when ffmpeg exits non-zero, naming the file", 
   msg <- collapsed_error(os_prep_audio(infile, outfile))
 
   expect_match(msg, basename(infile), fixed = TRUE)
-  expect_match(msg, "ffmpeg", fixed = TRUE)
-  expect_match(msg, "254", fixed = TRUE)
+  expect_match(msg, "ffmpeg exited with status 254", fixed = TRUE)
 })
 
 test_that("aw_prep_audio() aborts when ffmpeg exits non-zero, naming the file", {
@@ -97,8 +96,7 @@ test_that("aw_prep_audio() aborts when ffmpeg exits non-zero, naming the file", 
   msg <- collapsed_error(aw_prep_audio(infile, outfile))
 
   expect_match(msg, basename(infile), fixed = TRUE)
-  expect_match(msg, "ffmpeg", fixed = TRUE)
-  expect_match(msg, "254", fixed = TRUE)
+  expect_match(msg, "ffmpeg exited with status 254", fixed = TRUE)
 })
 
 test_that("os_extract_wav() aborts when openSMILE exits non-zero, naming the file", {
@@ -110,8 +108,7 @@ test_that("os_extract_wav() aborts when openSMILE exits non-zero, naming the fil
   msg <- collapsed_error(openac:::os_extract_wav(infile))
 
   expect_match(msg, basename(infile), fixed = TRUE)
-  expect_match(msg, "opensmile", fixed = TRUE)
-  expect_match(msg, "1", fixed = TRUE)
+  expect_match(msg, "opensmile exited with status 1", fixed = TRUE)
 })
 
 test_that("of_extract() aborts when OpenFace exits non-zero, naming the file", {
@@ -122,8 +119,80 @@ test_that("of_extract() aborts when OpenFace exits non-zero, naming the file", {
   msg <- collapsed_error(of_extract(infile, outfile))
 
   expect_match(msg, basename(infile), fixed = TRUE)
-  expect_match(msg, "openface", fixed = TRUE)
-  expect_match(msg, "11", fixed = TRUE)
+  expect_match(msg, "openface exited with status 11", fixed = TRUE)
+})
+
+test_that("os_extract() names the user's file, not the temp wav it converted to", {
+  # The exported function NEWS actually names. When the input does not already
+  # conform, `os_extract()` converts it to a `tempfile()` and hands THAT to
+  # `os_extract_wav()`, so a message built from the wav names a path that no
+  # longer exists and that the user never chose -- and it is this string that
+  # lands in `os_extract_dir()`'s `error` column, which NEWS tells them to read
+  # and re-run from. M17 shipped it that way and was returned for it.
+  #
+  # The AC2 sibling above drives `os_extract_wav()` directly, where the two
+  # files are the same, so it cannot see this. This test is the exported path.
+  infile <- local_media(".mp4")
+  aggfile <- file.path(withr::local_tempdir(), "agg.csv")
+  # An explicit `wavfile` rather than the `tempfile()` default, because the
+  # mocked ffmpeg writes nothing and `os_extract_wav()`'s own existence guard
+  # would trip before openSMILE is ever reached. It is still a DIFFERENT file
+  # from `infile`, which is the whole discriminator: the message must name the
+  # mp4 the user passed, not the wav openac derived.
+  wavfile <- local_media(".wav")
+  # Queue, in call order: os_check_audio() says no (a video stream is present)
+  # in two ffprobe queries; ffmpeg converts; os_extract_wav()'s own
+  # os_check_audio() says yes in two more; then openSMILE fails.
+  local_fake_tools(results = c(
+    list("video audio", c("aac", "44100", "2")),
+    list("ok"),
+    conforming(),
+    list(fake_nonzero_exit(status = 1L))
+  ))
+
+  msg <- collapsed_error(
+    os_extract(infile, wavfile = wavfile, aggfile = aggfile)
+  )
+
+  expect_match(msg, basename(infile), fixed = TRUE)
+  expect_no_match(msg, "\\.wav")
+})
+
+# --- the error path: run_tool() itself aborting ------------------------------
+
+test_that("the set_program() hint survives an abort from every wired wrapper", {
+  # `run_tool()` does not only return -- it ABORTS when `require_program()`
+  # cannot resolve the tool, and `find_program()` warns with the
+  # `set_program()` pointer on its way there, from inside the region where
+  # warnings are held pending the exit status. Releasing them as the error
+  # unwinds is the whole reason `run_checked()`'s `tryCatch` sits OUTSIDE the
+  # `withCallingHandlers`.
+  #
+  # M17 shipped the nesting inverted, which made the release loop run while
+  # the calling handler was still established: every released warning was
+  # re-captured and muffled, and all four wrappers lost the hint. Every other
+  # test in this file drives a RETURNED status and stayed green through it.
+  # This is the counterpart to the sibling's pin at
+  # test-commands-probe.R:258-273 ("It was, until this test"), which existed
+  # for `ffp_count_streams()` and had none here.
+  infile <- local_media(".mp4")
+  outfile <- file.path(withr::local_tempdir(), "out.wav")
+  outcsv <- file.path(withr::local_tempdir(), "faces.csv")
+
+  cases <- list(
+    function() os_prep_audio(infile, outfile),
+    function() aw_prep_audio(infile, outfile),
+    function() openac:::os_extract_wav(local_media()),
+    function() of_extract(infile, outcsv)
+  )
+
+  for (run in cases) {
+    local_fake_tools(resolve = character())
+    expect_warning(
+      expect_error(run(), "could not be found"),
+      "set_program"
+    )
+  }
 })
 
 # --- what the tool said reaches the message ----------------------------------

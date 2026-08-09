@@ -3,11 +3,15 @@
 * When ffmpeg, openSMILE or OpenFace fails on a file, that file is now reported
   as a failure instead of a success. Until now nothing in the package looked at
   whether these programs had actually worked — they report failure through a
-  channel R does not treat as an error — so a conversion or extraction that
-  produced no output at all finished quietly and was recorded in a batch's
-  results table as though it had worked. A long overnight run could therefore
-  report every file successful and leave you with far fewer output files than
-  inputs, with nothing saying which ones were missing or why. `os_prep_audio()`,
+  channel R does not treat as an error. For ffmpeg and OpenFace that meant a
+  conversion or extraction producing no output at all finished quietly and was
+  recorded in a batch's results table as though it had worked: a long overnight
+  run could report every file successful and leave you with far fewer output
+  files than inputs, with nothing saying which were missing or why. A failed
+  openSMILE run was already recorded as a failure, but only indirectly — the
+  step that tidies its output tripped over the missing file — and the message
+  said `file.exists(infile) is not TRUE`, naming neither the file nor openSMILE.
+  All three now report the same way. `os_prep_audio()`,
   `aw_prep_audio()`, `os_extract()` and `of_extract()` now stop with a message
   naming the file, the program, and the last few lines of what the program
   itself said; in a batch that message lands in the `error` column of the

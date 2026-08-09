@@ -271,11 +271,15 @@ them without attaching the upstream packages.
   on a missing input; `os_check_config()` aborts on a config it cannot resolve;
   and the abort messages name the file in only one of them (`aw_prep_audio`,
   `R/use_whisper.R`), the rest being bare `stopifnot()` deparses (M19).
-  Exit status is no longer among the gaps (**corrected 2026-08-08, M17**, which
-  superseded the earlier "`run_tool()` inspects no tool's exit status" reading):
-  `run_checked()` reads the `status` attribute on behalf of the four per-file
-  wrappers and aborts naming the file, the program and what the tool said, so an
-  ffmpeg, openSMILE or OpenFace failure is that file's own failed row.
+  Exit status is now read at the four per-file wrapper sites and nowhere else
+  (**corrected 2026-08-08, M17**, superseding the earlier "`run_tool()` inspects
+  no tool's exit status" reading): `run_checked()` reads the `status` attribute
+  for them and aborts naming the file, the program and what the tool said, so an
+  ffmpeg, openSMILE or OpenFace failure is that file's own failed row. Two
+  ffprobe calls remain unchecked — the codec/rate/channel query in
+  `os_check_audio()` and `aw_check_audio()`, where `ffp_count_streams()` guards
+  only the first probe; `os_check_audio()` has no length guard on the result, so
+  a non-zero exit there surfaces as `subscript out of bounds`.
   `run_tool()` itself still returns `system2()`'s value verbatim, which is what
   keeps the four exported passthroughs a raw escape hatch.
   `dir_outputs()`'s collision refusal

@@ -317,7 +317,8 @@ os_extract <- function(
     infile = wavfile,
     aggfile = aggfile,
     lldfile = lldfile,
-    config = config
+    config = config,
+    source = infile
   )
   # Clean up temporary file if created
   if (temp) unlink(wavfile)
@@ -328,11 +329,19 @@ os_extract <- function(
 
 # os_extract_wav ------------------------------------------------------------
 
+# `source` is the file to NAME in a failure message, which is not always the
+# file openSMILE is handed. `os_extract()` converts a non-conforming input to a
+# `tempfile()` and passes that as `infile`, so a message built from `infile`
+# names a temp path that no longer exists and that the user never chose -- and
+# it is `os_extract_dir()`'s `error` column the NEWS entry tells them to read
+# and re-run from. Defaults to `infile` for a direct call, where the two are the
+# same file (M17 review, finding B).
 os_extract_wav <- function(
   infile,
   aggfile = NULL,
   lldfile = NULL,
-  config = "misc/emo_large"
+  config = "misc/emo_large",
+  source = infile
 ) {
   # Validate inputs
   stopifnot(file.exists(infile), os_check_audio(infile))
@@ -357,7 +366,7 @@ os_extract_wav <- function(
     "-instname", basename(infile)
   )
   # Run opensmile command, failing the file if openSMILE does (M17)
-  out <- run_checked("opensmile", arg, infile)
+  out <- run_checked("opensmile", arg, source)
   # Fix the output CSV files
   if (!is.null(aggfile)) {
     os_fix_csv(aggfile)

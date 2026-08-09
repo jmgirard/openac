@@ -1,6 +1,6 @@
 # M17: A tool that exited non-zero is a failed file
 
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** high
 - **Depends on:** —
 - **Driving RR:** —
@@ -99,6 +99,9 @@ collisions → the standing ROADMAP candidate, behind M18.
 - 2026-08-08: added T5b, a GP7 layer-2 real-ffmpeg test, after noting the mocked suite is structurally blind to whether a real failing tool sets `status` at all — the shape of blindness M16 found in the mocked installer suite. Mutation-verified: neutering the check reds it (2 failures), restoring it passes 44.
 - 2026-08-08: T6 done, status → review. `devtools::check()` 0 errors / 0 warnings / 0 notes; `devtools::document()` no drift; suite 753 pass / 0 fail; real-tools layer 44 pass with ffmpeg, ffprobe and openSMILE present, OpenFace and audio.whisper skipped as absent.
 - 2026-08-09: review round 1 RETURNED (defect return 1). Finding A (93): `run_checked()` nests `withCallingHandlers(tryCatch(...))` where M14's sibling nests `tryCatch(withCallingHandlers(...))`, so the error handler's warning replay is re-captured by the still-active handler and the `set_program()` hint is lost from all four wrappers — MEASURED, 0 warnings surfaced against the passthrough's 1. Also actioned: D (85) two status assertions that cannot fail, B (84) `os_extract()` naming a tempfile NEWS says is the user's file, F (82) no test for the error path. 15 findings logged sub-threshold.
+- 2026-08-09: correcting the 2026-08-08 T1-T5 entry above, which is history and so is superseded rather than edited (D-045): `test-tool-exit-status.R` had 12 `test_that()` blocks at that commit, not "17 tests" — the figure was hand-written rather than derived, the defect the derived-figure rule deletes. It now has 14.
+- 2026-08-09: round-1 fixes. A: nesting transposed to `tryCatch(withCallingHandlers(...))` and M14's "not ceremony" rationale restored; mutation-verified, the inverted form reds the new test. F: a test drives the abort path through all four wrappers, asserting the `set_program()` hint survives. B: `os_extract_wav()` gained `source`, so `os_extract()` names the user's file, not the temp wav; mutation-verified. D: the four site assertions now pin the whole phrase `<tool> exited with status <n>` rather than a digit.
+- 2026-08-09: sub-threshold notes actioned alongside — NEWS narrowed (openSMILE already failed the row via `os_fix_csv()`, with an unreadable message), DESIGN narrowed (the two unchecked second-ffprobe calls named), and a candidate row opened for those two calls.
 - 2026-08-08: plan gate chose three milestones over one because the combined scope is ~15 criteria and ~20 tasks, well past the split tripwires; falsified by the three proving inseparable in implementation.
 
 ## Decisions

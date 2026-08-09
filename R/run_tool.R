@@ -131,18 +131,34 @@ run_checked <- function(program, arg, infile, call = rlang::caller_env()) {
   # POSITION: R warns about the status after the command has run and returned,
   # so its warning is the LAST one raised inside the call. Everything before it
   # is a diagnostic the caller should still see, and is released unchanged.
+  #
+  # The error handler is not ceremony, and the NESTING is not arbitrary:
+  # `tryCatch` goes OUTSIDE, so the handler runs after `withCallingHandlers`
+  # has unwound. Written the other way round -- `withCallingHandlers(tryCatch())`
+  # -- the handler's release loop runs while the calling handler is still
+  # established, so every warning it re-raises is re-captured and muffled and
+  # NOTHING escapes. MEASURED both ways at M17's review: the correct nesting
+  # released the held warning, the inverted one released none.
+  #
+  # What is at stake is `run_tool()`'s abort path. `require_program()` aborts
+  # when the tool cannot be resolved, and `find_program()` WARNS on its way
+  # there with the `set_program()` hint -- a warning raised inside the held
+  # region. Without the release, a user with no ffmpeg on their PATH loses the
+  # one message telling them how to point openac at it, and a batch prints 500
+  # identical aborts with no hint. This is the M14 fix-delta F1 defect; M17
+  # shipped it once by inverting the nesting and was returned for it.
   held <- list()
-  out <- withCallingHandlers(
-    tryCatch(
+  out <- tryCatch(
+    withCallingHandlers(
       run_tool(program, arg),
-      error = function(e) {
-        for (w in held) warning(w)
-        stop(e)
+      warning = function(w) {
+        held[[length(held) + 1L]] <<- w
+        invokeRestart("muffleWarning")
       }
     ),
-    warning = function(w) {
-      held[[length(held) + 1L]] <<- w
-      invokeRestart("muffleWarning")
+    error = function(e) {
+      for (w in held) warning(w)
+      stop(e)
     }
   )
 
