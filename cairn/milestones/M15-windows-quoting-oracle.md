@@ -211,7 +211,8 @@ line below rather than on that earlier pass.
   Both were further corrected at review (F15, F3, F4).
 - **AC6** — `devtools::test()` clean; `devtools::check()` **Status: OK** on
   macOS — 0 errors, 0 warnings, 0 notes — both before and after the review
-  fixes; all five `R-CMD-check` jobs pass on #15 (run 31286205053). The Windows
+  fixes; all five `R-CMD-check` jobs pass on #15 for the final review commit
+  (run 31289464034, after the line-ending normalization). The Windows
   host's own check reported one error, the pre-existing OpenFace failure that
   fails on `main` there too; AC6 names no host, it is met on this one, and that
   Windows error now has a candidate row rather than no owner.
