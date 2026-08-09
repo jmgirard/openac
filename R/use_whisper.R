@@ -12,8 +12,14 @@
 #' @export
 aw_check_audio <- function(infile, verbose = FALSE) {
   # Validate input
-  stopifnot(file.exists(infile))
-  stopifnot(rlang::is_bool(verbose))
+  check_file_arg(infile)
+  if (!file.exists(infile)) {
+    abort_file(infile, "No file exists at {.file {guarded_path}}.")
+  }
+  if (!rlang::is_bool(verbose)) {
+    abort_file(infile, "{.arg verbose} must be {.code TRUE} or {.code FALSE},
+                        not {.obj_type_friendly {verbose}}.")
+  }
   # Count streams
   streams <- ffp_count_streams(infile)
   # A file ffprobe could not read cannot be checked, and every test below would
@@ -62,8 +68,13 @@ aw_check_audio <- function(infile, verbose = FALSE) {
     cli::cli_h2("Audio Check Results")
     cli::cli_ul(items = tests)
   }
-  # Return single logical
-  all(tests)
+  # Return single logical -- `isTRUE()`, never a bare `all()`. A field ffprobe
+  # left blank makes its test NA and `all()` NA with it, and this function's
+  # callers ask `if (!aw_check_audio(x))`, which dies on `missing value where
+  # TRUE/FALSE needed` naming no file. The contract is one logical, and a check
+  # that could not be answered is not a pass -- the same disposition the
+  # unreadable-streams branch above already takes (M19 review round 1, F3).
+  isTRUE(all(tests))
 }
 
 
@@ -107,11 +118,29 @@ aw_prep_audio <- function(
   afilters = FALSE
 ) {
   # Validate input
-  stopifnot(file.exists(infile))
-  stopifnot(rlang::is_string(outfile))
-  stopifnot(rlang::is_integerish(stream, n = 1), stream >= 0)
-  stopifnot(rlang::is_bool(afilters))
-  stopifnot(rlang::is_bool(overwrite))
+  check_file_arg(infile)
+  if (!file.exists(infile)) {
+    abort_file(infile, "No file exists at {.file {guarded_path}}.")
+  }
+  if (!rlang::is_string(outfile)) {
+    abort_file(infile, "{.arg outfile} must be a single file path,
+                        not {.obj_type_friendly {outfile}}.")
+  }
+  # `is.na()` before the comparison: `is_integerish(NA_integer_, n = 1)` is
+  # TRUE, so a TYPED missing value passed the first test and left `NA < 0` for
+  # `if` to die on, naming no file (M19 review round 1, F1).
+  if (!rlang::is_integerish(stream, n = 1) || is.na(stream) || stream < 0) {
+    abort_file(infile, "{.arg stream} must be a single whole number
+                        {.code >= 0}, not {.val {stream}}.")
+  }
+  if (!rlang::is_bool(afilters)) {
+    abort_file(infile, "{.arg afilters} must be {.code TRUE} or {.code FALSE},
+                        not {.obj_type_friendly {afilters}}.")
+  }
+  if (!rlang::is_bool(overwrite)) {
+    abort_file(infile, "{.arg overwrite} must be {.code TRUE} or {.code FALSE},
+                        not {.obj_type_friendly {overwrite}}.")
+  }
   # Return early if overwrite is TRUE and outfile exists. The skip is SIGNALLED
   # as well as returned (M18): a direct caller sees the same "Skipped" it always
   # did, while a `*_dir()` batch records the row as skipped rather than as work
@@ -131,12 +160,12 @@ aw_prep_audio <- function(
   # never converted as a success.
   streams <- ffp_count_streams(infile)
   if (is.na(streams[["Audio"]])) {
-    cli::cli_abort(
-      "Cannot prepare {.file {basename(infile)}}: its streams could not be
-       counted."
-    )
+    abort_file(infile, "Its streams could not be counted.")
   }
-  stopifnot((stream + 1) <= streams[['Audio']])
+  if ((stream + 1) > streams[["Audio"]]) {
+    abort_file(infile, "It has no audio stream at index {.val {stream}};
+                        it has {streams[['Audio']]}.")
+  }
   # Create output directory if necessary
   if (!dir.exists(dirname(outfile))) {
     dir.create(dirname(outfile), recursive = TRUE)
@@ -314,12 +343,10 @@ aw_transcribe <- function(
   # does NOT: it never counts streams, so it has no such branch to match.)
   # A file that probed cleanly and carries no audio stream is a genuine SKIP:
   # the answer is known and there is nothing to transcribe.
+  check_file_arg(infile)
   streams <- ffp_count_streams(infile)
   if (is.na(streams[["Audio"]])) {
-    cli::cli_abort(
-      "Cannot transcribe {.file {basename(infile)}}: its streams could not be
-       counted."
-    )
+    abort_file(infile, "Its streams could not be counted.")
   }
   if (streams[["Audio"]] == 0) {
     skip_file("No audio streams detected.")
@@ -365,7 +392,8 @@ aw_transcribe <- function(
     language = language,
     rdsfile = rdsfile,
     csvfile = csvfile,
-    whisper_args = whisper_args
+    whisper_args = whisper_args,
+    source = infile
   )
   # Clean up temporary file if created
   if (temp) unlink(wavfile)
@@ -376,23 +404,64 @@ aw_transcribe <- function(
 
 # aw_transcribe_wav ------------------------------------------------------------
 
+# `source` is the file to NAME in a failure message, which is not always the
+# file whisper is handed -- the same split `os_extract_wav()` makes and for the
+# same reason (M17 review, finding B). `aw_transcribe()` converts a
+# non-conforming input to a `tempfile()` and passes that as `infile`, so a
+# message built from `infile` names a temp path that no longer exists and that
+# the user never chose, and it is `aw_transcribe_dir()`'s `error` column they
+# read it in. Defaults to `infile` for a direct call, where the two are the same
+# file.
 aw_transcribe_wav <- function(
   infile,
   model,
   language = "auto",
   rdsfile = NULL,
   csvfile = NULL,
-  whisper_args = list()
+  whisper_args = list(),
+  source = infile
 ) {
-  # Validate inputs
-  stopifnot(file.exists(infile), aw_check_audio(infile))
-  stopifnot(class(model) == "whisper")
-  stopifnot(rlang::is_string(language))
-  stopifnot(is.null(rdsfile) ||
-    (rlang::is_string(rdsfile) && tools::file_ext(rdsfile) == "rds"))
-  stopifnot(is.null(csvfile) ||
-    (rlang::is_string(csvfile) && tools::file_ext(csvfile) == "csv"))
-  stopifnot(is.list(whisper_args))
+  # Validate inputs. The missing-`infile` split is `os_extract_wav()`'s: when
+  # `source` differs, `infile` is the wav `aw_prep_audio()` was asked to write
+  # and ffmpeg returned success without writing.
+  check_file_arg(infile)
+  check_file_arg(source)
+  if (!file.exists(infile)) {
+    if (identical(infile, source)) {
+      abort_file(source, "No file exists at {.file {guarded_path}}.")
+    }
+    abort_file(source, "ffmpeg wrote no output at {.file {infile}}.")
+  }
+  if (!aw_check_audio(infile)) {
+    abort_file(source, "It is not the mono 16-bit PCM 16kHz audio whisper
+                        reads; {.fn aw_prep_audio} converts it.")
+  }
+  # `inherits()` rather than `class(model) == "whisper"`: the latter compares a
+  # whole class vector against one string, so it is length > 1 for any
+  # subclassed model and dies inside `stopifnot()` on the comparison rather
+  # than on the contract.
+  if (!inherits(model, "whisper")) {
+    abort_file(source, "{.arg model} must be a whisper model from
+                        {.fn aw_get_model}, not {.obj_type_friendly {model}}.")
+  }
+  if (!rlang::is_string(language)) {
+    abort_file(source, "{.arg language} must be a single string,
+                        not {.obj_type_friendly {language}}.")
+  }
+  if (!is.null(rdsfile) &&
+      !(rlang::is_string(rdsfile) && tools::file_ext(rdsfile) == "rds")) {
+    abort_file(source, "{.arg rdsfile} must be {.code NULL} or a single
+                        {.field .rds} path, not {.val {rdsfile}}.")
+  }
+  if (!is.null(csvfile) &&
+      !(rlang::is_string(csvfile) && tools::file_ext(csvfile) == "csv")) {
+    abort_file(source, "{.arg csvfile} must be {.code NULL} or a single
+                        {.field .csv} path, not {.val {csvfile}}.")
+  }
+  if (!is.list(whisper_args)) {
+    abort_file(source, "{.arg whisper_args} must be a list,
+                        not {.obj_type_friendly {whisper_args}}.")
+  }
   # Run whisper
   out <- do.call(
     what = predict,

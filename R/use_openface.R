@@ -72,16 +72,26 @@ of_extract <- function(
   multiview = FALSE
 ) {
   # Validate input
-  stopifnot(file.exists(infile))
-  stopifnot(rlang::is_string(outfile))
-  stopifnot(rlang::is_bool(fp2D))
-  stopifnot(rlang::is_bool(fp3D))
-  stopifnot(rlang::is_bool(pdm))
-  stopifnot(rlang::is_bool(pose))
-  stopifnot(rlang::is_bool(gaze))
-  stopifnot(rlang::is_bool(aus))
-  stopifnot(rlang::is_bool(wild))
-  stopifnot(rlang::is_bool(multiview))
+  check_file_arg(infile)
+  if (!file.exists(infile)) {
+    abort_file(infile, "No file exists at {.file {guarded_path}}.")
+  }
+  if (!rlang::is_string(outfile)) {
+    abort_file(infile, "{.arg outfile} must be a single file path,
+                        not {.obj_type_friendly {outfile}}.")
+  }
+  # The eight feature flags take the same check and the same message, so they
+  # are driven from a list rather than written out eight times -- the repeated
+  # form is where a ninth flag gets added with no guard at all. `{.arg {flag}}`
+  # keeps each message specific to the flag that failed.
+  for (flag in c("fp2D", "fp3D", "pdm", "pose", "gaze", "aus", "wild",
+                 "multiview")) {
+    value <- get(flag)
+    if (!rlang::is_bool(value)) {
+      abort_file(infile, "{.arg {flag}} must be {.code TRUE} or {.code FALSE},
+                          not {.obj_type_friendly {value}}.")
+    }
+  }
   # Construct openface command
   arg <- c(
     "-f", infile,

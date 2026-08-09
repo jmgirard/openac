@@ -139,13 +139,13 @@ test_that("aw_transcribe_wav() validates its arguments before running whisper", 
   whisper <- local_fake_whisper()
   expect_error(
     openac:::aw_transcribe_wav(infile, model = model, rdsfile = "out.txt"),
-    "file_ext"
+    "rdsfile"
   )
 
   local_fake_tools(results = conforming_wav())
   expect_error(
     openac:::aw_transcribe_wav(infile, model = model, csvfile = "out.txt"),
-    "file_ext"
+    "csvfile"
   )
 
   local_fake_tools(results = conforming_wav())
@@ -165,7 +165,7 @@ test_that("aw_transcribe_wav() refuses an input whisper cannot read", {
 
   expect_error(
     openac:::aw_transcribe_wav(infile, model = fake_model()),
-    "aw_check_audio"
+    "16-bit"
   )
   expect_length(whisper$calls, 0)
 })

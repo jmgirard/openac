@@ -276,12 +276,28 @@ them without attaching the upstream packages.
   processed.
   (`os_prep_audio_dir()` was the second such table until **M17, 2026-08-08**,
   which made a non-zero ffmpeg exit that file's own failure — see below.)
-  Resilience is ad hoc elsewhere: the `stopifnot(file.exists())` guards in
+  Resilience is ad hoc elsewhere: the input guards in
   `os_check_audio`, `os_prep_audio`, `os_extract_wav`, `os_fix_csv`,
   `aw_check_audio`, `aw_prep_audio`, `aw_transcribe_wav` and `of_extract` abort
-  on a missing input; `os_check_config()` aborts on a config it cannot resolve;
-  and the abort messages name the file in only one of them (`aw_prep_audio`,
-  `R/use_whisper.R`), the rest being bare `stopifnot()` deparses (M19).
+  on a missing input (**corrected 2026-08-09, M19**, superseding "the abort
+  messages name the file in only one of them, the rest being bare `stopifnot()`
+  deparses"): every guard inside a per-file function that has one file to name
+  now aborts through `abort_file()` (`R/utils.R`), whose message leads with the
+  file and states the defect on one line, so a failed row reads the same way
+  whether a guard or a tool stopped it. Two kinds sit outside that helper and
+  are not defects in it (**corrected 2026-08-09, M19 review round 2**,
+  superseding a reading that counted `os_fix_csv()` among them and omitted
+  `os_check_config()`): `check_file_arg()` rejects an `infile` that is not one
+  path at all, where there is no file to name and the argument is named
+  instead, and `os_check_config()` is about a batch-wide argument rather than
+  a file, though `os_extract_wav()` reaches it per file.
+  `os_check_config()` names the config it could not resolve, and
+  `os_extract_dir()` validates it once before the loop — so a bad `config`
+  costs no ffprobe rounds and produces no rows, though `os_extract_wav()` still
+  resolves it per file, making the count N+1 rather than 1. The `*_dir()`
+  wrappers' own pre-flight guards and the readers keep their `stopifnot()`s:
+  they abort before `dir_walk()` is entered or sit outside the batch path, so
+  no row exists to carry their message.
   Exit status is read at exactly two places (**corrected 2026-08-08, M17**,
   superseding the earlier "`run_tool()` inspects no tool's exit status"
   reading): `ffp_count_streams()` reads it for its own contractual `NA` return
