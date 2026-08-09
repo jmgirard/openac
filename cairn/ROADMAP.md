@@ -1,21 +1,20 @@
 # Roadmap
 
 _The only authority on milestone status. Grouped by status, not ID._
-_Last hygiene check: 2026-08-08 (board clear after M14 merged — nothing in flight, no open RB/RR, no open issues or PRs, all 24 validate checks green; 23 candidates awaiting a plan)_
+_Last hygiene check: 2026-08-09 (M17 merged and archived after two review rounds — the first caught a handler-nesting inversion that swallowed the set_program() hint, the second caught the fix's own test overstating its coverage and two false DESIGN claims; M12 row pruned at the 5-row terminal cap; one candidate added, three lessons captured)_
 _Released 0.1.0 (GitHub) 2026-07-11._
 
 ## Milestones
 
 | ID | Title | Status | Depends on | Priority | File/Archive |
 |---|---|---|---|---|---|
-| M17 | A tool that exited non-zero is a failed file | review | — | high | milestones/M17-tool-exit-status.md |
+| M17 | A tool that exited non-zero is a failed file | done | — | high | milestones/archive/M17-tool-exit-status.md |
 | M18 | A skipped file is a skip, not a success | planned | M17 | normal | milestones/M18-batch-skip-outcome.md |
 | M19 | A guard that names no file | planned | — | normal | milestones/M19-guards-name-the-file.md |
 | M13 | Quote at the process boundary, not at the call site | done | — | high | milestones/archive/M13-boundary-quoting.md |
 | M14 | A bad file is an outcome, not the end of the batch | done | M13 | normal | milestones/archive/M14-resilient-stream-count.md |
 | M15 | What Windows actually does to a path the shell can eat | done | — | high | milestones/archive/M15-windows-quoting-oracle.md |
 | M16 | The Windows installers, actually run | done | — | normal | milestones/archive/M16-windows-installers-real-run.md |
-| M12 | Does openac belong on top of tidymedia? — a fit assessment, and a decision | done | — | high | milestones/archive/M12-tidymedia-fit-assessment.md |
 
 ## Candidates
 <!-- unnumbered ideas; one line each: idea — added YYYY-MM-DD — links -->
