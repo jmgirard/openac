@@ -1,7 +1,7 @@
 # Roadmap
 
 _The only authority on milestone status. Grouped by status, not ID._
-_Last hygiene check: 2026-08-08 (M16 implemented on its branch — PR #16 open, all five CI jobs green, ready for review; main's tracking still shows it `planned` because the branch is unmerged)_
+_Last hygiene check: 2026-08-08 (M16 merged and archived after a two-pass review — the first pass returned it for a missing changelog entry and an unheld dependency gate; one candidate added for the two findings that landed just under the action bar)_
 _Released 0.1.0 (GitHub) 2026-07-11._
 
 ## Milestones
@@ -11,10 +11,9 @@ _Released 0.1.0 (GitHub) 2026-07-11._
 | M13 | Quote at the process boundary, not at the call site | done | — | high | milestones/archive/M13-boundary-quoting.md |
 | M14 | A bad file is an outcome, not the end of the batch | planned | M13 | normal | milestones/M14-resilient-stream-count.md |
 | M15 | What Windows actually does to a path the shell can eat | done | — | high | milestones/archive/M15-windows-quoting-oracle.md |
-| M16 | The Windows installers, actually run | review | — | normal | milestones/M16-windows-installers-real-run.md |
+| M16 | The Windows installers, actually run | done | — | normal | milestones/archive/M16-windows-installers-real-run.md |
 | M12 | Does openac belong on top of tidymedia? — a fit assessment, and a decision | done | — | high | milestones/archive/M12-tidymedia-fit-assessment.md |
 | M11 | A wholly-skipped test file cannot exist — the coverage gate's blind spot, closed at the door | done | M10 | normal | milestones/archive/M11-forbid-top-level-skips.md |
-| M10 | Command-contract coverage gate — completeness observed, not inferred | done | M09 | high | milestones/archive/M10-coverage-gate-run-scope.md |
 
 ## Candidates
 <!-- unnumbered ideas; one line each: idea — added YYYY-MM-DD — links -->
@@ -35,6 +34,7 @@ _Released 0.1.0 (GitHub) 2026-07-11._
 - Host the four OpenFace patch experts somewhere openac controls — M16 measured the OneDrive links dead (200 + sign-in page) and repointed to OpenFace's Dropbox links, which are the same shape of hazard on someone else's account; a release asset on this repo would end the class — added 2026-08-08 — M16 Review
 - Pin `install_ffmpeg_win()` to a version — its gyan.dev URL is a `-release-essentials` alias that resolved to 9.0 on 2026-08-08, so the installed ffmpeg moves with upstream and no two installs are guaranteed alike — added 2026-08-08 — M16 Review; DESIGN Known issues
 - OpenFace writes no `.csv` on Windows for a face-less input — it tracks to completion and writes `faces_of_details.txt` beside the requested `faces.csv`, where the same input on macOS yields a header-only CSV; `test-real-tools.R`'s OpenFace test fails on Windows on `main` as well as on the branch, so `devtools::check()` errors there — added 2026-08-08 — M15 review, out of scope
+- Two installer-guard robustness fixes M16's review logged just under the action bar: `download_model()`'s `if (size < floor)` errors instead of returning `FALSE` when `file.size()` gives `NA` (a Windows stat race), and `skip_if_not_installed("curl")` sits in the shared gate so a maintainer without curl loses all four opt-in tests rather than the one probe using it — added 2026-08-08 — M16 Review N10, N13
 - Run `install_opensmile_mac()` for real on macOS — the mac half of the gap M16 closes on Windows; the installers have only ever been exercised against a mocked download environment — added 2026-08-08 — M16 Out
 - Extend M14's per-file-outcome treatment to the other probe-and-abort guards (os_check_config, the stopifnot(file.exists()) guards in of_extract/os_extract) — added 2026-08-08 — M14 Out
 - Revisit the 8 names openac and tidymedia both export at the 1.0 API freeze — the README now warns users (2026-08-08); renaming is the other half and only makes sense once the API is frozen — added 2026-08-08 — M12 (cairn/references/tidymedia-fit.md, C1-C8)
