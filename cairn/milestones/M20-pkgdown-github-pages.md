@@ -1,11 +1,11 @@
 # M20: A published documentation site
 
-- **Status:** planned
+- **Status:** in-progress
 - **Priority:** normal
 - **Depends on:** —
 - **Driving RR:** —
 - **Principles touched:** —
-- **Branch/PR:** —
+- **Branch/PR:** `m20-pkgdown-github-pages`
 
 ## Goal
 
@@ -67,7 +67,7 @@ candidate row. Branch protection → existing candidate row.
 
 ## Tasks
 
-- [ ] T1 Author `_pkgdown.yml`: bootstrap 5 template, `url:`, and an explicit
+- [x] T1 Author `_pkgdown.yml`: bootstrap 5 template, `url:`, and an explicit
       `reference:` index whose groups mirror DESIGN's Function Families
       (program management, ffmpeg/ffprobe, `of_*`, `os_*`, `aw_*`, readers,
       re-exports). Add `.Rbuildignore` entries for `^_pkgdown\.yml$`, `^docs$`,
@@ -92,6 +92,7 @@ candidate row. Branch protection → existing candidate row.
 - 2026-08-09: plan gate chose deploying the site from the milestone branch before review over enabling Pages onto a placeholder page, because the placeholder satisfies a configuration check while leaving the milestone's actual deliverable unverified by any criterion; falsified by a review finding that branch-built site content diverged from what the post-merge CI deploy produces.
 - 2026-08-09: plan gate chose an explicit `reference:` index over pkgdown's auto-generated one, because the auto index makes `check_pkgdown()` pass vacuously and leaves PROFILE's "every new export gets a reference row" gate toothless; falsified by the explicit index proving to need hand-maintenance out of proportion to that gate's value.
 - 2026-08-09: plan chose declaring pkgdown in `Config/Needs/website` over naming it only in the workflow, because a single-site requirement is easy to lose when a workflow is regenerated; falsified by the field going unread by the workflow's dependency step.
+- 2026-08-09: T1 — `_pkgdown.yml` authored with an explicit `reference:` index of eight groups mirroring DESIGN's Function Families, covering all 37 Rd topics listed by `list.files("man", pattern = "[.]Rd$")`; `.Rbuildignore` gained `^_pkgdown\.yml$`, `^docs$`, `^pkgdown$` and `.gitignore` gained `docs`. `devtools::test()` 0 fail / 1161 pass / 6 skip.
 - 2026-08-09: criteria audit ([O], fresh context) returned five findings plus an AC1 vacuity note; findings 2, 4, 5 and the AC1 note were fixed in the wording before this file was written (assert placement pinned after dependency install; the unbounded "never compiles whisper.cpp" narrowed to the named run's install log; the unexercisable deploy-path claim narrowed to a YAML condition read plus a green PR build; an explicit `reference:` section required). Findings 1 and 3 went to the question gate as one question and were settled by the user choosing to publish during the work.
 
 ## Decisions

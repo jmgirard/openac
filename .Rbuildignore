@@ -7,3 +7,6 @@
 ^CLAUDE\.md$
 ^\.claude$
 ^\.github$
+^_pkgdown\.yml$
+^docs$
+^pkgdown$

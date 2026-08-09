@@ -6,7 +6,9 @@ Authors@R:
            comment = c(ORCID = "0000-0002-7359-3746"))
 Description: Provides R wrappers to open-source affective computing tools.
 License: GPL (>= 3)
-Imports: 
+URL: https://jmgirard.github.io/openac/, https://github.com/jmgirard/openac
+BugReports: https://github.com/jmgirard/openac/issues
+Imports:
     archive,
     cli,
     fs,
@@ -29,6 +31,7 @@ Suggests:
 VignetteBuilder: 
     knitr
 Config/testthat/edition: 3
+Config/Needs/website: pkgdown
 Encoding: UTF-8
 Language: en-US
 Roxygen: list(markdown = TRUE)

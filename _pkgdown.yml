@@ -1,0 +1,88 @@
+url: https://jmgirard.github.io/openac/
+
+template:
+  bootstrap: 5
+
+# Groups mirror cairn/DESIGN.md "Function Families". Every exported topic gets
+# a row here — pkgdown::check_pkgdown() fails on any topic this file omits.
+reference:
+- title: Package
+  contents:
+  - openac-package
+
+- title: Program management
+  desc: >
+    Locate, register, check and install the external command-line tools openac
+    drives. Locations are discovered on the PATH or recorded per tool; nothing
+    is hard-coded.
+  contents:
+  - find_program
+  - set_program
+  - check_ffmpeg
+  - check_ffprobe
+  - check_openface
+  - check_opensmile
+  - install_ffmpeg_win
+  - install_openface_win
+  - install_opensmile_mac
+  - install_opensmile_win
+  - install_whisper
+
+- title: ffmpeg and ffprobe
+  desc: >
+    Low-level argument passthroughs for media transcoding and probing, plus the
+    stream count openac's own guards rely on.
+  contents:
+  - ffmpeg
+  - ffprobe
+  - ffp_count_streams
+
+- title: OpenFace
+  desc: Facial-behavior feature extraction, per file and per directory.
+  contents:
+  - openface
+  - of_extract
+  - of_extract_dir
+
+- title: openSMILE
+  desc: >
+    Acoustic feature extraction — config discovery, audio preparation, and
+    extraction per file and per directory.
+  contents:
+  - opensmile
+  - os_list_configs
+  - os_check_config
+  - os_check_audio
+  - os_prep_audio
+  - os_prep_audio_dir
+  - os_extract
+  - os_extract_dir
+
+- title: whisper
+  desc: >
+    Speech transcription via audio.whisper — audio preparation, model fetch,
+    and transcription per file and per directory.
+  contents:
+  - aw_check_audio
+  - aw_prep_audio
+  - aw_prep_audio_dir
+  - aw_get_model
+  - aw_transcribe
+  - aw_transcribe_dir
+
+- title: Tidy readers
+  desc: >
+    Turn one tool's raw output into a tidy tibble under one shared contract.
+    Each reader states its row grain in its first sentence.
+  contents:
+  - os_read
+  - of_read
+  - aw_read
+
+- title: Parallelism and progress
+  desc: >
+    Re-exported controls so batch runs can be configured without attaching the
+    upstream packages.
+  contents:
+  - plan
+  - handlers
