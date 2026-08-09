@@ -35,13 +35,14 @@ within \code{indir} be included?}
 }
 \value{
 (Invisibly) a data frame with one row per input file, giving the
-\code{infile} and \code{outfile} it was called with, its #'   \code{status}, whether it \code{success}ed, and the \code{error} message if it did not.
-\code{status} is one of \code{"ok"} (the operation completed), \code{"skipped"} (the file
-was deliberately not processed) or \code{"failed"} (the operation raised an error);
-\code{success} is \code{status == "ok"}, so a skipped file reads \code{FALSE}, and
-\code{error} carries the reason for a skipped file as well as for a failed one.
-A file that fails is skipped with a warning rather than aborting the
-batch.
+\code{infile} and \code{outfile} it was called with, its \code{status}, whether it
+\code{success}ed, and the \code{error} message if it did not. \code{status} is one of
+\code{"ok"} (the operation completed), \code{"skipped"} (the file was deliberately
+not processed) or \code{"failed"} (the operation raised an error); \code{success} is
+\code{status == "ok"}, so a skipped file reads \code{FALSE}, and \code{error} carries the
+reason for a skipped file as well as for a failed one. A file that fails
+does not abort the batch: it is warned about, recorded as \code{"failed"}, and
+the remaining files still run.
 }
 \description{
 Find all video files with a specified extension in a specified directory and

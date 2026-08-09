@@ -205,13 +205,14 @@ aw_prep_audio <- function(
 #'   - `"off"`: Suppresses progress signals via `progressr::without_progress()`.
 #' @inheritDotParams aw_prep_audio stream overwrite afilters
 #' @return (Invisibly) a data frame with one row per input file, giving the
-#'   `infile` and `outfile` it was called with, its #'   `status`, whether it `success`ed, and the `error` message if it did not.
-#'   `status` is one of `"ok"` (the operation completed), `"skipped"` (the file
-#'   was deliberately not processed) or `"failed"` (the operation raised an error);
-#'   `success` is `status == "ok"`, so a skipped file reads `FALSE`, and
-#'   `error` carries the reason for a skipped file as well as for a failed one.
-#'   A file that fails is skipped with a warning rather than aborting the
-#'   batch.
+#'   `infile` and `outfile` it was called with, its `status`, whether it
+#'   `success`ed, and the `error` message if it did not. `status` is one of
+#'   `"ok"` (the operation completed), `"skipped"` (the file was deliberately
+#'   not processed) or `"failed"` (the operation raised an error); `success` is
+#'   `status == "ok"`, so a skipped file reads `FALSE`, and `error` carries the
+#'   reason for a skipped file as well as for a failed one. A file that fails
+#'   does not abort the batch: it is warned about, recorded as `"failed"`, and
+#'   the remaining files still run.
 #' @export
 #'
 aw_prep_audio_dir <- function(
@@ -306,7 +307,8 @@ aw_transcribe <- function(
   # company (M18). A file ffprobe could not probe is a FAILURE: nothing was
   # learned about it, so calling it deliberately passed over would assert
   # something false, and it aborts naming the file -- the same disposition
-  # `aw_prep_audio()` and `os_prep_audio()` already give an unprobeable input.
+  # `aw_prep_audio()` gives an unprobeable input just below. (`os_prep_audio()`
+  # does NOT: it never counts streams, so it has no such branch to match.)
   # A file that probed cleanly and carries no audio stream is a genuine SKIP:
   # the answer is known and there is nothing to transcribe.
   streams <- ffp_count_streams(infile)
@@ -459,13 +461,14 @@ aw_transcribe_wav <- function(
 #'   - `"off"`: Suppresses progress signals via `progressr::without_progress()`.
 #' @inheritDotParams aw_transcribe model language audio_args whisper_args
 #' @return (Invisibly) a data frame with one row per input file, giving the
-#'   paths it was called with, its #'   `status`, whether it `success`ed, and the `error` message if it did not.
-#'   `status` is one of `"ok"` (the operation completed), `"skipped"` (the file
-#'   was deliberately not processed) or `"failed"` (the operation raised an error);
-#'   `success` is `status == "ok"`, so a skipped file reads `FALSE`, and
-#'   `error` carries the reason for a skipped file as well as for a failed one.
-#'   A file that fails is skipped with a warning rather than aborting the
-#'   batch.
+#'   paths it was called with, its `status`, whether it
+#'   `success`ed, and the `error` message if it did not. `status` is one of
+#'   `"ok"` (the operation completed), `"skipped"` (the file was deliberately
+#'   not processed) or `"failed"` (the operation raised an error); `success` is
+#'   `status == "ok"`, so a skipped file reads `FALSE`, and `error` carries the
+#'   reason for a skipped file as well as for a failed one. A file that fails
+#'   does not abort the batch: it is warned about, recorded as `"failed"`, and
+#'   the remaining files still run.
 #' @export
 #'
 aw_transcribe_dir <- function(

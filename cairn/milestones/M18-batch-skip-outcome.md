@@ -96,7 +96,7 @@ plumbing that work needs, so it is planned after this one lands, not now.
 - [x] T8 Review round 1, F1/F2: a skip signalled by a NESTED prep call stops
       at that call, so only a batch whose own job was the prep records
       `"skipped"`.
-- [ ] T9 Review round 1, F3: the leaked `#'` out of the five `@return`
+- [x] T9 Review round 1, F3: the leaked `#'` out of the five `@return`
       blocks; `devtools::document()`.
 - [ ] T10 Re-verify: `devtools::document()` no drift, `devtools::test()`,
       `devtools::check()`.
@@ -123,6 +123,7 @@ plumbing that work needs, so it is planned after this one lands, not now.
 - 2026-08-09: implement round 2 gate chose that a batch reusing an already-prepared wav records `"ok"`, not `"skipped"` — `status` describes the batch's OWN job, so only a batch whose job was the prep skips; falsified by a caller who needs the table to surface that an internal stage was reused.
 - 2026-08-09: T7 three regression tests appended to `test-batch-skip-outcome.R` and RUN red before any source change — 8 failures: `os_extract_dir()` and `aw_transcribe_dir()` over a file whose wav already exists read `status = "skipped"` with the tool never reached and no output file written. The third test passes already and is the boundary the fix must not move (`os_prep_audio_dir()` still skips). Box unticked until the suite is green.
 - 2026-08-09: T8 `absorb_skip()` added beside `skip_file()`; the two NESTED prep calls (`os_extract()` at `R/use_opensmile.R:318`, `aw_transcribe()`'s `do.call` at `R/use_whisper.R:340`) wrap theirs in it, so a reused-wav skip stops at the prep call instead of unwinding the per-file job. The two `*_prep_audio_dir()` wrappers call the prep function as `.f` directly and are untouched, which is why their skip still reaches `dir_walk()`. T7's 8 failures now pass; full suite 813 pass, 0 fail.
+- 2026-08-09: T9 the leaked `#'` removed from all five `@return` blocks (5 replacements, asserted); `devtools::document()` re-run and `grep -rn "its #'" R/ man/` now matches nothing. Two round-1 findings logged below the action bar fixed in the same lines rather than left in text being rewritten anyway: the retained "a file that fails is skipped with a warning" sentence, which contradicted the `"skipped"`/`"failed"` vocabulary defined two sentences above it, and `R/use_whisper.R:310`'s claim that `os_prep_audio()` aborts an unprobeable input — it never counts streams and has no such branch.
 
 ## Decisions
 

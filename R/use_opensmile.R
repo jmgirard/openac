@@ -235,13 +235,14 @@ os_prep_audio <- function(infile, outfile, stream = 0, overwrite = TRUE) {
 #'  within `indir` be included?
 #' @inheritDotParams os_prep_audio stream overwrite
 #' @return (Invisibly) a data frame with one row per input file, giving the
-#'   `infile` and `outfile` it was called with, its #'   `status`, whether it `success`ed, and the `error` message if it did not.
-#'   `status` is one of `"ok"` (the operation completed), `"skipped"` (the file
-#'   was deliberately not processed) or `"failed"` (the operation raised an error);
-#'   `success` is `status == "ok"`, so a skipped file reads `FALSE`, and
-#'   `error` carries the reason for a skipped file as well as for a failed one.
-#'   A file that fails is skipped with a warning rather than aborting the
-#'   batch.
+#'   `infile` and `outfile` it was called with, its `status`, whether it
+#'   `success`ed, and the `error` message if it did not. `status` is one of
+#'   `"ok"` (the operation completed), `"skipped"` (the file was deliberately
+#'   not processed) or `"failed"` (the operation raised an error); `success` is
+#'   `status == "ok"`, so a skipped file reads `FALSE`, and `error` carries the
+#'   reason for a skipped file as well as for a failed one. A file that fails
+#'   does not abort the batch: it is warned about, recorded as `"failed"`, and
+#'   the remaining files still run.
 #' @export
 #'
 os_prep_audio_dir <- function(
@@ -426,13 +427,14 @@ os_extract_wav <- function(
 #' @inheritDotParams os_extract config
 #' @inheritDotParams os_prep_audio stream overwrite
 #' @return (Invisibly) a data frame with one row per input file, giving the
-#'   paths it was called with, its #'   `status`, whether it `success`ed, and the `error` message if it did not.
-#'   `status` is one of `"ok"` (the operation completed), `"skipped"` (the file
-#'   was deliberately not processed) or `"failed"` (the operation raised an error);
-#'   `success` is `status == "ok"`, so a skipped file reads `FALSE`, and
-#'   `error` carries the reason for a skipped file as well as for a failed one.
-#'   A file that fails is skipped with a warning rather than aborting the
-#'   batch.
+#'   paths it was called with, its `status`, whether it
+#'   `success`ed, and the `error` message if it did not. `status` is one of
+#'   `"ok"` (the operation completed), `"skipped"` (the file was deliberately
+#'   not processed) or `"failed"` (the operation raised an error); `success` is
+#'   `status == "ok"`, so a skipped file reads `FALSE`, and `error` carries the
+#'   reason for a skipped file as well as for a failed one. A file that fails
+#'   does not abort the batch: it is warned about, recorded as `"failed"`, and
+#'   the remaining files still run.
 #' @export
 #'
 os_extract_dir <- function(
