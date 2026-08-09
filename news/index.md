@@ -2,6 +2,20 @@
 
 ## openac (development version)
 
+- openac now has a documentation website at
+  <https://jmgirard.github.io/openac/>. It carries a help page for every
+  documented topic in the package, indexed by tool family — program
+  management, ffmpeg and ffprobe, OpenFace, openSMILE, whisper, the tidy
+  readers, and parallelism and progress — alongside the vignettes and
+  the README. It is rebuilt and republished on every push to the default
+  branch, so it tracks the development version rather than the last
+  release.
+
+- The package now names an issue tracker,
+  <https://github.com/jmgirard/openac/issues>, so bug reports have a
+  stated home; `DESCRIPTION` also points at the new site and the source
+  repository.
+
 - [`os_check_audio()`](https://jmgirard.github.io/openac/reference/os_check_audio.md)
   and
   [`aw_check_audio()`](https://jmgirard.github.io/openac/reference/aw_check_audio.md)

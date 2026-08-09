@@ -79,23 +79,23 @@ aw_transcribe_dir(
 
   `model`
 
-  : A required model object produced by `audio.whisper::whisper()`.
+  :   A required model object produced by `audio.whisper::whisper()`.
 
   `language`
 
-  : The language of the audio. Defaults to 'auto'. For a list of all
-    languages the model can handle: see
-    `audio.whisper::whisper_languages()`.
+  :   The language of the audio. Defaults to 'auto'. For a list of all
+      languages the model can handle: see
+      `audio.whisper::whisper_languages()`.
 
   `audio_args`
 
-  : A list of optional arguments to forward to
-    [`aw_prep_audio`](https://jmgirard.github.io/openac/reference/aw_prep_audio.md).
+  :   A list of optional arguments to forward to
+      [`aw_prep_audio`](https://jmgirard.github.io/openac/reference/aw_prep_audio.md).
 
   `whisper_args`
 
-  : A list of optional arguments to forward to
-    `audio.whisper::predict.whisper()`.
+  :   A list of optional arguments to forward to
+      `audio.whisper::predict.whisper()`.
 
 ## Value
 

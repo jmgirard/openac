@@ -2,6 +2,16 @@
 
 Provides R wrappers to open-source affective computing tools.
 
+## See also
+
+Useful links:
+
+- <https://jmgirard.github.io/openac/>
+
+- <https://github.com/jmgirard/openac>
+
+- Report bugs at <https://github.com/jmgirard/openac/issues>
+
 ## Author
 
 **Maintainer**: Jeffrey Girard <me@jmgirard.com>

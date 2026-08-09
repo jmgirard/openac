@@ -97,11 +97,11 @@
 <li>
 <strong><code>ffm</code> is the sharpest.</strong> In openac it is an alias for <code><a href="reference/ffmpeg.html">ffmpeg()</a></code> and returns the tool’s output. In tidymedia it constructs a command object and runs nothing.</li>
 <li>
-<strong>The <code>find_*</code> and <code>set_*</code> pairs read and write different configuration directories.</strong> A tool location recorded with <code><a href="reference/set_program.html">openac::set_ffmpeg()</a></code> is invisible to <code><a href="https://jmgirard.github.io/tidymedia/reference/find_program.html" class="external-link">tidymedia::find_ffmpeg()</a></code>, and the reverse. Register each tool in each package you use it from.</li>
+<strong>The <code>find_*</code> and <code>set_*</code> pairs read and write different configuration directories.</strong> A tool location recorded with <code><a href="reference/set_program.html">openac::set_ffmpeg()</a></code> is invisible to <code>tidymedia::find_ffmpeg()</code>, and the reverse. Register each tool in each package you use it from.</li>
 <li>
 <strong><code><a href="reference/set_program.html">set_program()</a></code> accepts different program names</strong> in each package.</li>
 </ul>
-<p>If you need both, qualify the calls — <code><a href="reference/ffmpeg.html">openac::ffmpeg()</a></code>, <code><a href="https://jmgirard.github.io/tidymedia/reference/ffm.html" class="external-link">tidymedia::ffm()</a></code> — rather than relying on attach order. (Observed against tidymedia at commit <code>b99f7e8</code>, 2026-08-08; the two name sets are compared in full in <code>cairn/references/tidymedia-fit.md</code> in this repository.)</p>
+<p>If you need both, qualify the calls — <code><a href="reference/ffmpeg.html">openac::ffmpeg()</a></code>, <code>tidymedia::ffm()</code> — rather than relying on attach order. (Observed against tidymedia at commit <code>b99f7e8</code>, 2026-08-08; the two name sets are compared in full in <code>cairn/references/tidymedia-fit.md</code> in this repository.)</p>
 </div>
 <div class="section level2">
 <h2 id="code-of-conduct">Code of Conduct<a class="anchor" aria-label="anchor" href="#code-of-conduct"></a>
@@ -162,7 +162,7 @@
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer>

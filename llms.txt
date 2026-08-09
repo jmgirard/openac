@@ -13,7 +13,11 @@ tidy tibble.
 You can install the development version of openac from
 [GitHub](https://github.com/jmgirard/openac) with:
 
-`# install.packages("pak")`` ``pak``::`[`pak`](https://pak.r-lib.org/reference/pak.html)`(``"jmgirard/openac"``)`
+``` r
+
+# install.packages("pak")
+pak::pak("jmgirard/openac")
+```
 
 openac calls external command-line tools; install and register the ones
 you need
@@ -28,7 +32,21 @@ or point openac at an existing install with
 Extract acoustic features from a folder of audio files in parallel, then
 read one result into a tidy tibble:
 
-[`library`](https://rdrr.io/r/base/library.html)`(`[`openac`](https://jmgirard.github.io/openac/)`)`` `` ``# Extract eGeMAPS features from every .wav under audio/ into features/.`` `[`os_extract_dir`](https://jmgirard.github.io/openac/reference/os_extract_dir.md)`(`` `` indir ``=`` ``"audio"``,`` `` inext ``=`` ``"wav"``,`` `` aggdir ``=`` ``"features"``,`` `` config ``=`` ``"egemaps/v02/eGeMAPSv02"`` ``)`` `` ``# Read one aggregate output into a one-row-per-file tidy tibble.`` ``feats`` ``<-`` `[`os_read`](https://jmgirard.github.io/openac/reference/os_read.md)`(``"features/clip01_agg.csv"``)`
+``` r
+
+library(openac)
+
+# Extract eGeMAPS features from every .wav under audio/ into features/.
+os_extract_dir(
+  indir = "audio",
+  inext = "wav",
+  aggdir = "features",
+  config = "egemaps/v02/eGeMAPSv02"
+)
+
+# Read one aggregate output into a one-row-per-file tidy tibble.
+feats <- os_read("features/clip01_agg.csv")
+```
 
 ## Using openac alongside tidymedia
 
@@ -50,18 +68,17 @@ and do the wrong thing:
 - **The `find_*` and `set_*` pairs read and write different
   configuration directories.** A tool location recorded with
   [`openac::set_ffmpeg()`](https://jmgirard.github.io/openac/reference/set_program.md)
-  is invisible to
-  [`tidymedia::find_ffmpeg()`](https://jmgirard.github.io/tidymedia/reference/find_program.html),
-  and the reverse. Register each tool in each package you use it from.
+  is invisible to `tidymedia::find_ffmpeg()`, and the reverse. Register
+  each tool in each package you use it from.
 - **[`set_program()`](https://jmgirard.github.io/openac/reference/set_program.md)
   accepts different program names** in each package.
 
 If you need both, qualify the calls —
 [`openac::ffmpeg()`](https://jmgirard.github.io/openac/reference/ffmpeg.md),
-[`tidymedia::ffm()`](https://jmgirard.github.io/tidymedia/reference/ffm.html)
-— rather than relying on attach order. (Observed against tidymedia at
-commit `b99f7e8`, 2026-08-08; the two name sets are compared in full in
-`cairn/references/tidymedia-fit.md` in this repository.)
+`tidymedia::ffm()` — rather than relying on attach order. (Observed
+against tidymedia at commit `b99f7e8`, 2026-08-08; the two name sets are
+compared in full in `cairn/references/tidymedia-fit.md` in this
+repository.)
 
 ## Code of Conduct
 

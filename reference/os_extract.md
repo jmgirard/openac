@@ -57,19 +57,19 @@ os_extract(
 
   `stream`
 
-  : (numeric, default=0) The index of the audio stream to extract
-    (ffmpeg uses zero-indexing so 0 is the first stream).
+  :   (numeric, default=0) The index of the audio stream to extract
+      (ffmpeg uses zero-indexing so 0 is the first stream).
 
   `overwrite`
 
-  : Should outfile be overwritten if it already exists? It will be
-    skipped otherwise, silently for a direct call. In a batch the row
-    depends on whose job the preparing is: under
-    [`os_prep_audio_dir()`](https://jmgirard.github.io/openac/reference/os_prep_audio_dir.md)
-    it is the whole job, so the row reads `"skipped"`; under
-    [`os_extract_dir()`](https://jmgirard.github.io/openac/reference/os_extract_dir.md)
-    the existing file is reused and openSMILE still runs, so the row
-    reads `"ok"`. Defaults to TRUE.
+  :   Should outfile be overwritten if it already exists? It will be
+      skipped otherwise, silently for a direct call. In a batch the row
+      depends on whose job the preparing is: under
+      [`os_prep_audio_dir()`](https://jmgirard.github.io/openac/reference/os_prep_audio_dir.md)
+      it is the whole job, so the row reads `"skipped"`; under
+      [`os_extract_dir()`](https://jmgirard.github.io/openac/reference/os_extract_dir.md)
+      the existing file is reused and openSMILE still runs, so the row
+      reads `"ok"`. Defaults to TRUE.
 
 ## Value
 

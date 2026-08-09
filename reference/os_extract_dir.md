@@ -61,25 +61,25 @@ os_extract_dir(
 
   `config`
 
-  : (character, default="misc/emo_large") Which configuration file
-    should be used to analyze `infile`? A list of available config files
-    can be generated using
-    [`os_list_configs()`](https://jmgirard.github.io/openac/reference/os_list_configs.md).
+  :   (character, default="misc/emo_large") Which configuration file
+      should be used to analyze `infile`? A list of available config
+      files can be generated using
+      [`os_list_configs()`](https://jmgirard.github.io/openac/reference/os_list_configs.md).
 
   `stream`
 
-  : (numeric, default=0) The index of the audio stream to extract
-    (ffmpeg uses zero-indexing so 0 is the first stream).
+  :   (numeric, default=0) The index of the audio stream to extract
+      (ffmpeg uses zero-indexing so 0 is the first stream).
 
   `overwrite`
 
-  : Should outfile be overwritten if it already exists? It will be
-    skipped otherwise, silently for a direct call. In a batch the row
-    depends on whose job the preparing is: under
-    [`os_prep_audio_dir()`](https://jmgirard.github.io/openac/reference/os_prep_audio_dir.md)
-    it is the whole job, so the row reads `"skipped"`; under
-    `os_extract_dir()` the existing file is reused and openSMILE still
-    runs, so the row reads `"ok"`. Defaults to TRUE.
+  :   Should outfile be overwritten if it already exists? It will be
+      skipped otherwise, silently for a direct call. In a batch the row
+      depends on whose job the preparing is: under
+      [`os_prep_audio_dir()`](https://jmgirard.github.io/openac/reference/os_prep_audio_dir.md)
+      it is the whole job, so the row reads `"skipped"`; under
+      `os_extract_dir()` the existing file is reused and openSMILE still
+      runs, so the row reads `"ok"`. Defaults to TRUE.
 
 ## Value
 
