@@ -124,6 +124,128 @@ install_ffmpeg_win <- function(download_url = NULL, install_dir = NULL) {
 }
 
 
+# Model downloads --------------------------------------------------------------
+
+# The four CEN patch experts OpenFace needs and its release archive does not
+# ship, keyed by the filename they must land under.
+#
+# These were OneDrive links carrying `authkey=` query parameters until
+# 2026-08-08, when M16 ran the installer for real and MEASURED all four
+# answering **HTTP 200 with a 34 KB login.live.com sign-in page**. Nothing
+# reported it: `download.file()` returns 0 for a 200, the file existed and was
+# non-empty, and `install_openface_win()` returned TRUE onto four HTML
+# documents named `.dat`. How long they had been dead is unknowable, which is
+# the point -- see `download_model()` below.
+#
+# The replacements are OpenFace's own PRIMARY links. Upstream's
+# `download_models.ps1` and `download_models.sh` try Dropbox first and fall
+# back to OneDrive; openac had copied only the fallback. All four were measured
+# alive and serving binary on 2026-08-08.
+openface_patch_experts <- c(
+  "cen_patches_0.25_of.dat" =
+    "https://www.dropbox.com/s/7na5qsjzz8yfoer/cen_patches_0.25_of.dat?dl=1",
+  "cen_patches_0.35_of.dat" =
+    "https://www.dropbox.com/s/k7bj804cyiu474t/cen_patches_0.35_of.dat?dl=1",
+  "cen_patches_0.50_of.dat" =
+    "https://www.dropbox.com/s/ixt4vkbmxgab1iu/cen_patches_0.50_of.dat?dl=1",
+  "cen_patches_1.00_of.dat" =
+    "https://www.dropbox.com/s/2t5t1sdpshzfhpj/cen_patches_1.00_of.dat?dl=1"
+)
+
+# The smallest a real patch expert is: the four measured 60.6 MB, 60.6 MB,
+# 154.3 MB and 154.3 MB on 2026-08-08. A floor well under the smallest of them
+# tolerates an upstream re-release; a sign-in page (~34 KB) is four orders of
+# magnitude below it.
+#
+# A function, not a constant, so the mocked installer tests can lower it rather
+# than write 40 MB of fixture to satisfy it. The guard itself is covered by
+# tests that feed `download_model()` a page instead of a model.
+model_byte_floor <- function() 40e6
+
+# Download one model file and refuse anything that is not one.
+#
+# A dead link of this shape does not 404. It redirects to a sign-in page and
+# answers 200, so `download.file()`'s status says success and the only way to
+# tell is to look at what landed. Two independent bars, because either alone
+# has a hole: a byte floor passes a large HTML error page, and a content sniff
+# passes a truncated download. Returning FALSE with a warning naming the URL --
+# rather than aborting -- keeps the installer's documented `logical` contract.
+download_model <- function(url, destfile, floor = model_byte_floor()) {
+  model <- basename(destfile)
+  failed <- tryCatch(
+    {
+      status <- utils::download.file(url = url, destfile = destfile, mode = "wb")
+      if (identical(as.integer(status), 0L)) NULL else "download reported failure"
+    },
+    error = function(e) conditionMessage(e)
+  )
+  if (!is.null(failed)) {
+    cli::cli_warn(c(
+      "Could not download {.file {model}}.",
+      "x" = "{failed}",
+      "i" = "From {.url {url}}"
+    ))
+    return(FALSE)
+  }
+  if (!file.exists(destfile)) {
+    cli::cli_warn(c(
+      "The download of {.file {model}} reported success but wrote no file.",
+      "i" = "From {.url {url}}"
+    ))
+    return(FALSE)
+  }
+  size <- file.size(destfile)
+  if (size < floor) {
+    # Spelled out rather than interpolated raw: glue renders 40e6 as `4e+07`.
+    floor_txt <- format(floor, scientific = FALSE, big.mark = ",")
+    cli::cli_warn(c(
+      "{.file {model}} is {size} byte{?s}, below the {floor_txt}-byte floor for
+       a model file.",
+      "x" = "{.url {url}} is probably serving an error or sign-in page.",
+      "i" = "A real patch expert is tens of megabytes."
+    ))
+    return(FALSE)
+  }
+  if (starts_with_markup(destfile)) {
+    cli::cli_warn(c(
+      "{.file {model}} is a markup document, not a model.",
+      "x" = "{.url {url}} is serving a sign-in or error page."
+    ))
+    return(FALSE)
+  }
+  TRUE
+}
+
+# Does this run of bytes open an HTML or XML document?
+#
+# THE one markup rule. It lives here, in the package rather than the test file,
+# because the real-network test asserts the guard that ships -- a second copy
+# written beside the test would let the two drift and leave the test green over
+# a production sniff that had stopped matching (the divergence M09 removed from
+# the download helper, found again by M16's review).
+#
+# Bytes, not characters: a model file is binary and `readLines()`/`rawToChar()`
+# choke on the embedded nul it is certain to contain. The `<!--` needle is not
+# padding -- the live.com sign-in page measured on 2026-08-08 opens with a
+# copyright comment, so a sniff for `<!DOCTYPE` alone would have missed the
+# exact page this guard exists for.
+raw_is_markup <- function(bytes) {
+  hex <- paste(sprintf("%02x", as.integer(bytes)), collapse = "")
+  any(vapply(
+    c("3c21444f43545950", "3c68746d6c", "3c48544d4c", "3c3f786d6c", "3c212d2d"),
+    function(needle) grepl(needle, hex, fixed = TRUE),
+    logical(1)
+  ))
+}
+
+# The file-shaped view over `raw_is_markup()`, for a download that has landed.
+starts_with_markup <- function(path) {
+  con <- file(path, "rb")
+  on.exit(close(con))
+  raw_is_markup(readBin(con, "raw", n = 512L))
+}
+
+
 # install_openface_win ---------------------------------------------------------
 
 #' Install openface on Windows
@@ -175,33 +297,33 @@ install_openface_win <- function(download_url = NULL, install_dir = NULL) {
   unlink(tf)
   # Update the user config files with the locations of the installed files
   set_openface(file.path(install_dir, "FaceLandmarkVidMulti.exe"))
-  # Download patch experts
-  status1 <-
-    utils::download.file(
-      url = "https://onedrive.live.com/download?cid=2E2ADA578BFF6E6E&resid=2E2ADA578BFF6E6E%2153072&authkey=AKqoZtcN0PSIZH4",
-      destfile = file.path(install_dir, "model", "patch_experts", "cen_patches_0.25_of.dat"),
-      mode = "wb"
-    )
-  status2 <-
-    utils::download.file(
-      url = "https://onedrive.live.com/download?cid=2E2ADA578BFF6E6E&resid=2E2ADA578BFF6E6E%2153079&authkey=ANpDR1n3ckL_0gs",
-      destfile = file.path(install_dir, "model", "patch_experts", "cen_patches_0.35_of.dat"),
-      mode = "wb"
-    )
-  status3 <-
-    utils::download.file(
-      url = "https://onedrive.live.com/download?cid=2E2ADA578BFF6E6E&resid=2E2ADA578BFF6E6E%2153074&authkey=AGi-e30AfRc_zvs",
-      destfile = file.path(install_dir, "model", "patch_experts", "cen_patches_0.50_of.dat"),
-      mode = "wb"
-    )
-  status4 <-
-    utils::download.file(
-      url = "https://onedrive.live.com/download?cid=2E2ADA578BFF6E6E&resid=2E2ADA578BFF6E6E%2153070&authkey=AD6KjtYipphwBPc",
-      destfile = file.path(install_dir, "model", "patch_experts", "cen_patches_1.00_of.dat"),
-      mode = "wb"
-    )
-  if (any(status1, status2, status3, status4)) {
-    warning("File download failed")
+  # Download the patch experts, which the release archive does not ship.
+  patch_dir <- file.path(install_dir, "model", "patch_experts")
+  if (!dir.exists(patch_dir)) {
+    if (!dir.create(patch_dir, recursive = TRUE)) return(FALSE)
+  }
+  # Every model is attempted even after one fails, and the failures are named
+  # together at the end. The four OneDrive links this replaced died as a SET,
+  # and returning at the first would have reported one dead link per run --
+  # each run re-fetching the 130 MB release archive to reach the next one.
+  ok <- vapply(
+    names(openface_patch_experts),
+    function(model) {
+      download_model(
+        url = openface_patch_experts[[model]],
+        destfile = file.path(patch_dir, model)
+      )
+    },
+    logical(1)
+  )
+  if (!all(ok)) {
+    cli::cli_warn(c(
+      "{sum(!ok)} of OpenFace's {length(ok)} patch-expert model{?s} did not
+       download, so this install cannot track faces.",
+      "x" = "Missing: {.file {names(ok)[!ok]}}",
+      "i" = "Each failure is reported above. {.fn install_openface_win} is safe
+             to run again."
+    ))
     return(FALSE)
   }
   return(TRUE)
@@ -232,7 +354,10 @@ install_opensmile_win <- function(download_url = NULL, install_dir = NULL) {
   if (is.null(download_url)) {
     download_url <- paste0(
       "https://github.com/audeering/opensmile/releases/download/",
-      "v3.0.2/opensmile-3.0.2-win-x64.zip"
+      # `opensmile-3.0.2-win-x64.zip` was pinned here and MEASURED 404 on
+      # 2026-08-08 (M16): the v3.0.2 release has never carried that name. The
+      # asset it does carry is below, read off the release's own API listing.
+      "v3.0.2/opensmile-3.0.2-windows-x86_64.zip"
     )
   }
   if (is.null(install_dir)) {

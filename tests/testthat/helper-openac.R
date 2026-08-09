@@ -779,8 +779,13 @@ local_fake_os <- function(sysname, .env = parent.frame()) {
 # could reproduce (M07 B1/P1). It carries no `resolve` list here: the installers
 # look for the files the fake extractor just wrote, so the predicate answers for
 # them, reading the platform `local_fake_os()` names rather than the host's.
+# `content` is what a "downloaded" file holds. The default stands in for an
+# archive nothing reads, but `install_openface_win()` now inspects what landed
+# (M16: four URLs answered 200 with a sign-in page for years), so a test of that
+# guard needs to choose the bytes.
 local_fake_downloads <- function(status = 0L,
                                  extract_creates = character(),
+                                 content = "fake archive",
                                  .env = parent.frame()) {
   state <- new.env(parent = emptyenv())
   state$downloads <- list()
@@ -790,7 +795,7 @@ local_fake_downloads <- function(status = 0L,
     state$downloads[[length(state$downloads) + 1L]] <-
       list(url = url, destfile = destfile, args = list(...))
     dir.create(dirname(destfile), recursive = TRUE, showWarnings = FALSE)
-    writeLines("fake archive", destfile)
+    writeLines(content, destfile)
     status
   }
 

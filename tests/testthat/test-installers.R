@@ -130,6 +130,10 @@ for (fn in suffixed_installers()) {
     local_fake_config()
     local_fake_data_dir()
     state <- local_fake_downloads(extract_creates = fixture$creates)
+    # This test is about the platform guard, not the model-integrity guard, so
+    # the 40 MB floor the fake's 13-byte file cannot clear is lowered rather
+    # than left to warn through every installer in the loop.
+    testthat::local_mocked_bindings(model_byte_floor = function() 0)
 
     expect_no_error(do.call(fn, list()))
     # Proceeding means reaching the download, which is what the wrong-platform
@@ -210,6 +214,10 @@ test_that("install_openface_win() fetches the release and its patch experts", {
   env <- local_install_env("Windows")
   withr::local_options(timeout = getOption("timeout"))
   state <- local_fake_downloads(extract_creates = "FaceLandmarkVidMulti.exe")
+  # The real floor is 40 MB and this fake writes 13 bytes. Lowering it here
+  # keeps this test about WHICH urls are fetched and WHERE they land; the floor
+  # itself is asserted by the two failure tests below.
+  testthat::local_mocked_bindings(model_byte_floor = function() 0)
   install_dir <- withr::local_tempdir()
 
   expect_true(install_openface_win(install_dir = install_dir))
@@ -229,13 +237,102 @@ test_that("install_openface_win() fetches the release and its patch experts", {
   )
   # The four patch-expert models, at the scales OpenFace looks for them under.
   expect_length(urls, 5)
-  expect_true(all(grepl("^https://onedrive\\.live\\.com/download\\?", urls[-1])))
+  # Dropbox, not OneDrive. M16 MEASURED all four OneDrive links answering 200
+  # with a login.live.com page on 2026-08-08; these are the primary links
+  # OpenFace's own download_models scripts try first, which openac had skipped
+  # in favour of upstream's fallback.
+  expect_true(all(grepl("^https://www\\.dropbox\\.com/s/", urls[-1])))
+  expect_false(any(grepl("onedrive", urls, fixed = TRUE)))
   expect_identical(
     download_dests(state)[-1],
     file.path(
       install_dir, "model", "patch_experts",
       paste0("cen_patches_", c("0.25", "0.35", "0.50", "1.00"), "_of.dat")
     )
+  )
+})
+
+test_that("install_openface_win() refuses a model URL serving a sign-in page", {
+  # The failure M16 exists to catch, reproduced at the boundary. `download.file`
+  # reports success (status 0) and writes a file that exists and is non-empty --
+  # every check the installer used to make. What distinguishes it from a model
+  # is its content, so that is what is checked.
+  local_install_env("Windows")
+  withr::local_options(timeout = getOption("timeout"))
+  local_fake_downloads(
+    extract_creates = "FaceLandmarkVidMulti.exe",
+    content = "<!-- Copyright (C) Microsoft Corporation. --><html><body>Sign in"
+  )
+  testthat::local_mocked_bindings(model_byte_floor = function() 0)
+  install_dir <- withr::local_tempdir()
+
+  warnings <- testthat::capture_warnings(
+    result <- install_openface_win(install_dir = install_dir)
+  )
+  expect_false(result)
+  expect_true(any(grepl("markup document", warnings)))
+})
+
+test_that("install_openface_win() refuses a model file below the byte floor", {
+  # The other half. A truncated or error-body download can be perfectly valid
+  # binary and still not be a 60 MB model, so the sniff alone is not enough.
+  local_install_env("Windows")
+  withr::local_options(timeout = getOption("timeout"))
+  local_fake_downloads(extract_creates = "FaceLandmarkVidMulti.exe")
+  install_dir <- withr::local_tempdir()
+
+  # No mocked floor here: the real 40 MB one against the fake's 13 bytes.
+  warnings <- testthat::capture_warnings(
+    result <- install_openface_win(install_dir = install_dir)
+  )
+  expect_false(result)
+  expect_true(any(grepl("below the", warnings)))
+})
+
+test_that("install_openface_win() tries all four models and names every failure", {
+  # The OneDrive set died as a SET (M16's measurement), so an installer that
+  # returns at the first bad model tells the user about one dead link per run --
+  # and each run re-downloads the 130 MB release archive to get there. The
+  # assertion is the count of download attempts, which is what distinguishes
+  # "tried all four" from "stopped at the first"; the fake's 13-byte files fail
+  # the real 40 MB floor, so all four models fail.
+  local_install_env("Windows")
+  withr::local_options(timeout = getOption("timeout"))
+  state <- local_fake_downloads(extract_creates = "FaceLandmarkVidMulti.exe")
+  install_dir <- withr::local_tempdir()
+
+  warnings <- testthat::capture_warnings(
+    result <- install_openface_win(install_dir = install_dir)
+  )
+  expect_false(result)
+
+  # The release archive plus all four patch experts: five attempts, not two.
+  expect_length(download_urls(state), 5L)
+  expect_true(all(grepl(
+    "^https://www\\.dropbox\\.com/s/", download_urls(state)[-1]
+  )))
+
+  # Each failure reported on its own, then one line naming the whole set.
+  expect_length(grep("below the", warnings), 4L)
+  summary <- warnings[grepl("did not download", warnings)]
+  expect_length(summary, 1L)
+  for (scale in c("0.25", "0.35", "0.50", "1.00")) {
+    expect_true(grepl(paste0("cen_patches_", scale, "_of.dat"), summary), info = scale)
+  }
+})
+
+test_that("install_openface_win() reports a download that fails outright", {
+  local_install_env("Windows")
+  withr::local_options(timeout = getOption("timeout"))
+  # Status 1 on the FIRST download aborts before the models are reached, so the
+  # release archive's own failure path is what this covers; the models' is the
+  # two tests above.
+  local_fake_downloads(status = 1L, extract_creates = "FaceLandmarkVidMulti.exe")
+  install_dir <- withr::local_tempdir()
+
+  expect_warning(
+    expect_false(install_openface_win(install_dir = install_dir)),
+    "download failed"
   )
 })
 
@@ -252,7 +349,9 @@ test_that("install_opensmile_win() fetches the pinned 3.0.2 Windows archive", {
     download_urls(state),
     paste0(
       "https://github.com/audeering/opensmile/releases/download/",
-      "v3.0.2/opensmile-3.0.2-win-x64.zip"
+      # `win-x64` was pinned until 2026-08-08 and MEASURED 404 (M16): the v3.0.2
+      # release has no asset by that name. This one it does have.
+      "v3.0.2/opensmile-3.0.2-windows-x86_64.zip"
     )
   )
   expect_identical(extract_dirs(state), install_dir)
