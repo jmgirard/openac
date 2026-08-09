@@ -1,7 +1,7 @@
 # Roadmap
 
 _The only authority on milestone status. Grouped by status, not ID._
-_Last hygiene check: 2026-08-09 (M19 merged and archived after three review rounds — the first two returned it, on guards never reached and on a config check `do.call()` partial-matched past, then on a hand-rolled abort and a swallowed duplicate argument; the third returned nothing. 2 candidates, 2 lessons; the M14 row pruned at the terminal-row cap and 2 stale lessons at theirs)_
+_Last hygiene check: 2026-08-09 (second check same day: board clear, all validate checks green, both gh inboxes empty; candidate sweep merged two pairs whose halves wait on each other — `os_read` fixtures/`os_fix_csv`, and the macOS OpenFace installer/its dispatchers — leaving 24 rows, and routed the unchecked second ffprobe query to `/hotfix`)_
 _Released 0.1.0 (GitHub) 2026-07-11._
 
 ## Milestones
@@ -18,15 +18,13 @@ _Released 0.1.0 (GitHub) 2026-07-11._
 <!-- unnumbered ideas; one line each: idea — added YYYY-MM-DD — links -->
 - The tool path still writes console formatting into the batch `error` column — `run_checked()` was outside M19's scope, so it keeps a wrapped, glyphed message and carries no `defect` field, and `dir_walk()`'s warning names the file twice for a tool failure where a guard failure now names it once — added 2026-08-09 — M19 review round 3, F1 (78); M17 Out
 - Five guard-message findings the M19 reviews logged below the action bar in all three rounds: `abort_file()` messages name the file twice, once as basename and once inside the path (40); `abort_file()`'s `class` argument is dead and `openac_file_guard` is asserted nowhere (48); `aw_transcribe_wav()`'s `source != infile` branch is untested (42); the stream-index message pairs a 0-based index with a count (45); `os_extract_wav()` recommends `os_prep_audio()` on a file openac just ran it on (45) — added 2026-08-09 — M19 review rounds 1-3
-- Validate `os_read` fixtures against a real openSMILE run (name quoting, `frameTime` in functionals output) — added 2026-07-11 — M01 review F5
+- Validate `os_read` fixtures against a real openSMILE run (name quoting, `frameTime` in functionals output), then drop/rework `os_fix_csv` on-disk normalization if that run proves it redundant — the second half waits on the first half's evidence — added 2026-07-11 — M01 review F5; M01; merged 2026-08-09
 - Evaluate wrapping modern ML tools (e.g., HuggingFace models) against the add-tool bar — added 2026-07-11 — DESIGN "Purpose & Scope"
-- Drop/rework `os_fix_csv` on-disk normalization once `os_read` proves it redundant — added 2026-07-11 — M01
 - Reader options deferred: `long=TRUE` pivot; OpenFace feature-block subsetting; whisper `$tokens` (separate reader) — added 2026-07-11 — M01–M03; RR01/D-008
 - Let `aw_read` also accept a bare `$data` data.frame (convenience) — added 2026-07-11 — RR01 R6
 - Multi-file reading idiom / `id`-column convention for readers (GP2 capability) — added 2026-07-11 — RR01 R7
 - CRAN readiness: `audio.whisper` distribution decided (`Remotes:` must go; Additional_repositories vs. wrapping whisper.cpp — deferred to submission time; the two audio.whisper-expanding candidates above are on hold behind it) — added 2026-07-11 — design interview; the wrapper-testing-contract half became M06+M07 on 2026-08-07
-- A working macOS OpenFace installer (`install_openface_mac()` was an inert stub and was deleted; the Homebrew/cmake build it sketched is the starting point) — added 2026-08-07 — M07
-- Platform-aware installer dispatchers (`install_openface()` detecting the OS and delegating), amending DESIGN's `_win`/`_mac` convention — needs a D-entry — added 2026-08-07 — M07 (guards only)
+- A working macOS OpenFace installer (`install_openface_mac()` was an inert stub and was deleted; the Homebrew/cmake build it sketched is the starting point), and the platform-aware dispatchers on top of it (`install_openface()` detecting the OS and delegating), which amend DESIGN's `_win`/`_mac` convention and need a D-entry — the dispatcher is unbuildable until the mac installer exists — added 2026-08-07 — M07; M07 (guards only); merged 2026-08-09
 - Scout OpenFace successors (LibreFace / py-feat / OpenFace 3.0) against the add-tool bar — added 2026-07-11 — design interview
 - Run-time tool-version capture (surface tool versions in outputs/attributes for methods reporting and drift debugging) — added 2026-07-11 — design interview
 - Add the `test-coverage` / Codecov workflow (usethis `use_github_action("test-coverage")`); needs a `CODECOV_TOKEN` repository secret only the maintainer can add, so an unauthenticated job would block every later merge — added 2026-08-07 — M06 review 2; the check-standard half became M08 on 2026-08-07
