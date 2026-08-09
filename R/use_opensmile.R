@@ -610,15 +610,19 @@ os_extract_dir <- function(
 # saying so is what turns a batch row from "a path does not exist" into
 # something the user can act on. Adding a caller that does not have openSMILE
 # write the file first makes that attribution false.
+#
+# The guard goes through `abort_file()` like every other one in the batch path.
+# It used to build its own `cli::cli_abort()`, which is how it kept the hard
+# line break and the bullet glyph the shared helper had already removed
+# everywhere else -- a guard that opts out of the helper opts out of its fixes
+# (M19 review round 2, F1).
 os_fix_csv <- function(infile) {
   # Validate input
+  check_file_arg(infile)
   if (!file.exists(infile)) {
-    cli::cli_abort(
-      c(
-        "Could not tidy the openSMILE output at {.file {infile}}.",
-        "x" = "openSMILE wrote no output there."
-      ),
-      class = "openac_file_guard"
+    abort_file(
+      infile,
+      "openSMILE wrote no output at {.file {guarded_path}}."
     )
   }
   # Read in opensmile output in original format

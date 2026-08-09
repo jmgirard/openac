@@ -69,8 +69,8 @@ messages; this milestone is scoped to what a batch row can carry.
 - AC1 → T1, T2, T3, T8
 - AC2 → T1, T3
 - AC3 → T4, T5, T9
-- AC4 → T3, T6
-- AC5 → T7, T10
+- AC4 → T3, T6, T11
+- AC5 → T7, T10, T11, T12
 
 ## Tasks
 
@@ -100,6 +100,13 @@ messages; this milestone is scoped to what a batch row can carry.
 - [x] T10 Review round 1, actioned beyond the criteria: the `error` column is
       one unglyphed line naming the file once (F14), and the DESIGN/NEWS
       claims narrow to what the branch does (F8).
+- [x] T11 Review round 2, F1/F2/F3: the `error` column carries plain data —
+      `os_fix_csv()` routed through `abort_file()` so round 1's fix reaches it,
+      no ANSI escapes baked in by the eager format, and the property asserted
+      over every guard case on the RAW message rather than the collapsed one.
+- [ ] T12 Review round 2, F6 (and F5, below the bar, same helper):
+      `match_formals()` rejects two prefixes of one formal instead of swallowing
+      the second, and does not partial-match formals declared after `...`.
 
 ## Work log
 
@@ -127,6 +134,10 @@ messages; this milestone is scoped to what a batch row can carry.
 - 2026-08-09: T10 F8 — the DESIGN Known-issues sentence and the NEWS entries narrowed to what the branch does. Two claims were false and are gone: that EVERY per-file guard routes through `abort_file()` (`os_fix_csv()` hand-rolls one, and `check_file_arg()` names no file), and that `config` is resolved once rather than per file (`os_extract_wav()` still resolves it, so the count is N+1). The third, that a bad `config` costs no ffprobe rounds, was false only under F5 and is now true and asserted.
 - 2026-08-09: T8-T10 verify slot MEASURED on R 4.6.1 / macOS 15: `devtools::document()` writes no diff, `devtools::test()` 1009 tests 0 failures 0 errors 6 skips, `devtools::check()` Status OK — 0 errors, 0 warnings, 0 notes. The round's own delta was measured by stashing it: the same command at commit 882df74 reports 928 passing, so this round adds 81. That 928 supersedes the `308` the T7 line above records for the same command — T7's figure is not reproducible at the commit it names and the procedure behind it is unknown, so it is superseded rather than relied on.
 - 2026-08-09: review round 2 returned the milestone to `in-progress` (defect return 2). No acceptance criterion failed — all five verified with fresh evidence — but two findings scored >= 90 on user-facing defects: `os_fix_csv()` hand-rolls its abort, so round 1's F14 fix never reached the one guard whose message still carries a newline and a bullet glyph into the `error` column (falsifying NEWS, DESIGN and the AC4 evidence line the branch itself added), and `match_formals()` turns R's duplicate-argument error into silence, swallowing a second supplied argument into `...`. Also actioned: `abort_file()` bakes ANSI colour codes into the same column, and no test could have caught any of it because `collapsed_guard()` deletes the newline under test.
+- 2026-08-09: minor amendment — T11 and T12 added for the round-2 return, grouped by fix rather than by finding: F1, F2 and F3 are one property of the `error` column (plain data, not console output) and share a test, F6 and F5 are one helper. The Coverage map gains T11 under AC4 (it rewrites the message AC4 reads) and T11/T12 under AC5. No acceptance criterion's text changes: round 2 falsified none.
+- 2026-08-09: implement gate chose (a) routing `os_fix_csv()` through `abort_file()` and letting its wording become the shared shape over keeping the bespoke wording with a second copy of the flattening, because a guard that opts out of the helper is exactly how F14's fix missed it; (b) rejecting a duplicate-prefix argument once, pre-flight, over leaving it for `do.call()` to reject per file, on the plan gate's own reasoning that a batch-wide argument error is not a per-file outcome; (c) fixing F5's post-`...` partial match in the same pass, three lines inside the helper already being rewritten.
+- 2026-08-09: T11 wrote the property test first over the same `guard_cases()` table the collapsed assertions read, at `cli.width = 40` and `cli.num_colors = 256` so a console-formatted message must misbehave, and MEASURED it red on both counts. F1 reproduced verbatim at those settings: `os_fix_csv()`'s `conditionMessage()` returned `"Could not tidy the openSMILE\noutput at\n'...clip.csv'.\n<glyph> openSMILE wrote no output there."` F3 reproduced across every `abort_file()` case as `\033[34m`-wrapped paths. Fixes: `os_fix_csv()` routed through `abort_file()` (its message becomes the shared shape, and AC4's two parts — the full path and the openSMILE attribution — survive the rewording, which is what its existing test asserts); `cli::ansi_strip()` as the last step of both formats in `abort_file()`, unconditional rather than an option set around the call. The round-1 F14 test gained the colour assertion it lacked.
+- 2026-08-09: T11 also corrected DESIGN's Known-issues sentence in place: it named `os_fix_csv()` as one of two guards outside `abort_file()`, which this task makes false, and omitted `os_check_config()`, which the round-2 review logged below the bar (F12) as the real third. It now names the two that are actually outside and why each is.
 
 ## Decisions
 

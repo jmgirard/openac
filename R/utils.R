@@ -126,6 +126,15 @@ dir_outputs <- function(infiles, indir, outdir, ext) {
 # `"Could not process 'clip.mp4'.\n<glyph> No file exists at ..."` (M19 review
 # round 1, F14).
 #
+# Formatting eagerly trades one console artefact for another: `format_inline()`
+# colourizes `{.file}` and `{.val}` whenever colours are on, so the escapes land
+# in the same column the wrap and the glyph used to (M19 review round 2, F3).
+# MEASURED 2026-08-09 with `cli.num_colors = 256`: `"Could not process
+# \033[34mclip.wav\033[39m: ..."`. `ansi_strip()` here is unconditional rather
+# than an option set around the call, so the column is plain text however cli
+# decides to colour -- and it is the LAST step, so nothing formatted afterwards
+# can reintroduce them.
+#
 # The condition also carries `defect` -- the same text WITHOUT the leading
 # "Could not process <file>". `dir_walk()`'s warning already opens with the
 # basename, so it reads that field and names the file once; the `error` column
@@ -138,10 +147,14 @@ abort_file <- function(file,
   envir <- rlang::env(caller, guarded_name = basename(file), guarded_path = file)
   # Source-formatting whitespace: these templates are wrapped and indented to
   # fit the R sources, and cli keeps that whitespace verbatim in inline output.
-  defect <- cli::format_inline(gsub("[[:space:]]+", " ", message), .envir = envir)
-  full <- cli::format_inline(
-    "Could not process {.file {guarded_name}}: {defect}",
-    .envir = rlang::env(envir, defect = defect)
+  defect <- cli::ansi_strip(
+    cli::format_inline(gsub("[[:space:]]+", " ", message), .envir = envir)
+  )
+  full <- cli::ansi_strip(
+    cli::format_inline(
+      "Could not process {.file {guarded_name}}: {defect}",
+      .envir = rlang::env(envir, defect = defect)
+    )
   )
   rlang::abort(
     full,

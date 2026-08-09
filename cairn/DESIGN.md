@@ -285,10 +285,13 @@ them without attaching the upstream packages.
   now aborts through `abort_file()` (`R/utils.R`), whose message leads with the
   file and states the defect on one line, so a failed row reads the same way
   whether a guard or a tool stopped it. Two kinds sit outside that helper and
-  are not defects in it (**M19 review round 1**): `os_fix_csv()` hand-rolls an
-  abort of the same shape, and `check_file_arg()` rejects an `infile` that is
-  not one path at all, where there is no file to name and the argument is named
-  instead. `os_check_config()` names the config it could not resolve, and
+  are not defects in it (**corrected 2026-08-09, M19 review round 2**,
+  superseding a reading that counted `os_fix_csv()` among them and omitted
+  `os_check_config()`): `check_file_arg()` rejects an `infile` that is not one
+  path at all, where there is no file to name and the argument is named
+  instead, and `os_check_config()` is about a batch-wide argument rather than
+  a file, though `os_extract_wav()` reaches it per file.
+  `os_check_config()` names the config it could not resolve, and
   `os_extract_dir()` validates it once before the loop — so a bad `config`
   costs no ffprobe rounds and produces no rows, though `os_extract_wav()` still
   resolves it per file, making the count N+1 rather than 1. The `*_dir()`

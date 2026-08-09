@@ -350,6 +350,43 @@ for (case in guard_cases()) {
   })
 }
 
+# --- review round 2: the error column is plain data, in EVERY guard -----------
+#
+# Round 1's F14 fix lives inside `abort_file()`, so a guard building its own
+# `cli_abort()` never received it: `os_fix_csv()` was still shipping a hard line
+# break and a bullet glyph into the `error` column (round 2, F1). The eager
+# `format_inline()` that fixed the others has its own leak -- it bakes ANSI
+# colour codes in whenever colours are on (F3). Neither was catchable, because
+# every assertion above reads a whitespace-COLLAPSED message and
+# `gsub("\\s+", " ", ...)` deletes the newline under test (F2).
+#
+# So this loop reads the RAW `conditionMessage()`, over the same case table, and
+# under conditions chosen to make a console-formatted message misbehave: a
+# 40-column width, so anything that wraps wraps, and 256 colours, so anything
+# that colourizes does.
+
+raw_guard <- function(expr) {
+  cnd <- rlang::catch_cnd(expr, classes = "error")
+  if (is.null(cnd)) {
+    return(NA_character_)
+  }
+  conditionMessage(cnd)
+}
+
+for (case in guard_cases()) {
+  test_that(paste0("the message is one plain line -- ", case$label), {
+    withr::local_options(cli.width = 40, cli.num_colors = 256)
+    infile <- if (is.null(case$file)) local_media(".wav") else case$file
+
+    msg <- raw_guard(case$run(infile))
+
+    expect_false(is.na(msg), info = case$label)
+    expect_false(grepl("\n", msg, fixed = TRUE), info = case$label)
+    expect_false(grepl("✖", msg, fixed = TRUE), info = case$label)
+    expect_identical(msg, cli::ansi_strip(msg), info = case$label)
+  })
+}
+
 # --- the eight of_extract() flags, each its own guard -------------------------
 
 for (flag in c("fp2D", "fp3D", "pdm", "pose", "gaze", "aus", "wild", "multiview")) {
@@ -659,6 +696,7 @@ test_that("a failed row's error is one line, unglyphed, and names the file once"
   expect_identical(out$status, "failed")
   expect_false(grepl("\n", out$error, fixed = TRUE))
   expect_false(grepl("✖", out$error, fixed = TRUE))
+  expect_identical(out$error, cli::ansi_strip(out$error))
   # The row's own message still names the file -- that is AC1 -- but the
   # warning, which already leads with the basename, must not say it twice.
   expect_match(out$error, "clip.mp4", fixed = TRUE)
