@@ -837,6 +837,24 @@ extract_dirs <- function(state) {
   vapply(state$extracts, function(x) as.character(x$dir), character(1))
 }
 
+# A queued `local_fake_tools()` result standing in for a tool that exits
+# non-zero -- the unprobeable file M14 exists for.
+#
+# MEASURED 2026-08-08 (R 4.6.1, macOS): `system2(stdout = TRUE, stderr = TRUE)`
+# on a non-zero exit returns the output with a `status` attribute AND emits R's
+# own warning quoting the whole command line --
+# `running command ''ls' /nonexistent-zzz 2>&1' had status 1`. Both halves are
+# reproduced here, because `ffp_count_streams()` reads the first and muffles the
+# second, and a fake carrying only the attribute could not show the muffling.
+fake_nonzero_exit <- function(status = 1L, output = "ffprobe: Invalid data") {
+  force(status)
+  force(output)
+  function(command, args) {
+    warning(sprintf("running command '%s' had status %d", basename(command), status))
+    structure(output, status = status)
+  }
+}
+
 # Every warning `expr` emits, in order, as a character vector.
 #
 # `expect_warning()` consumes ONE warning and matches it against a regexp, which

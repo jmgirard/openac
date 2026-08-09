@@ -157,23 +157,6 @@ test_that("ffp_count_streams() counts each stream combination", {
   expect_equal(ffp_count_streams(infile), c(Video = 0, Audio = 0))
 })
 
-# A queued result standing in for a tool that exits non-zero.
-#
-# MEASURED 2026-08-08 (R 4.6.1, macOS): `system2(stdout = TRUE, stderr = TRUE)`
-# on a non-zero exit returns the output with a `status` attribute AND emits R's
-# own warning quoting the whole command line --
-# `running command ''ls' /nonexistent-zzz 2>&1' had status 1`. Both halves are
-# reproduced here, because `ffp_count_streams()` reads the first and muffles the
-# second.
-fake_nonzero_exit <- function(status = 1L, output = "ffprobe: Invalid data") {
-  force(status)
-  force(output)
-  function(command, args) {
-    warning(sprintf("running command '%s' had status %d", basename(command), status))
-    structure(output, status = status)
-  }
-}
-
 test_that("ffp_count_streams() reports a nonexistent file rather than aborting", {
   # Was `stopifnot(file.exists(infile))`, which killed the whole batch (GP6).
   local_fake_tools()

@@ -153,6 +153,22 @@ test_that("aw_prep_audio() rejects a stream the file does not have", {
   expect_error(aw_prep_audio(infile, outfile, stream = 3), "Audio")
 })
 
+test_that("aw_prep_audio() aborts on a file it cannot probe, naming it", {
+  # An abort rather than a warn-and-skip, deliberately: dir_walk() records a row
+  # as FAILED only on an error, so a skip here would report the bad file as a
+  # success in the batch table.
+  infile <- local_media()
+  outfile <- local_outpath()
+  state <- local_fake_tools(results = list(fake_nonzero_exit()))
+
+  suppressWarnings(
+    expect_error(aw_prep_audio(infile, outfile), basename(infile))
+  )
+
+  # ffmpeg was never reached: the count is the gate.
+  expect_identical(boundary_tools(state), "ffprobe")
+})
+
 test_that("aw_prep_audio(afilters = TRUE) inserts the filter chain", {
   infile <- local_media()
   outfile <- local_outpath()

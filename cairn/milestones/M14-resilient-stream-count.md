@@ -69,7 +69,7 @@ opportunistic per DESIGN's Conventions. Argument-assembly changes → M13.
 - [x] T2 Give `os_check_audio` and `aw_check_audio` their `NA` branch
       (`R/use_opensmile.R:112`, `R/use_whisper.R:18`) — `FALSE` plus a warning
       naming the file; tests first.
-- [ ] T3 Give `aw_prep_audio` its `NA` branch (`R/use_whisper.R:102`, replacing
+- [x] T3 Give `aw_prep_audio` its `NA` branch (`R/use_whisper.R:102`, replacing
       the `stopifnot` comparison that `NA` would otherwise poison) and pin
       `aw_transcribe`'s existing branch (`R/use_whisper.R:266`); tests first.
 - [ ] T4 Add the three-input batch test for AC3 against `aw_prep_audio_dir()`.
@@ -81,9 +81,9 @@ opportunistic per DESIGN's Conventions. Argument-assembly changes → M13.
 - 2026-08-08: created by /milestone-plan.
 - 2026-08-08: plan chose a separate milestone depending on M13 over folding this into M13, because both rewrite ffp_count_streams — M13 its argument assembly, M14 its failure signal — and combined they cross the acceptance-criteria and task tripwires; falsified by the two edits proving inseparable in practice, i.e. M13 unable to convert R/use_ffprobe.R:51 without also deciding the NA contract.
 - 2026-08-08: plan chose to split the NA disposition by caller — FALSE-plus-warning for the two check_audio predicates, cli_abort for aw_prep_audio — over one uniform disposition, because dir_walk records a row as failed only on an error (R/utils.R:118-127), so a warning-and-skip in aw_prep_audio would leave AC3's bad file reported as a success; falsified by a caller for which neither shape fits.
-
 - 2026-08-08: T1 — `ffp_count_streams()` returns NA counts with a warning on a nonexistent file and on a non-zero ffprobe exit, read from the `status` attribute `system2(stdout = TRUE)` sets (measured, R 4.6.1); R's own status warning is muffled so one warning naming the file reaches the caller. A missing ffprobe still aborts (question gate).
 - 2026-08-08: T2 — `os_check_audio()` and `aw_check_audio()` return FALSE on an NA count, before their second ffprobe query (which would fail on the same file); their own message is verbose-gated per the question gate, matching the sibling "no audio stream" warning. Added a `collect_warnings()` test helper: nested `expect_warning()` is order-dependent and misreported which of the two warnings was missing.
+- 2026-08-08: T3 — `aw_prep_audio()` aborts naming the file on an NA count (dir_walk records a row as failed only on an error); `aw_transcribe()`'s existing `is.na(has_audio)` branch pinned by a test that discriminates it from the tryCatch fallback via the probe warning, verified by mutating the NA return to an abort and observing the test red on that assertion.
 
 ## Decisions
 
