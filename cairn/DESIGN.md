@@ -253,7 +253,10 @@ them without attaching the upstream packages.
   now contractual: `ffp_count_streams()` returns `NA` counts with a warning
   naming an unprobeable file rather than aborting, and each of its four callers
   disposes of `NA` explicitly (`os_check_audio`/`aw_check_audio` return `FALSE`,
-  `aw_prep_audio` aborts naming the file, `aw_transcribe` skips it). What that
+  `aw_prep_audio` aborts naming the file, and `aw_transcribe` **aborts naming
+  the file** — **corrected 2026-08-09, M18**: it used to skip such a file,
+  conflating "could not be probed" with "has no audio", and only the latter is
+  a deliberate skip). What that
   buys at the BATCH level is uneven, and MEASURED 2026-08-08 rather than
   inferred from the callers: `aw_prep_audio_dir()` records the bad file as a
   failed row naming it; `os_extract_dir()` records a failed row naming the file and
@@ -261,10 +264,16 @@ them without attaching the upstream packages.
   `stopifnot()` deparse `file.exists(infile) is not TRUE`, about a temporary wav
   that was never written — MEASURED 2026-08-09, it now reads `Could not process
   'clip.mp4'. ffmpeg exited with status 183. …`);
-  and `aw_transcribe_dir()` records it as a **success**, because
-  `aw_transcribe()` skips such a file with a message and returns `NULL`, which
-  `dir_walk()` cannot tell from a completed transcription (M18). A
-  per-file disposition is not a per-file outcome until the batch table shows it.
+  and `aw_transcribe_dir()` records a failed row naming the file
+  (**corrected 2026-08-09, M18**: it previously recorded a **success**, because
+  `aw_transcribe()` skipped such a file with a message and returned `NULL`,
+  which `dir_walk()` could not tell from a completed transcription). A
+  per-file disposition is not a per-file outcome until the batch table shows it,
+  and since **M18** that table has three states rather than two: `dir_walk()`
+  adds a `status` column of `"ok"`/`"skipped"`/`"failed"`, with `success` now
+  `status == "ok"`, so a file a wrapper deliberately declines
+  (`skip_file()`, `R/utils.R`) is no longer indistinguishable from one it
+  processed.
   (`os_prep_audio_dir()` was the second such table until **M17, 2026-08-08**,
   which made a non-zero ffmpeg exit that file's own failure — see below.)
   Resilience is ad hoc elsewhere: the `stopifnot(file.exists())` guards in

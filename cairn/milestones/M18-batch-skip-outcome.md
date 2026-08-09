@@ -1,6 +1,6 @@
 # M18: A skipped file is a skip, not a success
 
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** normal
 - **Depends on:** M17
 - **Driving RR:** —
@@ -88,7 +88,7 @@ plumbing that work needs, so it is planned after this one lands, not now.
       `R/use_opensmile.R:229-232`, `:403-406`; `R/use_openface.R:126-129`) and
       run `devtools::document()`.
 - [x] T5 Replace the KNOWN GAP test and update the helper and its comment.
-- [ ] T6 NEWS entry; `devtools::test()`; `devtools::check()`.
+- [x] T6 NEWS entry; `devtools::test()`; `devtools::check()`.
 
 ## Work log
 
@@ -104,6 +104,8 @@ plumbing that work needs, so it is planned after this one lands, not now.
 - 2026-08-09: T3 discovered sub-task — `test-whisper-transcribe.R:278` pinned the old conflated branch; rewritten to assert the abort, keeping its warning-based discriminator for the NA path.
 - 2026-08-09: T5 KNOWN GAP test replaced by one asserting both split states; `dir_walk_reports_failure()` RETIRED (its sole caller was that test, and its column-set proxy would now report every table) with a comment in its place, and its guarantee re-pinned directly by an all-ok batch test asserting the exact column set.
 - 2026-08-09: T4 five `*_dir()` `@return` blocks document the `status` vocabulary and that `success` is `status == "ok"`; both `overwrite` `@param`s note the batch now records the skip; `devtools::document()` re-run, `devtools::test()` clean (803 pass).
+- 2026-08-09: T6 NEWS entry added and the previous entry's now-false tail ("`aw_transcribe_dir()` … still records such a file as a success") corrected in place; `devtools::check()` **Status: OK** — 0 errors, 0 warnings, 0 notes, the spelling comparison clean after rewording two words the change introduced.
+- 2026-08-09: DESIGN Known-issues corrected in place (marked, 2026-08-09 M18) on two claims this milestone falsified — `aw_transcribe` skipping an unprobeable file, and `aw_transcribe_dir()` recording it as a success — and the three-state table recorded there.
 - 2026-08-09: amendment — AC2's run-time wrapper list moves from a `R/*.R` grep to `asNamespace("openac")`; MEASURED an installed package's `R/` holds only the lazy-load DB (withr: `withr`, `withr.rdb`, `withr.rdx`), so the grep would match nothing under `R CMD check` and the criterion would be vacuous there.
 
 ## Decisions
