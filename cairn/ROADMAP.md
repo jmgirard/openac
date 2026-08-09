@@ -8,7 +8,7 @@ _Released 0.1.0 (GitHub) 2026-07-11._
 
 | ID | Title | Status | Depends on | Priority | File/Archive |
 |---|---|---|---|---|---|
-| M17 | A tool that exited non-zero is a failed file | in-progress | — | high | milestones/M17-tool-exit-status.md |
+| M17 | A tool that exited non-zero is a failed file | review | — | high | milestones/M17-tool-exit-status.md |
 | M18 | A skipped file is a skip, not a success | planned | M17 | normal | milestones/M18-batch-skip-outcome.md |
 | M19 | A guard that names no file | planned | — | normal | milestones/M19-guards-name-the-file.md |
 | M13 | Quote at the process boundary, not at the call site | done | — | high | milestones/archive/M13-boundary-quoting.md |

@@ -1,6 +1,6 @@
 # M17: A tool that exited non-zero is a failed file
 
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** high
 - **Depends on:** —
 - **Driving RR:** —
@@ -85,7 +85,7 @@ collisions → the standing ROADMAP candidate, behind M18.
 - [x] T5b (added at implementation) A GP7 layer-2 test in
       `test-real-tools.R`: a real failing ffmpeg really sets the status the
       wrapper reads — the one assertion the mocked boundary cannot make.
-- [ ] T6 `devtools::document()`, `devtools::test()`, `devtools::check()`.
+- [x] T6 `devtools::document()`, `devtools::test()`, `devtools::check()`.
 
 ## Work log
 
@@ -97,6 +97,7 @@ collisions → the standing ROADMAP candidate, behind M18.
 - 2026-08-08: T1–T5 done. `run_checked()` added to R/run_tool.R and wired into the four per-file sites; 17 tests in the new test-tool-exit-status.R, red before the change (16 failures) and green after; suite 753 pass / 0 fail / 6 pre-existing skips.
 - 2026-08-08: D-010's command-contract gate reddened on the new function, exactly as designed — `run_checked` entered the computed `system2` closure with no command test. Satisfied with a real command test asserting it forwards its tokens quoted, not with a deferral entry.
 - 2026-08-08: added T5b, a GP7 layer-2 real-ffmpeg test, after noting the mocked suite is structurally blind to whether a real failing tool sets `status` at all — the shape of blindness M16 found in the mocked installer suite. Mutation-verified: neutering the check reds it (2 failures), restoring it passes 44.
+- 2026-08-08: T6 done, status → review. `devtools::check()` 0 errors / 0 warnings / 0 notes; `devtools::document()` no drift; suite 753 pass / 0 fail; real-tools layer 44 pass with ffmpeg, ffprobe and openSMILE present, OpenFace and audio.whisper skipped as absent.
 - 2026-08-08: plan gate chose three milestones over one because the combined scope is ~15 criteria and ~20 tasks, well past the split tripwires; falsified by the three proving inseparable in implementation.
 
 ## Decisions
