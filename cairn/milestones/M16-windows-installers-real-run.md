@@ -311,3 +311,47 @@ F23 [22]; F24 [15].
 
 **Disposition: returned to `in-progress`.** The changelog gate failed and the
 dependency question gate was never held; neither is review's to settle.
+
+### Review pass 2 — 2026-08-08, at e664d0e, after the return
+
+Fresh evidence at the reviewed commit, not carried over from pass 1:
+
+- AC1 — `devtools::test()`: 662 pass, 0 fail, 6 skips. The four real-installer
+  tests skip per-test with their stated reasons and the `top_level_skips()`
+  guard passes over the file, unchanged by T7's rewrite of it.
+- AC2 — completeness re-derived after T7 touched the probe: `https://` outside
+  roxygen matches **8 lines** in `R/programs_install.R` building **9 distinct**
+  URLs (`:363` branches on `arch`), and the probe's `urls` vector still holds
+  exactly 9. The measured statuses and sizes remain the Windows run's record —
+  unreproducible here, and unchanged by this pass.
+- AC3 — the repointed URLs are unchanged; what changed is the failure branch
+  the criterion names. It said the installer must "fail naming the dead link
+  instead of returning `TRUE`", and after T9 it names **every** dead link
+  rather than the first, which satisfies the criterion more completely than the
+  code reviewed in pass 1 did. Five mocked tests now cover
+  `install_openface_win()`'s paths.
+- AC4 — the real test's assertions now call the shipped guard
+  (`openac:::starts_with_markup()`) instead of a local copy of its rule, so
+  what AC4 asserts and what ships can no longer diverge. The needle set went
+  from three copies to one: `grep -c` over `R/` and `tests/` returns 1.
+- AC5 — DESIGN's OneDrive entry is unchanged by this pass and still annotated
+  with the measurement and its date.
+- AC6 — `devtools::check()` at e664d0e: **0 errors, 0 warnings, 0 notes**.
+  `devtools::document()` produces no diff. All five `R-CMD-check` jobs green on
+  #16 (run 31290714879).
+
+**Consistency gate.** `cairn_validate`: all 16 checks PASS, exit 0. No principle
+changed, so `cairn_impact` is skipped. Toolchain slot: `document()` no-diff ✓;
+generated files ✓; README untouched ✓; no `_pkgdown.yml`; no new top-level
+files; `check()` clean ✓. **The changelog check now passes** — `NEWS.md` gains
+16 lines, and each behavior it asserts is covered by a test that fails without
+it.
+
+**Fresh-context review over the five new commits.** Same three lenses plus a
+scorer. The prior-PR-comments lens reports **no findings**, confirming F3 and
+F10 resolved without regression, and records that its GitHub probe returned an
+empty comment set so the per-PR walk was skipped. The blame-history lens
+reports **no findings**: it verified the `capture_warnings()` rewrite still
+identifies each warning by matcher rather than weakening to a bare capture, that
+`raw_is_markup()` is byte-identical to the function it split, and that D-018 is
+consistent with D-005/D-011 and accurately describes what the code does.
