@@ -82,13 +82,30 @@ os_list_configs <- function() {
 #' }
 #' @export
 os_check_config <- function(config) {
-  # Validate input
-  stopifnot(rlang::is_string(config))
+  # Validate input. This guard names no file, and cannot: `config` is a
+  # batch-wide argument rather than an input, and since M19 `os_extract_dir()`
+  # resolves it BEFORE `dir_walk()` is entered, so an unresolvable config aborts
+  # the batch with no row to carry a message. What it owes instead is the value
+  # it could not resolve -- the old message named neither the config nor where
+  # to look, so a typo in one of `os_list_configs()`'s several dozen names cost
+  # a batch and told the user nothing about which name was wrong.
+  if (!rlang::is_string(config)) {
+    cli::cli_abort(
+      "{.arg config} must be a single string, not {.obj_type_friendly {config}}."
+    )
+  }
   # Strip away file extensions
   config_sans <- tools::file_path_sans_ext(config)
   configs_sans <- tools::file_path_sans_ext(os_list_configs())
   if (config_sans %in% configs_sans == FALSE) {
-    cli::cli_abort("Config file not found in opensmile installation.")
+    cli::cli_abort(
+      c(
+        "Can't find the openSMILE config {.val {config}}.",
+        "i" = "{.run openac::os_list_configs()} lists the configs this
+               openSMILE installation carries."
+      ),
+      class = "openac_config_not_found"
+    )
   }
   # Get absolute path to config
   fd <- dirname(find_opensmile())
@@ -111,8 +128,13 @@ os_check_config <- function(config) {
 #' @export
 os_check_audio <- function(infile, verbose = FALSE) {
   # Validate input
-  stopifnot(file.exists(infile))
-  stopifnot(rlang::is_bool(verbose))
+  if (!file.exists(infile)) {
+    abort_file(infile, "No file exists at {.file {guarded_path}}.")
+  }
+  if (!rlang::is_bool(verbose)) {
+    abort_file(infile, "{.arg verbose} must be {.code TRUE} or {.code FALSE},
+                        not {.obj_type_friendly {verbose}}.")
+  }
   # Count streams
   streams <- ffp_count_streams(infile)
   # A file ffprobe could not read cannot be checked, and every test below would
@@ -181,10 +203,21 @@ os_check_audio <- function(infile, verbose = FALSE) {
 #'
 os_prep_audio <- function(infile, outfile, stream = 0, overwrite = TRUE) {
   # Validate input
-  stopifnot(file.exists(infile))
-  stopifnot(rlang::is_string(outfile))
-  stopifnot(rlang::is_integerish(stream, n = 1), stream >= 0)
-  stopifnot(rlang::is_bool(overwrite))
+  if (!file.exists(infile)) {
+    abort_file(infile, "No file exists at {.file {guarded_path}}.")
+  }
+  if (!rlang::is_string(outfile)) {
+    abort_file(infile, "{.arg outfile} must be a single file path,
+                        not {.obj_type_friendly {outfile}}.")
+  }
+  if (!rlang::is_integerish(stream, n = 1) || stream < 0) {
+    abort_file(infile, "{.arg stream} must be a single whole number
+                        {.code >= 0}, not {.val {stream}}.")
+  }
+  if (!rlang::is_bool(overwrite)) {
+    abort_file(infile, "{.arg overwrite} must be {.code TRUE} or {.code FALSE},
+                        not {.obj_type_friendly {overwrite}}.")
+  }
   # Return early if overwrite is TRUE and outfile exists. The skip is SIGNALLED
   # as well as returned (M18): a direct caller sees the same "Skipped" it always
   # did, while a `*_dir()` batch records the row as skipped rather than as work
@@ -361,12 +394,33 @@ os_extract_wav <- function(
   config = "misc/emo_large",
   source = infile
 ) {
-  # Validate inputs
-  stopifnot(file.exists(infile), os_check_audio(infile))
-  stopifnot(is.null(aggfile) ||
-   (rlang::is_string(aggfile) && tools::file_ext(aggfile) == "csv"))
-  stopifnot(is.null(lldfile) ||
-    (rlang::is_string(lldfile) && tools::file_ext(lldfile) == "csv"))
+  # Validate inputs. The missing-`infile` branch splits on whether openac
+  # derived `infile` itself, because the two are different failures with the
+  # same symptom. When `source` differs, `infile` is the wav `os_prep_audio()`
+  # was asked to write and ffmpeg returned success without writing -- an
+  # absence openac caused, and the batch row says so rather than reporting a
+  # missing file about a temp path the user never chose. When they are the
+  # same file, the user handed openSMILE a path with nothing at it.
+  if (!file.exists(infile)) {
+    if (identical(infile, source)) {
+      abort_file(source, "No file exists at {.file {guarded_path}}.")
+    }
+    abort_file(source, "ffmpeg wrote no output at {.file {infile}}.")
+  }
+  if (!os_check_audio(infile)) {
+    abort_file(source, "It is not the mono 16-bit PCM audio openSMILE reads;
+                        {.fn os_prep_audio} converts it.")
+  }
+  if (!is.null(aggfile) &&
+      !(rlang::is_string(aggfile) && tools::file_ext(aggfile) == "csv")) {
+    abort_file(source, "{.arg aggfile} must be {.code NULL} or a single
+                        {.field .csv} path, not {.val {aggfile}}.")
+  }
+  if (!is.null(lldfile) &&
+      !(rlang::is_string(lldfile) && tools::file_ext(lldfile) == "csv")) {
+    abort_file(source, "{.arg lldfile} must be {.code NULL} or a single
+                        {.field .csv} path, not {.val {lldfile}}.")
+  }
   config <- os_check_config(config)
   # Create output directories if necessary
   if (!is.null(aggfile) && !dir.exists(dirname(aggfile))) {
@@ -458,6 +512,20 @@ os_extract_dir <- function(
   stopifnot(!is.null(aggdir) || !is.null(llddir))
   stopifnot(rlang::is_bool(recursive))
   extra_args <- list(...)
+  # Resolve `config` ONCE, here, rather than once per file inside the loop.
+  # `config` is batch-wide: a typo in it is wrong for every input, so the
+  # per-file form spent a full `os_check_audio()` round -- two ffprobe calls --
+  # on each of N files before failing each of them identically, and returned a
+  # table of N failed rows where the truth is one bad argument. Pre-flight it
+  # aborts before `dir_walk()` is entered, with nothing run.
+  #
+  # The default is read from `os_extract()`'s own signature rather than repeated
+  # here, because the commonest call of all supplies no `config` at all: a check
+  # reading only `...` would validate nothing precisely when the caller relied
+  # on the default, and a second copy of the literal could drift from it.
+  config <- extra_args$config
+  if (is.null(config)) config <- eval(formals(os_extract)$config)
+  os_check_config(config)
   # Find input filepaths
   infiles <- dir_inputs(indir, inext, recursive)
   # Construct iteration data frame
@@ -486,9 +554,26 @@ os_extract_dir <- function(
 
 # os_fix_csv -------------------------------------------------------------------
 
+# Rewrite an openSMILE output CSV from its native ';' delimiter to ','.
+#
+# The missing-input guard ATTRIBUTES the absence, which it can only do because
+# of who calls it: `os_extract_wav()` calls it on an `aggfile`/`lldfile` it has
+# just handed openSMILE as `-csvoutput` / `-lldcsvoutput`, and on nothing else.
+# So a file that is not there is openSMILE having written nothing there, and
+# saying so is what turns a batch row from "a path does not exist" into
+# something the user can act on. Adding a caller that does not have openSMILE
+# write the file first makes that attribution false.
 os_fix_csv <- function(infile) {
   # Validate input
-  stopifnot(file.exists(infile))
+  if (!file.exists(infile)) {
+    cli::cli_abort(
+      c(
+        "Could not tidy the openSMILE output at {.file {infile}}.",
+        "x" = "openSMILE wrote no output there."
+      ),
+      class = "openac_file_guard"
+    )
+  }
   # Read in opensmile output in original format
   df <- read.csv(file = infile, sep = ";", dec = ".")
   # Write out opensmile output in traditional format

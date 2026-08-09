@@ -88,6 +88,45 @@ dir_outputs <- function(infiles, indir, outdir, ext) {
   as.character(out)
 }
 
+# Abort naming the file the batch stopped on, and the defect (M19).
+#
+# Every guard inside a per-file function is reachable from `dir_walk()`, whose
+# error handler copies `conditionMessage()` straight into the outcome table's
+# `error` column. A `stopifnot()` there contributes the DEPARSE of its own
+# condition -- `file.exists(infile) is not TRUE` -- which names neither the file
+# nor what was wrong with it, and the file name reaches the user only because
+# `dir_walk()` prepends a basename to its own warning, which the `error` column
+# does not carry. This is that column's message.
+#
+# The shape matches `run_checked()`'s, deliberately: a batch table whose failed
+# rows read two different ways for a missing file and a failed tool is harder to
+# scan than one that always leads with the file.
+#
+# `file` is the file to NAME, which is not always the file the guard tested:
+# `os_extract_wav()` is handed a wav derived from the user's input, so a message
+# built from what it received names a path the user never chose (M17 review,
+# finding B). Callers there pass `source`.
+#
+# `message` is a cli format string evaluated in a CHILD of the caller's
+# environment, so it may interpolate the guarded function's own arguments
+# (`{.arg overwrite}`, `{.val {stream}}`) as well as the two bindings added
+# here. The file is interpolated as a VALUE, never pasted into the format
+# string, so a `{` in a filename cannot be read as glue markup and abort inside
+# the abort -- the same rule `run_checked()` follows for tool output.
+abort_file <- function(file,
+                       message,
+                       class = character(),
+                       call = rlang::caller_env()) {
+  caller <- rlang::caller_env()
+  envir <- rlang::env(caller, guarded_name = basename(file), guarded_path = file)
+  cli::cli_abort(
+    c("Could not process {.file {guarded_name}}.", "x" = message),
+    class = c(class, "openac_file_guard"),
+    call = call,
+    .envir = envir
+  )
+}
+
 # Run `run` under the progress mode the caller asked for, returning its value.
 with_progress_mode <- function(run, progress = c("auto", "on", "off")) {
   progress <- match.arg(progress)

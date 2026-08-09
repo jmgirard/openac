@@ -340,7 +340,7 @@ for (case in guard_cases()) {
   test_that(paste0("names the file and the defect -- ", case$label), {
     # A `file` of NULL means the guard fires on a file that DOES exist, so the
     # case gets a real one; the named cases carry a path nothing wrote.
-    infile <- case$file %||% local_media(".wav")
+    infile <- if (is.null(case$file)) local_media(".wav") else case$file
 
     msg <- collapsed_guard(case$run(infile))
 
@@ -395,7 +395,13 @@ test_that("os_extract_dir() attributes a missing intermediate wav to ffmpeg", {
 
   expect_identical(out$status, "failed")
   msg <- gsub("\\s+", " ", out$error)
-  expect_match(msg, file.path(wavdir, "clip.wav"), fixed = TRUE)
+  # Through `fs`, as `dir_outputs()` derived it: `tempdir()` can carry a doubled
+  # separator, which the derived path does not.
+  expect_match(
+    msg,
+    as.character(fs::path_abs(file.path(wavdir, "clip.wav"))),
+    fixed = TRUE
+  )
   expect_match(msg, "ffmpeg wrote no output", fixed = TRUE)
 })
 

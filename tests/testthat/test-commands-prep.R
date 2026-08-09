@@ -109,16 +109,10 @@ test_that("os_prep_audio() creates a missing output directory", {
   expect_true(dir.exists(dirname(nested)))
 })
 
-test_that("os_prep_audio() validates its arguments", {
-  infile <- local_media()
-  outfile <- local_outpath()
-  local_fake_tools(results = list())
-
-  expect_error(os_prep_audio(file.path(tempdir(), "gone.mp4"), outfile), "file.exists")
-  expect_error(os_prep_audio(infile, 1), "is_string")
-  expect_error(os_prep_audio(infile, outfile, stream = -1), "stream >= 0")
-  expect_error(os_prep_audio(infile, outfile, overwrite = "yes"), "is_bool")
-})
+# `os_prep_audio()`'s four argument guards moved to `test-guard-messages.R` at
+# M19. They pinned the `stopifnot()` deparses -- "file.exists", "is_string",
+# "stream >= 0", "is_bool" -- which is precisely the text M19 removed, and each
+# is now asserted there against a message that names the file and the defect.
 
 # --- aw_prep_audio -----------------------------------------------------------
 
@@ -150,7 +144,7 @@ test_that("aw_prep_audio() rejects a stream the file does not have", {
   outfile <- local_outpath()
   local_fake_tools(results = list("audio"))
 
-  expect_error(aw_prep_audio(infile, outfile, stream = 3), "Audio")
+  expect_error(aw_prep_audio(infile, outfile, stream = 3), "no audio stream")
 })
 
 test_that("aw_prep_audio() aborts on a file it cannot probe, naming it", {
@@ -210,12 +204,5 @@ test_that("aw_prep_audio(overwrite = FALSE) skips an existing output", {
   expect_length(boundary_calls(state), 0)
 })
 
-test_that("aw_prep_audio() validates its arguments", {
-  infile <- local_media()
-  outfile <- local_outpath()
-  local_fake_tools(results = list())
-
-  expect_error(aw_prep_audio(file.path(tempdir(), "gone.mp4"), outfile), "file.exists")
-  expect_error(aw_prep_audio(infile, outfile, afilters = "yes"), "is_bool")
-  expect_error(aw_prep_audio(infile, outfile, stream = 1.5), "is_integerish")
-})
+# `aw_prep_audio()`'s argument guards moved to `test-guard-messages.R` at M19,
+# for the reason recorded at its `os_prep_audio()` sibling above.

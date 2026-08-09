@@ -115,15 +115,11 @@ test_that("of_extract() toggles each flag independently", {
   }
 })
 
-test_that("of_extract() validates its arguments", {
-  infile <- local_media(".mp4")
-  outfile <- file.path(withr::local_tempdir(), "faces.csv")
-  local_fake_tools(results = list())
-
-  expect_error(of_extract(file.path(tempdir(), "gone.mp4"), outfile), "file.exists")
-  expect_error(of_extract(infile, 1), "is_string")
-  expect_error(of_extract(infile, outfile, aus = "yes"), "is_bool")
-})
+# `of_extract()`'s ten argument guards moved to `test-guard-messages.R` at M19.
+# They pinned the `stopifnot()` deparses -- "file.exists", "is_string",
+# "is_bool" -- which is precisely the text M19 removed, and all ten are now
+# asserted there against messages that name the file and the defect (the eight
+# feature flags one by one, where this test sampled `aus` alone).
 
 # --- os_extract_wav ----------------------------------------------------------
 
@@ -179,13 +175,13 @@ test_that("os_extract_wav() rejects an unknown config and non-csv outputs", {
   local_fake_tools(results = conforming())
   expect_error(
     openac:::os_extract_wav(infile, config = "nope/missing"),
-    "Config file not found"
+    "nope/missing"
   )
 
   local_fake_tools(results = conforming())
   expect_error(
     openac:::os_extract_wav(infile, aggfile = "agg.txt"),
-    "file_ext"
+    "aggfile"
   )
 })
 
