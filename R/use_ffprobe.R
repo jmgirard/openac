@@ -135,8 +135,16 @@ ffp_count_streams <- function(infile) {
   # `as.integer()` on a character status warns about the coercion itself, from
   # inside a function whose contract is one warning, and a status that is NA or
   # longer than one element counts as failure without a special case.
+  #
+  # `length(status)` is tested separately because `all()` of an empty vector is
+  # TRUE -- a zero-length status would otherwise read as a clean exit, which is
+  # the same vacuous truth the comment above faults the old `stopifnot()` for.
+  # `system2()` sets no such attribute today; this costs one comparison and
+  # removes the question.
   status <- attr(stream_types, "status")
-  if (!is.null(status) && !isTRUE(all(status == 0))) {
+  probe_failed <- !is.null(status) &&
+    (length(status) == 0L || !isTRUE(all(status == 0)))
+  if (probe_failed) {
     cli::cli_warn(c(
       "!" = "Cannot count the streams in {.file {infile}}: ffprobe exited with
              status {status}.",

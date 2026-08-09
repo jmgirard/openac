@@ -869,6 +869,21 @@ fake_nonzero_exit <- function(status = 1L,
   }
 }
 
+# Does a `dir_walk()` outcome table report ANY row as not-processed?
+#
+# Deliberately broader than `any(!x$success)`. The known gap this exists to pin
+# -- two batch tables recording a skipped file as a success -- has two
+# contemplated fixes on the ROADMAP: make the per-file call abort, or add a
+# third outcome column. An assertion written against `success` alone stays green
+# under the second fix, so the test would go on passing while the NEWS entry it
+# enforces went stale. This reads `success` and treats ANY column beyond the
+# established four as a report of a non-success outcome, so either fix reddens
+# the caller.
+dir_walk_reports_failure <- function(x) {
+  known <- c("infile", "outfile", "wavfile", "rdsfile", "csvfile", "success", "error")
+  any(!x$success) || length(setdiff(names(x), known)) > 0L
+}
+
 # Every warning `expr` emits, in order, as a character vector, each collapsed
 # onto one line.
 #

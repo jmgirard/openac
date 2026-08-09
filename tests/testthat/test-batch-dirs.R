@@ -342,16 +342,27 @@ test_that("KNOWN GAP: two batch tables record a skipped file as a success", {
   # the changelog needs something that fails when it stops being true. When the
   # ROADMAP candidate for it lands, this test SHOULD red -- update it and the
   # NEWS entry together.
+  #
+  # BOTH functions NEWS names are exercised, and each is asserted through
+  # `dir_walk_reports_failure()` rather than on `success` alone: the candidate
+  # offers two routes -- abort, or a third outcome column -- and an assertion on
+  # `success` alone stays green under the second while NEWS goes stale.
   indir <- withr::local_tempdir()
   file.create(file.path(indir, "b.mp4"))
   outdir <- file.path(withr::local_tempdir(), "wavs")
+
   local_fake_tools(results = list(fake_nonzero_exit()))
-
   suppressWarnings(prep <- os_prep_audio_dir(indir, "mp4", outdir))
+  expect_false(dir_walk_reports_failure(prep))
 
-  expect_identical(prep$success, TRUE)
-  expect_true(is.na(prep$error))
-  expect_false(file.exists(prep$outfile))
+  local_fake_tools(results = list(fake_nonzero_exit()))
+  suppressWarnings(suppressMessages(
+    transcribed <- aw_transcribe_dir(
+      indir, "mp4",
+      model = structure(list(name = "tiny"), class = "whisper")
+    )
+  ))
+  expect_false(dir_walk_reports_failure(transcribed))
 })
 
 test_that("every file failing still returns a full report rather than erroring", {

@@ -256,8 +256,10 @@ them without attaching the upstream packages.
   `aw_prep_audio` aborts naming the file, `aw_transcribe` skips it). What that
   buys at the BATCH level is uneven, and MEASURED 2026-08-08 rather than
   inferred from the callers: `aw_prep_audio_dir()` records the bad file as a
-  failed row naming it; `os_extract_dir()` records a failed row whose message
-  names a tempfile the caller never passed; `aw_transcribe_dir()` and
+  failed row naming it; `os_extract_dir()` records a failed row whose message is
+  the bare `stopifnot()` deparse `file.exists(infile) is not TRUE`, naming no
+  file at all — the input it concerns is a temporary wav that was never written;
+  `aw_transcribe_dir()` and
   `os_prep_audio_dir()` record it as a **success** (ROADMAP candidate). A
   per-file disposition is not a per-file outcome until the batch table shows it.
   Resilience is ad hoc elsewhere: the `stopifnot(file.exists())` guards in

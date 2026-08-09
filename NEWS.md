@@ -10,8 +10,10 @@
   failure you can read and re-run, where before the table said only that an
   audio stream index was not true — a message that named neither the file nor
   the reason, and that came from reading a failed probe as a file with no audio.
-  Two batch functions do not yet report it that clearly: `aw_transcribe_dir()`
-  and `os_prep_audio_dir()` still record a file they skipped as a success. A
+  Two batch functions do not yet report it that clearly, and both still record
+  such a file as a success: `aw_transcribe_dir()` skips it, and
+  `os_prep_audio_dir()` hands it to ffmpeg and does not check whether ffmpeg
+  succeeded, so no audio file is written and the table says nothing went wrong. A
   missing ffprobe stops the run as before, because that is a problem with the
   installation rather than with any one file.
 

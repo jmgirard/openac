@@ -262,7 +262,14 @@ Status back to `in-progress`. Defect returns for M14: 1.
   four callers' NA dispositions — which is what the branch actually delivers —
   and it states the batch-level reality separately, per entry point:
   `aw_prep_audio_dir()` a failed row naming the file; `os_extract_dir()` a
-  failed row whose message names a tempfile the caller never passed;
+  failed row whose message is the bare `stopifnot()` deparse
+  `file.exists(infile) is not TRUE`, naming no file at all
+  (**corrected 2026-08-08, fix-delta review F4:** this line first said the
+  message "names a tempfile the caller never passed" — it names nothing; that
+  described what the failure is ABOUT rather than what the table records, which
+  is the same unverified-claim defect the milestone was returned on, written a
+  second time in the fix for it. The table was read; the sentence then said
+  something the read did not support);
   `aw_transcribe_dir()` and `os_prep_audio_dir()` a **success**. Each of those
   four was executed against the mocked boundary at review and read off the
   returned table, not derived from reading the callers. The ad-hoc guards are
