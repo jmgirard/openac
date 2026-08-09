@@ -294,12 +294,29 @@ install_openface_win <- function(download_url = NULL, install_dir = NULL) {
   if (!dir.exists(patch_dir)) {
     if (!dir.create(patch_dir, recursive = TRUE)) return(FALSE)
   }
-  for (model in names(openface_patch_experts)) {
-    ok <- download_model(
-      url = openface_patch_experts[[model]],
-      destfile = file.path(patch_dir, model)
-    )
-    if (!ok) return(FALSE)
+  # Every model is attempted even after one fails, and the failures are named
+  # together at the end. The four OneDrive links this replaced died as a SET,
+  # and returning at the first would have reported one dead link per run --
+  # each run re-fetching the 130 MB release archive to reach the next one.
+  ok <- vapply(
+    names(openface_patch_experts),
+    function(model) {
+      download_model(
+        url = openface_patch_experts[[model]],
+        destfile = file.path(patch_dir, model)
+      )
+    },
+    logical(1)
+  )
+  if (!all(ok)) {
+    cli::cli_warn(c(
+      "{sum(!ok)} of OpenFace's {length(ok)} patch-expert model{?s} did not
+       download, so this install cannot track faces.",
+      "x" = "Missing: {.file {names(ok)[!ok]}}",
+      "i" = "Each failure is reported above. {.fn install_openface_win} is safe
+             to run again."
+    ))
+    return(FALSE)
   }
   return(TRUE)
 }

@@ -103,6 +103,7 @@ not this milestone.
 - 2026-08-08: plan chose temp config and data dirs via the existing `local_fake_config()`/`local_fake_data_dir()` helpers over letting the installers write the machine's real rappdirs config, because the run happens on the maintainer's working Windows machine and `set_*()` would overwrite the tool locations openac is actually used with there; falsified by an installer path that ignores the redirection.
 - 2026-08-08: catch-up — all four tasks were committed and CI was green, but the status was left at `in-progress`; set to `review` at the start of /milestone-review.
 - 2026-08-08: merged `main` (M15) into the branch. The only conflicts were M15's LF normalization of `R/programs_install.R` (resolved to the branch's content re-written LF, `--ignore-cr-at-eol` confirming main changed no content there) and the ROADMAP's M15 row and candidate list.
+- 2026-08-08: T9 done — `install_openface_win()` now runs all four patch experts through `vapply()` and names every failure in one closing `cli_warn()`. The discriminating assertion is the download-attempt count: 2 before the fix, 5 after. MEASURED on the branch — the test failed at `expect_length(download_urls(state), 5L)` with "Actual length: 2" before the loop changed.
 - 2026-08-08: T9 added to the tasks at the review gate (the user approved fixing F12 with the return); T8 worked before T7 and T9 so the new failure message lands in its final style rather than being converted twice.
 - 2026-08-08: T8 done — `download_model()`'s five base `warning()` calls are `cli::cli_warn()`. Restructuring the `tryCatch` to yield one message either way also closed F16: a connection error warned twice (handler, then the status check) and now warns once. The floor is spelled through `format(scientific = FALSE)` because glue renders 40e6 as `4e+07`. Existing matchers still hit; `test-installers` 92 pass, 0 fail.
 - 2026-08-08: review returned M16 to `in-progress` (defect return 1). Failed: the toolchain consistency gate's changelog check — `NEWS.md` has no entry for a milestone that fixed two broken installers — and the universal dependency gate, `curl` having been added to `Suggests` with no question gate and no D-entry. Every acceptance criterion's evidence held; T5–T8 carry the return.
@@ -126,7 +127,7 @@ not this milestone.
       guard.
 - [x] T8 Fix F10: convert `download_model()`'s five base `warning()` calls to
       `cli::cli_warn()`, updating the three tests' message matchers with them.
-- [ ] T9 Fix F12: `install_openface_win()` attempts all four patch experts and
+- [x] T9 Fix F12: `install_openface_win()` attempts all four patch experts and
       reports every failure together, instead of returning `FALSE` at the first.
       The OneDrive set died as a set, so first-failure abort costs four full
       runs — each re-downloading the 130 MB release archive — to enumerate.

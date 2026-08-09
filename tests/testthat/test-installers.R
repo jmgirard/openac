@@ -266,10 +266,11 @@ test_that("install_openface_win() refuses a model URL serving a sign-in page", {
   testthat::local_mocked_bindings(model_byte_floor = function() 0)
   install_dir <- withr::local_tempdir()
 
-  expect_warning(
-    expect_false(install_openface_win(install_dir = install_dir)),
-    "markup document"
+  warnings <- testthat::capture_warnings(
+    result <- install_openface_win(install_dir = install_dir)
   )
+  expect_false(result)
+  expect_true(any(grepl("markup document", warnings)))
 })
 
 test_that("install_openface_win() refuses a model file below the byte floor", {
@@ -281,10 +282,43 @@ test_that("install_openface_win() refuses a model file below the byte floor", {
   install_dir <- withr::local_tempdir()
 
   # No mocked floor here: the real 40 MB one against the fake's 13 bytes.
-  expect_warning(
-    expect_false(install_openface_win(install_dir = install_dir)),
-    "below the"
+  warnings <- testthat::capture_warnings(
+    result <- install_openface_win(install_dir = install_dir)
   )
+  expect_false(result)
+  expect_true(any(grepl("below the", warnings)))
+})
+
+test_that("install_openface_win() tries all four models and names every failure", {
+  # The OneDrive set died as a SET (M16's measurement), so an installer that
+  # returns at the first bad model tells the user about one dead link per run --
+  # and each run re-downloads the 130 MB release archive to get there. The
+  # assertion is the count of download attempts, which is what distinguishes
+  # "tried all four" from "stopped at the first"; the fake's 13-byte files fail
+  # the real 40 MB floor, so all four models fail.
+  local_install_env("Windows")
+  withr::local_options(timeout = getOption("timeout"))
+  state <- local_fake_downloads(extract_creates = "FaceLandmarkVidMulti.exe")
+  install_dir <- withr::local_tempdir()
+
+  warnings <- testthat::capture_warnings(
+    result <- install_openface_win(install_dir = install_dir)
+  )
+  expect_false(result)
+
+  # The release archive plus all four patch experts: five attempts, not two.
+  expect_length(download_urls(state), 5L)
+  expect_true(all(grepl(
+    "^https://www\\.dropbox\\.com/s/", download_urls(state)[-1]
+  )))
+
+  # Each failure reported on its own, then one line naming the whole set.
+  expect_length(grep("below the", warnings), 4L)
+  summary <- warnings[grepl("did not download", warnings)]
+  expect_length(summary, 1L)
+  for (scale in c("0.25", "0.35", "0.50", "1.00")) {
+    expect_true(grepl(paste0("cen_patches_", scale, "_of.dat"), summary), info = scale)
+  }
 })
 
 test_that("install_openface_win() reports a download that fails outright", {
