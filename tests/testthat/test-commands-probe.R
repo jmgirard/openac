@@ -157,9 +157,76 @@ test_that("ffp_count_streams() counts each stream combination", {
   expect_equal(ffp_count_streams(infile), c(Video = 0, Audio = 0))
 })
 
-test_that("ffp_count_streams() requires an existing file", {
+# A queued result standing in for a tool that exits non-zero.
+#
+# MEASURED 2026-08-08 (R 4.6.1, macOS): `system2(stdout = TRUE, stderr = TRUE)`
+# on a non-zero exit returns the output with a `status` attribute AND emits R's
+# own warning quoting the whole command line --
+# `running command ''ls' /nonexistent-zzz 2>&1' had status 1`. Both halves are
+# reproduced here, because `ffp_count_streams()` reads the first and muffles the
+# second.
+fake_nonzero_exit <- function(status = 1L, output = "ffprobe: Invalid data") {
+  force(status)
+  force(output)
+  function(command, args) {
+    warning(sprintf("running command '%s' had status %d", basename(command), status))
+    structure(output, status = status)
+  }
+}
+
+test_that("ffp_count_streams() reports a nonexistent file rather than aborting", {
+  # Was `stopifnot(file.exists(infile))`, which killed the whole batch (GP6).
   local_fake_tools()
-  expect_error(ffp_count_streams(file.path(tempdir(), "absent.mp4")), "file.exists")
+  absent <- file.path(tempdir(), "absent.mp4")
+
+  expect_warning(
+    streams <- ffp_count_streams(absent),
+    "does not exist"
+  )
+  expect_identical(streams, c(Video = NA_integer_, Audio = NA_integer_))
+  # The warning names the file, so a batch report can be acted on.
+  expect_warning(ffp_count_streams(absent), "absent\\.mp4")
+})
+
+test_that("ffp_count_streams() reports a failed probe rather than aborting", {
+  infile <- local_media(".mp4")
+  local_fake_tools(results = list(fake_nonzero_exit(status = 1L)))
+
+  expect_warning(
+    streams <- ffp_count_streams(infile),
+    "status 1"
+  )
+  expect_identical(streams, c(Video = NA_integer_, Audio = NA_integer_))
+})
+
+test_that("a failed probe warns once, naming the file rather than the command", {
+  # R's own status warning quotes the argv and never the file; ours does the
+  # opposite, and only one of the two reaches the caller.
+  infile <- local_media(".mp4")
+  local_fake_tools(results = list(fake_nonzero_exit()))
+
+  warnings <- character()
+  withCallingHandlers(
+    ffp_count_streams(infile),
+    warning = function(w) {
+      warnings <<- c(warnings, conditionMessage(w))
+      invokeRestart("muffleWarning")
+    }
+  )
+
+  expect_length(warnings, 1L)
+  expect_match(warnings, basename(infile), fixed = TRUE)
+})
+
+test_that("ffp_count_streams() still aborts when ffprobe itself is unavailable", {
+  # A missing tool fails every file in a batch identically, so it stays an
+  # abort from require_program() rather than becoming a per-file NA.
+  infile <- local_media(".mp4")
+  local_fake_tools(resolve = character())
+
+  suppressWarnings(
+    expect_error(ffp_count_streams(infile), "could not be found")
+  )
 })
 
 # --- os_check_audio ----------------------------------------------------------

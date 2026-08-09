@@ -63,7 +63,7 @@ opportunistic per DESIGN's Conventions. Argument-assembly changes → M13.
 
 ## Tasks
 
-- [ ] T1 Rewrite `ffp_count_streams()` (`R/use_ffprobe.R:46-67`): drop the
+- [x] T1 Rewrite `ffp_count_streams()` (`R/use_ffprobe.R:46-67`): drop the
       `stopifnot`, capture ffprobe's status, return `NA` counts with a
       `cli_warn`; tests first, both AC1 cases.
 - [ ] T2 Give `os_check_audio` and `aw_check_audio` their `NA` branch
@@ -81,6 +81,8 @@ opportunistic per DESIGN's Conventions. Argument-assembly changes → M13.
 - 2026-08-08: created by /milestone-plan.
 - 2026-08-08: plan chose a separate milestone depending on M13 over folding this into M13, because both rewrite ffp_count_streams — M13 its argument assembly, M14 its failure signal — and combined they cross the acceptance-criteria and task tripwires; falsified by the two edits proving inseparable in practice, i.e. M13 unable to convert R/use_ffprobe.R:51 without also deciding the NA contract.
 - 2026-08-08: plan chose to split the NA disposition by caller — FALSE-plus-warning for the two check_audio predicates, cli_abort for aw_prep_audio — over one uniform disposition, because dir_walk records a row as failed only on an error (R/utils.R:118-127), so a warning-and-skip in aw_prep_audio would leave AC3's bad file reported as a success; falsified by a caller for which neither shape fits.
+
+- 2026-08-08: T1 — `ffp_count_streams()` returns NA counts with a warning on a nonexistent file and on a non-zero ffprobe exit, read from the `status` attribute `system2(stdout = TRUE)` sets (measured, R 4.6.1); R's own status warning is muffled so one warning naming the file reaches the caller. A missing ffprobe still aborts (question gate).
 
 ## Decisions
 
