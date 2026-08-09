@@ -1,11 +1,11 @@
 # M18: A skipped file is a skip, not a success
 
-- **Status:** planned
+- **Status:** in-progress
 - **Priority:** normal
 - **Depends on:** M17
 - **Driving RR:** —
 - **Principles touched:** GP6
-- **Branch/PR:** —
+- **Branch/PR:** `m18-batch-skip-outcome`
 
 ## Goal
 
