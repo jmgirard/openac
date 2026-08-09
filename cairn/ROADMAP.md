@@ -1,7 +1,7 @@
 # Roadmap
 
 _The only authority on milestone status. Grouped by status, not ID._
-_Last hygiene check: 2026-08-08 (M14 merged and archived after two review rounds — the first returned it for prose in NEWS and DESIGN asserting batch behavior two of four paths lack, the second caught the fix repeating that defect; one candidate added, two lessons captured)_
+_Last hygiene check: 2026-08-08 (board clear after M14 merged — nothing in flight, no open RB/RR, no open issues or PRs, all 24 validate checks green; 23 candidates awaiting a plan)_
 _Released 0.1.0 (GitHub) 2026-07-11._
 
 ## Milestones
