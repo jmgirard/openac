@@ -249,5 +249,24 @@ them without attaching the upstream packages.
 - 2026-07-11: GP5 unmet — high-level functions build their command strings
   internally with no way for users to inspect/report them; retrofit when
   touched.
-- 2026-07-11: GP6 unevenly met — some `_dir` functions skip bad files
-  (audio-less inputs), but resilience is ad hoc, not a designed contract.
+- 2026-07-11 (**narrowed 2026-08-08, M14**): GP6 unevenly met — one guard is
+  now contractual: `ffp_count_streams()` returns `NA` counts with a warning
+  naming an unprobeable file rather than aborting, and each of its four callers
+  disposes of `NA` explicitly (`os_check_audio`/`aw_check_audio` return `FALSE`,
+  `aw_prep_audio` aborts naming the file, `aw_transcribe` skips it). What that
+  buys at the BATCH level is uneven, and MEASURED 2026-08-08 rather than
+  inferred from the callers: `aw_prep_audio_dir()` records the bad file as a
+  failed row naming it; `os_extract_dir()` records a failed row whose message is
+  the bare `stopifnot()` deparse `file.exists(infile) is not TRUE`, naming no
+  file at all — the input it concerns is a temporary wav that was never written;
+  `aw_transcribe_dir()` and
+  `os_prep_audio_dir()` record it as a **success** (ROADMAP candidate). A
+  per-file disposition is not a per-file outcome until the batch table shows it.
+  Resilience is ad hoc elsewhere: the `stopifnot(file.exists())` guards in
+  `os_check_audio`, `os_prep_audio`, `os_extract_wav`, `os_fix_csv`,
+  `aw_check_audio`, `aw_prep_audio`, `aw_transcribe_wav` and `of_extract` abort
+  on a missing input; `os_check_config()` aborts on a config it cannot resolve;
+  and `run_tool()` inspects no tool's exit status, so an ffmpeg, openSMILE or
+  OpenFace failure is invisible to its caller — `ffp_count_streams()` is the
+  only place in the package that reads one. `dir_outputs()`'s collision refusal
+  is a deliberate pre-flight abort outside that set (see `R/utils.R`).

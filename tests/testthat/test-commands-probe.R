@@ -157,9 +157,119 @@ test_that("ffp_count_streams() counts each stream combination", {
   expect_equal(ffp_count_streams(infile), c(Video = 0, Audio = 0))
 })
 
-test_that("ffp_count_streams() requires an existing file", {
+test_that("ffp_count_streams() reports a nonexistent file rather than aborting", {
+  # Was `stopifnot(file.exists(infile))`, which killed the whole batch (GP6).
   local_fake_tools()
-  expect_error(ffp_count_streams(file.path(tempdir(), "absent.mp4")), "file.exists")
+  absent <- file.path(tempdir(), "absent.mp4")
+
+  # Messages are read through collect_warnings(), which collapses the hard line
+  # breaks cli bakes in at the console width -- an assertion on the raw text
+  # passes or fails on how long the temp path is (see the helper).
+  warnings <- collect_warnings(streams <- ffp_count_streams(absent))
+
+  expect_length(warnings, 1L)
+  expect_match(warnings, "does not exist")
+  expect_identical(streams, c(Video = NA_integer_, Audio = NA_integer_))
+  # The warning names the file, so a batch report can be acted on.
+  expect_match(warnings, "absent.mp4", fixed = TRUE)
+})
+
+test_that("ffp_count_streams() reports a failed probe rather than aborting", {
+  infile <- local_media(".mp4")
+  local_fake_tools(results = list(fake_nonzero_exit(status = 1L)))
+
+  warnings <- collect_warnings(streams <- ffp_count_streams(infile))
+
+  expect_match(warnings, "ffprobe exited with status 1")
+  expect_identical(streams, c(Video = NA_integer_, Audio = NA_integer_))
+})
+
+test_that("a failed probe warns once whatever language R speaks", {
+  # R's own status warning quotes the argv and never the file; ours does the
+  # opposite, and only one of the two reaches the caller.
+  #
+  # The fake's message is the MEASURED French one, carrying no English at all
+  # (see fake_nonzero_exit()). That is what gives this test teeth: suppression
+  # is keyed on the exit status, so it cannot be satisfied by a handler grepping
+  # for English text the way the first cut of this code did.
+  infile <- local_media(".mp4")
+  local_fake_tools(results = list(fake_nonzero_exit()))
+
+  warnings <- collect_warnings(ffp_count_streams(infile))
+
+  expect_length(warnings, 1L)
+  expect_match(warnings, basename(infile), fixed = TRUE)
+  # And what reached the caller is ours, not the tool's argv report.
+  expect_no_match(warnings, "renvoie un statut", fixed = TRUE)
+})
+
+test_that("a diagnostic raised alongside a FAILED probe still reaches the caller", {
+  # Suppression is aimed at R's exit-status report and nothing else. An earlier
+  # cut dropped every warning held during a failed probe, which made this the
+  # one path where a diagnostic could vanish silently (fix-delta review F1).
+  infile <- local_media(".mp4")
+  chatty <- function(command, args) {
+    warning("ffprobe: this build is ancient")
+    # R raises its status warning last, after the command has returned; the
+    # fake reproduces that order because the suppression depends on it.
+    warning("l'exécution de la commande 'ffprobe' renvoie un statut 1")
+    structure("ffprobe: Invalid data", status = 1L)
+  }
+  local_fake_tools(results = list(chatty))
+
+  warnings <- collect_warnings(streams <- ffp_count_streams(infile))
+
+  expect_identical(streams, c(Video = NA_integer_, Audio = NA_integer_))
+  expect_length(warnings, 2L)
+  # The diagnostic survived; R's argv report did not.
+  expect_match(warnings[[1]], "this build is ancient", fixed = TRUE)
+  expect_match(warnings[[2]], "ffprobe exited with status 1")
+  expect_false(any(grepl("renvoie un statut", warnings, fixed = TRUE)))
+})
+
+test_that("a warning from a probe that SUCCEEDS still reaches the caller", {
+  # Suppression is scoped to the failure it replaces. A warning raised on a
+  # successful probe is not ours to swallow, so it is re-signalled unchanged --
+  # the case a blanket muffle would have silently eaten.
+  infile <- local_media(".mp4")
+  noisy <- function(command, args) {
+    warning("ffprobe: deprecated pixel format")
+    c("video", "audio")
+  }
+  local_fake_tools(results = list(noisy))
+
+  warnings <- collect_warnings(streams <- ffp_count_streams(infile))
+
+  expect_equal(streams, c(Video = 1, Audio = 1))
+  expect_length(warnings, 1L)
+  expect_match(warnings, "deprecated pixel format", fixed = TRUE)
+})
+
+test_that("ffp_count_streams() requires a single file path", {
+  # Not a bad file but a bad call, so it aborts rather than returning NA. Both
+  # shapes died on a raw base-R condition once the stopifnot() was removed.
+  local_fake_tools()
+
+  expect_error(ffp_count_streams(c("a.mp4", "b.mp4")), "single file path")
+  expect_error(ffp_count_streams(character(0)), "single file path")
+  expect_error(ffp_count_streams(42), "single file path")
+})
+
+test_that("ffp_count_streams() still aborts when ffprobe itself is unavailable", {
+  # A missing tool fails every file in a batch identically, so it stays an
+  # abort from require_program() rather than becoming a per-file NA.
+  infile <- local_media(".mp4")
+  local_fake_tools(resolve = character())
+
+  # And the hint survives the abort. `find_program()` warns with the
+  # `set_program()` pointer on its way to the error, from inside the region
+  # where warnings are held pending the exit status -- so it has to be released
+  # as the error unwinds, or the one message telling the user how to fix this
+  # is lost. It was, until this test.
+  expect_warning(
+    expect_error(ffp_count_streams(infile), "could not be found"),
+    "set_program"
+  )
 })
 
 # --- os_check_audio ----------------------------------------------------------
@@ -211,6 +321,34 @@ test_that("os_check_audio() accepts a conforming file and rejects others", {
   expect_false(os_check_audio(infile))
 })
 
+test_that("os_check_audio() returns FALSE on a file it cannot probe", {
+  # The stream count is NA, so every test built on it would be NA and `all()`
+  # would return NA rather than a logical. The queue holds ONE result: the
+  # second ffprobe query must not be issued, because it would fail identically.
+  infile <- local_media()
+  state <- local_fake_tools(results = list(fake_nonzero_exit()))
+
+  warnings <- collect_warnings(result <- os_check_audio(infile))
+
+  expect_match(warnings, "ffprobe exited with status 1")
+  expect_false(result)
+  expect_identical(boundary_tools(state), "ffprobe")
+})
+
+test_that("os_check_audio(verbose = TRUE) names the file it could not probe", {
+  infile <- local_media()
+  local_fake_tools(results = list(fake_nonzero_exit()))
+
+  warnings <- collect_warnings(
+    expect_false(os_check_audio(infile, verbose = TRUE))
+  )
+
+  # Two messages, both naming the file: the probe's own, then the check's.
+  expect_length(warnings, 2L)
+  expect_true(all(grepl(basename(infile), warnings, fixed = TRUE)))
+  expect_match(warnings[[2]], "Could not count the streams")
+})
+
 test_that("os_check_audio(verbose = TRUE) warns about a non-44.1kHz rate", {
   infile <- local_media()
   local_fake_tools(results = list("audio", c("pcm_s16le", "48000", "1")))
@@ -256,6 +394,31 @@ test_that("aw_check_audio() accepts a conforming file and rejects others", {
 
   local_fake_tools(results = list("audio", c("mp3", "16000", "1")))
   expect_false(aw_check_audio(infile))
+})
+
+test_that("aw_check_audio() returns FALSE on a file it cannot probe", {
+  infile <- local_media()
+  state <- local_fake_tools(results = list(fake_nonzero_exit()))
+
+  warnings <- collect_warnings(result <- aw_check_audio(infile))
+
+  expect_match(warnings, "ffprobe exited with status 1")
+  expect_false(result)
+  # One call, not two: the second query would fail on the same file.
+  expect_identical(boundary_tools(state), "ffprobe")
+})
+
+test_that("aw_check_audio(verbose = TRUE) names the file it could not probe", {
+  infile <- local_media()
+  local_fake_tools(results = list(fake_nonzero_exit()))
+
+  warnings <- collect_warnings(
+    expect_false(aw_check_audio(infile, verbose = TRUE))
+  )
+
+  expect_length(warnings, 2L)
+  expect_true(all(grepl(basename(infile), warnings, fixed = TRUE)))
+  expect_match(warnings[[2]], "Could not count the streams")
 })
 
 test_that("aw_check_audio() returns FALSE when ffprobe reports under 3 fields", {

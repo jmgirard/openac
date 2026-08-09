@@ -16,6 +16,19 @@ aw_check_audio <- function(infile, verbose = FALSE) {
   stopifnot(rlang::is_bool(verbose))
   # Count streams
   streams <- ffp_count_streams(infile)
+  # A file ffprobe could not read cannot be checked, and every test below would
+  # be NA rather than a logical. Return before the second query, which would
+  # fail on that same file. ffp_count_streams() has already warned naming it, so
+  # this second message is verbose-gated like the sibling warning below.
+  if (anyNA(streams)) {
+    if (verbose) {
+      cli::cli_warn(c(
+        "!" = "Could not count the streams in {.file {basename(infile)}}",
+        "i" = "Returning FALSE."
+      ))
+    }
+    return(FALSE)
+  }
   # Create ffprobe command
   arg <- c(
     "-v", "error",
@@ -98,8 +111,21 @@ aw_prep_audio <- function(
   if (overwrite == FALSE && file.exists(outfile)) {
     return("Skipped")
   }
-  # Check that the requested audio stream exists
-  stopifnot((stream + 1) <= ffp_count_streams(infile)[['Audio']])
+  # Check that the requested audio stream exists. A file ffprobe could not read
+  # cannot answer that, and `NA` would poison the comparison below into a
+  # `stopifnot()` failure whose message names neither the file nor the reason.
+  # It aborts instead, naming the file -- an ABORT rather than the warn-and-skip
+  # the check_audio() pair got, because dir_walk() records a batch row as failed
+  # only on an error (R/utils.R), so a skip here would report a file that was
+  # never converted as a success.
+  streams <- ffp_count_streams(infile)
+  if (is.na(streams[["Audio"]])) {
+    cli::cli_abort(
+      "Cannot prepare {.file {basename(infile)}}: its streams could not be
+       counted."
+    )
+  }
+  stopifnot((stream + 1) <= streams[['Audio']])
   # Create output directory if necessary
   if (!dir.exists(dirname(outfile))) {
     dir.create(dirname(outfile), recursive = TRUE)

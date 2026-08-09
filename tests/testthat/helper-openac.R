@@ -837,6 +837,83 @@ extract_dirs <- function(state) {
   vapply(state$extracts, function(x) as.character(x$dir), character(1))
 }
 
+# A queued `local_fake_tools()` result standing in for a tool that exits
+# non-zero -- the unprobeable file M14 exists for.
+#
+# MEASURED 2026-08-08 (R 4.6.1, macOS): `system2(stdout = TRUE, stderr = TRUE)`
+# on a non-zero exit returns the output with a `status` attribute AND emits R's
+# own warning quoting the whole command line. Both halves are reproduced here,
+# because `ffp_count_streams()` reads the first and suppresses the second, and a
+# fake carrying only the attribute could not show the suppression.
+#
+# The default message is the FRENCH one, and that is the whole point. R
+# translates this warning -- MEASURED on the same run, `LANGUAGE=fr` gives
+# "l'exécution de la commande '...' renvoie un statut 1" and `LANGUAGE=de`
+# "Ausführung von Kommando '...' ergab Status 1". An earlier cut of
+# `ffp_count_streams()` suppressed by grepping for the literal English
+# "had status", and a fake that hand-wrote that same English phrase could only
+# ever confirm the grep matched a string the test author had chosen to make it
+# match -- green in every locale, including the ones where the code was broken
+# (M14 review A1, A2). Defaulting to a message with no English in it means this
+# fake reds against that implementation and passes only against one keyed on the
+# exit status.
+fake_nonzero_exit <- function(status = 1L,
+                              output = "ffprobe: Invalid data",
+                              message = "l'exécution de la commande '%s' renvoie un statut %d") {
+  force(status)
+  force(output)
+  force(message)
+  function(command, args) {
+    warning(sprintf(message, basename(command), status))
+    structure(output, status = status)
+  }
+}
+
+# Does a `dir_walk()` outcome table report ANY row as not-processed?
+#
+# Deliberately broader than `any(!x$success)`. The known gap this exists to pin
+# -- two batch tables recording a skipped file as a success -- has two
+# contemplated fixes on the ROADMAP: make the per-file call abort, or add a
+# third outcome column. An assertion written against `success` alone stays green
+# under the second fix, so the test would go on passing while the NEWS entry it
+# enforces went stale. This reads `success` and treats ANY column beyond the
+# established four as a report of a non-success outcome, so either fix reddens
+# the caller.
+dir_walk_reports_failure <- function(x) {
+  known <- c("infile", "outfile", "wavfile", "rdsfile", "csvfile", "success", "error")
+  any(!x$success) || length(setdiff(names(x), known)) > 0L
+}
+
+# Every warning `expr` emits, in order, as a character vector, each collapsed
+# onto one line.
+#
+# `expect_warning()` consumes ONE warning and matches it against a regexp, which
+# says nothing about how many were emitted or in what order. A call that warns
+# twice -- a failed probe, then the caller's own report of it -- needs both
+# facts, and nesting `expect_warning()` to get them is order-dependent and
+# reports the wrong one as missing when the order changes.
+#
+# The whitespace collapse is what makes a message assertion mean anything.
+# `cli_warn()` bakes HARD line breaks into `conditionMessage()` at the console
+# width, so whether a phrase survives intact depends on how long the interpolated
+# path is. MEASURED at width 80: `ffprobe exited with status 1` matches for an
+# infile of `/tmp/a/v.mp4` and fails for `/tmp/abcdefgh/v.mp4`, purely because
+# the longer path pushes the wrap one word earlier. The assertions that
+# survived review did so only because macOS `tempdir()` is long enough to put
+# the path on its own line -- a CI runner with a short `TMPDIR`, or a narrower
+# `cli.width`, would have reddened them for no contract reason (M14 review A3).
+collect_warnings <- function(expr) {
+  seen <- character()
+  withCallingHandlers(
+    expr,
+    warning = function(w) {
+      seen <<- c(seen, gsub("\\s+", " ", conditionMessage(w)))
+      invokeRestart("muffleWarning")
+    }
+  )
+  seen
+}
+
 # --- accessors over a recorder returned by local_fake_tools() ----------------
 
 # The ordered (tool, args) pairs seen at the boundary.

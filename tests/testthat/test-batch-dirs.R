@@ -294,6 +294,77 @@ test_that("the failure warning names the file that was skipped", {
   expect_warning(os_prep_audio_dir(indir, "mp4", outdir), "clip\\.mp4")
 })
 
+test_that("one unprobeable file among three is a row, not the end of the batch", {
+  # The milestone case, pinned to the failure it actually is. MEASURED against
+  # the pre-M14 sources: the batch already survived this file, because
+  # dir_walk() caught aw_prep_audio()'s abort and recorded the row. What it
+  # recorded was the defect --
+  #   x | (stream + 1) <= ffp_count_streams(infile)[["Audio"]] is not TRUE
+  # -- because a probe that FAILED was parsed as a file with zero audio streams.
+  # So the report named neither the file nor the reason, and asserted something
+  # false about the input: nothing was ever learned about its streams. The
+  # message assertion below is the discriminating one; the success column passes
+  # against the old code too.
+  indir <- withr::local_tempdir()
+  file.create(file.path(indir, c("a.mp4", "b.mp4", "c.mp4")))
+  outdir <- file.path(withr::local_tempdir(), "wavs")
+  # list.files() sorts, so the queue runs a, b, c. `b` fails its probe and never
+  # reaches ffmpeg; the other two spend a probe and a conversion each.
+  state <- local_fake_tools(
+    results = list("audio", "ok", fake_nonzero_exit(), "audio", "ok")
+  )
+
+  warnings <- collect_warnings(
+    result <- aw_prep_audio_dir(indir, "mp4", outdir)
+  )
+
+  expect_identical(basename(result$infile), c("a.mp4", "b.mp4", "c.mp4"))
+  expect_identical(result$success, c(TRUE, FALSE, TRUE))
+  expect_match(result$error[[2]], "could not be counted")
+  expect_true(all(is.na(result$error[c(1, 3)])))
+  # The batch really ran the other two: two conversions, not three and not one.
+  expect_identical(
+    boundary_tools(state),
+    c("ffprobe", "ffmpeg", "ffprobe", "ffprobe", "ffmpeg")
+  )
+  # And it said so at the time, naming the file it skipped.
+  expect_true(any(grepl("b.mp4", warnings, fixed = TRUE)))
+})
+
+test_that("KNOWN GAP: two batch tables record a skipped file as a success", {
+  # Pinning a wart, not a contract. `aw_prep_audio_dir()` above reports an
+  # unprobeable file as a failed row; these two do not, because dir_walk()
+  # records a row as failed only on an ERROR -- `aw_transcribe()` skips such a
+  # file with a message and returns NULL, and `os_prep_audio()` never counts
+  # streams at all and never inspects ffmpeg's exit status.
+  #
+  # The test exists because NEWS names this limitation to users, and a claim in
+  # the changelog needs something that fails when it stops being true. When the
+  # ROADMAP candidate for it lands, this test SHOULD red -- update it and the
+  # NEWS entry together.
+  #
+  # BOTH functions NEWS names are exercised, and each is asserted through
+  # `dir_walk_reports_failure()` rather than on `success` alone: the candidate
+  # offers two routes -- abort, or a third outcome column -- and an assertion on
+  # `success` alone stays green under the second while NEWS goes stale.
+  indir <- withr::local_tempdir()
+  file.create(file.path(indir, "b.mp4"))
+  outdir <- file.path(withr::local_tempdir(), "wavs")
+
+  local_fake_tools(results = list(fake_nonzero_exit()))
+  suppressWarnings(prep <- os_prep_audio_dir(indir, "mp4", outdir))
+  expect_false(dir_walk_reports_failure(prep))
+
+  local_fake_tools(results = list(fake_nonzero_exit()))
+  suppressWarnings(suppressMessages(
+    transcribed <- aw_transcribe_dir(
+      indir, "mp4",
+      model = structure(list(name = "tiny"), class = "whisper")
+    )
+  ))
+  expect_false(dir_walk_reports_failure(transcribed))
+})
+
 test_that("every file failing still returns a full report rather than erroring", {
   indir <- local_input_tree()
   outdir <- file.path(withr::local_tempdir(), "faces")
