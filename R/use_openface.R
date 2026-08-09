@@ -54,7 +54,8 @@ of <- openface
 #' @param aus (logical, default=TRUE) Should the output include action unit estimates?
 #' @param wild (logical, default=FALSE) Should the model consider extended search regions (for challenging images)?
 #' @param multiview (logical, default=FALSE) Should multi-view initialisation be used (more robust but slower)?
-#' @return A character vector containing openface output.
+#' @return A character vector containing openface output. Errors, naming the
+#'   file, if OpenFace exits non-zero.
 #' @references https://github.com/TadasBaltrusaitis/OpenFace/wiki/Command-line-arguments
 #' @export
 #' 
@@ -94,8 +95,8 @@ of_extract <- function(
     opt_arg(wild, "-wild"),
     opt_arg(multiview, "-multi_view", "1")
   )
-  # Run openface command
-  openface(arg)
+  # Run openface command, failing the file if OpenFace does (M17)
+  run_checked("openface", arg, infile)
 }
 
 

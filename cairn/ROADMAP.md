@@ -8,7 +8,7 @@ _Released 0.1.0 (GitHub) 2026-07-11._
 
 | ID | Title | Status | Depends on | Priority | File/Archive |
 |---|---|---|---|---|---|
-| M17 | A tool that exited non-zero is a failed file | planned | — | high | milestones/M17-tool-exit-status.md |
+| M17 | A tool that exited non-zero is a failed file | review | — | high | milestones/M17-tool-exit-status.md |
 | M18 | A skipped file is a skip, not a success | planned | M17 | normal | milestones/M18-batch-skip-outcome.md |
 | M19 | A guard that names no file | planned | — | normal | milestones/M19-guards-name-the-file.md |
 | M13 | Quote at the process boundary, not at the call site | done | — | high | milestones/archive/M13-boundary-quoting.md |
@@ -39,4 +39,5 @@ _Released 0.1.0 (GitHub) 2026-07-11._
 - Two installer-guard robustness fixes M16's review logged just under the action bar: `download_model()`'s `if (size < floor)` errors instead of returning `FALSE` when `file.size()` gives `NA` (a Windows stat race), and `skip_if_not_installed("curl")` sits in the shared gate so a maintainer without curl loses all four opt-in tests rather than the one probe using it — added 2026-08-08 — M16 Review N10, N13
 - Run `install_opensmile_mac()` for real on macOS — the mac half of the gap M16 closes on Windows; the installers have only ever been exercised against a mocked download environment — added 2026-08-08 — M16 Out
 - Revisit the 8 names openac and tidymedia both export at the 1.0 API freeze — the README now warns users (2026-08-08); renaming is the other half and only makes sense once the API is frozen — added 2026-08-08 — M12 (cairn/references/tidymedia-fit.md, C1-C8)
+- The second ffprobe query is unchecked in `os_check_audio()` (R/use_opensmile.R:139) and `aw_check_audio()` (R/use_whisper.R:41) — `ffp_count_streams()` guards only the FIRST probe, so a non-zero exit on the codec/rate/channel query surfaces as `subscript out of bounds` in the openSMILE one (no length guard) and as a silent `FALSE` in the whisper one (which has one), i.e. "not ready" rather than "unreadable" — added 2026-08-09 — M17 Review, finding I (63); M17 Out excluded ffprobe deliberately
 - Restore GP6 for output-path collisions — drop colliding files into the `*_dir` outcome table as per-file failures instead of aborting the batch pre-flight; waits on M18, whose skip channel is the pre-marked-row plumbing this needs (`dir_outputs()` returns a bare `character(N)` cbind-ed into a `pmap` frame, and the collision is a property of a row PAIR found before `dir_walk` is entered) — added 2026-08-07 — hotfix batch-extension-case, PR #9; M18

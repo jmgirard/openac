@@ -39,7 +39,8 @@ of_extract(
 \item{multiview}{(logical, default=FALSE) Should multi-view initialisation be used (more robust but slower)?}
 }
 \value{
-A character vector containing openface output.
+A character vector containing openface output. Errors, naming the
+file, if OpenFace exits non-zero.
 }
 \description{
 Extract openface features from a video with potentially multiple faces using

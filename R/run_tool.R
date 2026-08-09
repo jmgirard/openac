@@ -98,3 +98,101 @@ run_tool <- function(program, arg) {
   args <- quote_tokens(arg, type = quote_type())
   system2(require_program(program), args = args, stdout = TRUE, stderr = TRUE)
 }
+
+
+# run_checked ------------------------------------------------------------------
+
+# Run `program` on behalf of `infile`, aborting if the tool exits non-zero.
+#
+# `run_tool()` returns `system2()`'s value verbatim, and `system2(stdout = TRUE,
+# stderr = TRUE)` reports a non-zero exit in a `status` attribute rather than by
+# erroring. So before M17 a failed ffmpeg, openSMILE or OpenFace run returned
+# normally from every per-file wrapper, and `dir_walk()` -- which classifies a
+# row only by whether the call raised an error (R/utils.R) -- recorded the file
+# as a SUCCESS with no output written. `ffp_count_streams()` was the only place
+# in the package that read a status at all.
+#
+# The check lives here, called by the wrappers that know which file is being
+# processed, rather than inside `run_tool()`, which does not: the message has to
+# name the file, and `ffp_count_streams()` reads the status itself to return its
+# contractual `NA` counts (M14) and would need an opt-out. The four exported
+# passthroughs keep returning the output unchanged either way -- they are the
+# documented low-level escape hatch.
+#
+# MEASURED 2026-08-08 (R 4.6.1, macOS 15, ffmpeg 8.0): a SUCCESSFUL run sets no
+# `status` attribute at all -- NULL, not 0. `!is.null(status)` first is what
+# keeps this from aborting every successful call. `length(status) == 0L` is
+# tested separately because `all()` of an empty vector is TRUE, so a zero-length
+# status would otherwise read as a clean exit; `system2()` sets no such
+# attribute today, and this costs one comparison and removes the question.
+run_checked <- function(program, arg, infile, call = rlang::caller_env()) {
+  # R's own exit-status warning is TRANSLATED (LESSONS, M14), so which warning
+  # is ours to suppress cannot be decided from its text. It is decided by
+  # POSITION: R warns about the status after the command has run and returned,
+  # so its warning is the LAST one raised inside the call. Everything before it
+  # is a diagnostic the caller should still see, and is released unchanged.
+  #
+  # The error handler is not ceremony, and the NESTING is not arbitrary:
+  # `tryCatch` goes OUTSIDE, so the handler runs after `withCallingHandlers`
+  # has unwound. Written the other way round -- `withCallingHandlers(tryCatch())`
+  # -- the handler's release loop runs while the calling handler is still
+  # established, so every warning it re-raises is re-captured and muffled and
+  # NOTHING escapes. MEASURED both ways at M17's review: the correct nesting
+  # released the held warning, the inverted one released none.
+  #
+  # What is at stake is `run_tool()`'s abort path. `require_program()` aborts
+  # when the tool cannot be resolved, and `find_program()` WARNS on its way
+  # there with the `set_program()` hint -- a warning raised inside the held
+  # region. Without the release, a user with no ffmpeg on their PATH loses the
+  # one message telling them how to point openac at it, and a batch prints 500
+  # identical aborts with no hint. This is the M14 fix-delta F1 defect; M17
+  # shipped it once by inverting the nesting and was returned for it.
+  held <- list()
+  out <- tryCatch(
+    withCallingHandlers(
+      run_tool(program, arg),
+      warning = function(w) {
+        held[[length(held) + 1L]] <<- w
+        invokeRestart("muffleWarning")
+      }
+    ),
+    error = function(e) {
+      for (w in held) warning(w)
+      stop(e)
+    }
+  )
+
+  status <- attr(out, "status")
+  failed <- !is.null(status) &&
+    (length(status) == 0L || !isTRUE(all(status == 0)))
+  if (!failed) {
+    for (w in held) warning(w)
+    return(out)
+  }
+
+  for (w in utils::head(held, -1L)) warning(w)
+
+  # What the tool itself said, which is the difference between a report and a
+  # shrug: the batch table's `error` column is where a user reads this, and
+  # without it they must re-run the file by hand to learn why it failed. Capped
+  # at the last few lines so one bad file cannot flood a data frame column --
+  # ffmpeg is verbose, and the operative complaint is always at the end.
+  #
+  # Interpolated as a VALUE, never pasted into the format string: the tool's
+  # output is untrusted text, and a `{` in it would be read as glue markup and
+  # abort inside the handler -- a failure while reporting a failure, which is
+  # how the batch loses the row it was trying to record.
+  said <- utils::tail(as.character(out), 3L)
+  said <- said[nzchar(said)]
+  reported <- if (length(status) == 0L) "no status" else paste(status, collapse = ", ")
+
+  cli::cli_abort(
+    c(
+      "Could not process {.file {basename(infile)}}.",
+      "x" = "{program} exited with status {reported}.",
+      if (length(said)) c("i" = "{program} said: {said}")
+    ),
+    class = "openac_tool_failed",
+    call = call
+  )
+}

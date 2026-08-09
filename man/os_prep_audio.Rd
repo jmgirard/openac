@@ -19,7 +19,8 @@ to import?}
 be skipped otherwise. Defaults to TRUE.}
 }
 \value{
-A character vector containing the output of ffmpeg.
+A character vector containing the output of ffmpeg. Errors, naming
+the file, if ffmpeg exits non-zero.
 }
 \description{
 Import an audio or video file and export an audio file for acoustic analysis.

@@ -171,7 +171,8 @@ os_check_audio <- function(infile, verbose = FALSE) {
 #' (ffmpeg uses zero-indexing so 0 is the first stream).
 #' @param overwrite Should outfile be overwritten if it already exists? It will
 #'   be skipped otherwise. Defaults to TRUE.
-#' @return A character vector containing the output of ffmpeg.
+#' @return A character vector containing the output of ffmpeg. Errors, naming
+#'   the file, if ffmpeg exits non-zero.
 #' @export
 #'
 os_prep_audio <- function(infile, outfile, stream = 0, overwrite = TRUE) {
@@ -198,8 +199,8 @@ os_prep_audio <- function(infile, outfile, stream = 0, overwrite = TRUE) {
     "-c:a", "pcm_s16le", # set to 16-bit PCM Little-Endian codec
     outfile
   )
-  # Run ffmpeg command
-  ffmpeg(arg)
+  # Run ffmpeg command, failing the file if ffmpeg does (M17)
+  run_checked("ffmpeg", arg, infile)
 }
 
 
@@ -281,7 +282,8 @@ os_prep_audio_dir <- function(
 #' should be used to analyze `infile`? A list of available config files can be
 #' generated using `os_list_configs()`.
 #' @inheritDotParams os_prep_audio stream overwrite
-#' @return A character vector including opensmile output.
+#' @return A character vector including opensmile output. Errors, naming the
+#'   file, if openSMILE exits non-zero.
 #' @export
 #'
 os_extract <- function(
@@ -315,7 +317,8 @@ os_extract <- function(
     infile = wavfile,
     aggfile = aggfile,
     lldfile = lldfile,
-    config = config
+    config = config,
+    source = infile
   )
   # Clean up temporary file if created
   if (temp) unlink(wavfile)
@@ -326,11 +329,19 @@ os_extract <- function(
 
 # os_extract_wav ------------------------------------------------------------
 
+# `source` is the file to NAME in a failure message, which is not always the
+# file openSMILE is handed. `os_extract()` converts a non-conforming input to a
+# `tempfile()` and passes that as `infile`, so a message built from `infile`
+# names a temp path that no longer exists and that the user never chose -- and
+# it is `os_extract_dir()`'s `error` column the NEWS entry tells them to read
+# and re-run from. Defaults to `infile` for a direct call, where the two are the
+# same file (M17 review, finding B).
 os_extract_wav <- function(
   infile,
   aggfile = NULL,
   lldfile = NULL,
-  config = "misc/emo_large"
+  config = "misc/emo_large",
+  source = infile
 ) {
   # Validate inputs
   stopifnot(file.exists(infile), os_check_audio(infile))
@@ -354,8 +365,8 @@ os_extract_wav <- function(
     opt_arg(!is.null(lldfile), "-lldcsvoutput", lldfile),
     "-instname", basename(infile)
   )
-  # Run opensmile command
-  out <- opensmile(arg)
+  # Run opensmile command, failing the file if openSMILE does (M17)
+  out <- run_checked("opensmile", arg, source)
   # Fix the output CSV files
   if (!is.null(aggfile)) {
     os_fix_csv(aggfile)

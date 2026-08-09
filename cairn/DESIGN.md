@@ -256,17 +256,34 @@ them without attaching the upstream packages.
   `aw_prep_audio` aborts naming the file, `aw_transcribe` skips it). What that
   buys at the BATCH level is uneven, and MEASURED 2026-08-08 rather than
   inferred from the callers: `aw_prep_audio_dir()` records the bad file as a
-  failed row naming it; `os_extract_dir()` records a failed row whose message is
-  the bare `stopifnot()` deparse `file.exists(infile) is not TRUE`, naming no
-  file at all — the input it concerns is a temporary wav that was never written;
-  `aw_transcribe_dir()` and
-  `os_prep_audio_dir()` record it as a **success** (ROADMAP candidate). A
+  failed row naming it; `os_extract_dir()` records a failed row naming the file and
+  the tool (**corrected 2026-08-09, M17**: it previously carried the bare
+  `stopifnot()` deparse `file.exists(infile) is not TRUE`, about a temporary wav
+  that was never written — MEASURED 2026-08-09, it now reads `Could not process
+  'clip.mp4'. ffmpeg exited with status 183. …`);
+  and `aw_transcribe_dir()` records it as a **success**, because
+  `aw_transcribe()` skips such a file with a message and returns `NULL`, which
+  `dir_walk()` cannot tell from a completed transcription (M18). A
   per-file disposition is not a per-file outcome until the batch table shows it.
+  (`os_prep_audio_dir()` was the second such table until **M17, 2026-08-08**,
+  which made a non-zero ffmpeg exit that file's own failure — see below.)
   Resilience is ad hoc elsewhere: the `stopifnot(file.exists())` guards in
   `os_check_audio`, `os_prep_audio`, `os_extract_wav`, `os_fix_csv`,
   `aw_check_audio`, `aw_prep_audio`, `aw_transcribe_wav` and `of_extract` abort
   on a missing input; `os_check_config()` aborts on a config it cannot resolve;
-  and `run_tool()` inspects no tool's exit status, so an ffmpeg, openSMILE or
-  OpenFace failure is invisible to its caller — `ffp_count_streams()` is the
-  only place in the package that reads one. `dir_outputs()`'s collision refusal
+  and the abort messages name the file in only one of them (`aw_prep_audio`,
+  `R/use_whisper.R`), the rest being bare `stopifnot()` deparses (M19).
+  Exit status is read at exactly two places (**corrected 2026-08-08, M17**,
+  superseding the earlier "`run_tool()` inspects no tool's exit status"
+  reading): `ffp_count_streams()` reads it for its own contractual `NA` return
+  (M14), and `run_checked()` reads it on behalf of the four per-file wrappers,
+  aborting with the file, the program and what the tool said — so an ffmpeg,
+  openSMILE or OpenFace failure is that file's own failed row. Two
+  ffprobe calls remain unchecked — the codec/rate/channel query in
+  `os_check_audio()` and `aw_check_audio()`, where `ffp_count_streams()` guards
+  only the first probe; `os_check_audio()` has no length guard on the result, so
+  a non-zero exit there surfaces as `subscript out of bounds`.
+  `run_tool()` itself still returns `system2()`'s value verbatim, which is what
+  keeps the four exported passthroughs a raw escape hatch.
+  `dir_outputs()`'s collision refusal
   is a deliberate pre-flight abort outside that set (see `R/utils.R`).

@@ -1,5 +1,25 @@
 # openac (development version)
 
+* When ffmpeg, openSMILE or OpenFace fails on a file, that file is now reported
+  as a failure instead of a success. Until now nothing in the package looked at
+  whether these programs had actually worked — they report failure through a
+  channel R does not treat as an error. For ffmpeg and OpenFace that meant a
+  conversion or extraction producing no output at all finished quietly and was
+  recorded in a batch's results table as though it had worked: a long overnight
+  run could report every file successful and leave you with far fewer output
+  files than inputs, with nothing saying which were missing or why. A failed
+  openSMILE run was already recorded as a failure, but only indirectly — the
+  step that tidies its output tripped over the missing file — and the message
+  said `file.exists(infile) is not TRUE`, naming neither the file nor openSMILE.
+  All three now report the same way. `os_prep_audio()`,
+  `aw_prep_audio()`, `os_extract()` and `of_extract()` now stop with a message
+  naming the file, the program, and the last few lines of what the program
+  itself said; in a batch that message lands in the `error` column of the
+  returned table, so you can read the failures and re-run exactly those files.
+  The low-level `ffmpeg()`, `ffprobe()`, `openface()` and `opensmile()`
+  functions are unchanged and still hand back whatever the program printed —
+  they are the escape hatch for driving a tool yourself.
+
 * A media file that ffprobe cannot read is now reported as that file's own
   result rather than being mistaken for a file with no audio.
   `ffp_count_streams()` returns `NA` counts and a warning naming the file
@@ -10,10 +30,9 @@
   failure you can read and re-run, where before the table said only that an
   audio stream index was not true — a message that named neither the file nor
   the reason, and that came from reading a failed probe as a file with no audio.
-  Two batch functions do not yet report it that clearly, and both still record
-  such a file as a success: `aw_transcribe_dir()` skips it, and
-  `os_prep_audio_dir()` hands it to ffmpeg and does not check whether ffmpeg
-  succeeded, so no audio file is written and the table says nothing went wrong. A
+  One batch function does not yet report it that clearly and still records such
+  a file as a success: `aw_transcribe_dir()` skips it, and a skipped file is not
+  yet distinguishable from a transcribed one in the returned table. A
   missing ffprobe stops the run as before, because that is a problem with the
   installation rather than with any one file. `ffp_count_streams()` also now
   requires a single file path: it previously accepted a vector of several and

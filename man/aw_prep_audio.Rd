@@ -24,7 +24,8 @@ be silently skipped otherwise. Defaults to TRUE.}
 (See Details.) Defaults to FALSE.}
 }
 \value{
-A string containing the text output from ffmpeg.
+A string containing the text output from ffmpeg. Errors, naming the
+file, if ffmpeg exits non-zero.
 }
 \description{
 If provided an audio file, convert the specified audio stream to the proper
