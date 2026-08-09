@@ -1,7 +1,7 @@
 # Roadmap
 
 _The only authority on milestone status. Grouped by status, not ID._
-_Last hygiene check: 2026-08-08 (M15 merged and archived; two candidates added — the OpenFace Windows CSV defect and the mac installer run; M14 and M16 are workable)_
+_Last hygiene check: 2026-08-08 (M16 implemented on its branch — PR #16 open, all five CI jobs green, ready for review; main's tracking still shows it `planned` because the branch is unmerged)_
 _Released 0.1.0 (GitHub) 2026-07-11._
 
 ## Milestones
