@@ -412,3 +412,79 @@ supplied argument being silently ignored. Second defect return for this
 milestone; the thrash rule's third-return threshold is not yet reached, and its
 same-criterion trigger does not fire, since round 1's failures were AC1 and AC3
 and this round's findings rest on neither.
+
+### Round 3 (2026-08-09)
+
+_Evidence gathered 2026-08-09 on R 4.6.1 / macOS 15 (Darwin 25.6.0), at branch
+`m19-guards-name-the-file` (6902e5e), PR #20. `main` at 212a234, unmoved since
+the branch was cut, so the branch needed no merge._
+
+- **AC1 — verified.** Domain re-derived by the criterion's own stated input:
+  `grep -n "stopifnot\|cli_abort" R/use_*.R` returns 43 hits (43 at round 2 —
+  `os_fix_csv()`'s `cli_abort` left, and the comment recording why arrived).
+  Every `stopifnot()` among them outside a comment sits in a `*_dir()`
+  pre-flight block — `os_prep_audio_dir` `use_opensmile.R:321-324`,
+  `os_extract_dir` `:541-547`, `of_extract_dir` `use_openface.R:156-159`,
+  `aw_prep_audio_dir` `use_whisper.R:259-262`, `aw_transcribe_dir` `:557-562` —
+  exactly the set T2 recorded as not batch-reachable, with its reason; four
+  further `stopifnot` hits are inside comments. The surviving `cli_abort` hits
+  are `os_check_config` `use_opensmile.R:99`, `:107` (AC3's, and a `*_dir()`
+  pre-flight) and the three readers Scope excludes (`os_read` `:666-675`,
+  `of_read` `use_openface.R:203-212`, `aw_read_data` `use_whisper.R:644-673`).
+  `os_fix_csv()` is no longer among them: it routes through `abort_file()`,
+  which now has 33 call sites in `R/use_*.R` (32 at round 2, +1 for that move),
+  one comment mention excluded from the count. The domain is 30 case-table
+  guards plus `of_extract()`'s 8 flags = the 38 T2 enumerated.
+  `test-guard-messages.R` ran 96 test blocks, 334 expectations, 0 failures,
+  0 errors, 0 skips.
+- **AC2 — verified.** `os_extract_dir()` driven fresh over a one-file directory
+  with `wavdir=` and `aggdir=`, ffprobe reporting a non-conforming input and
+  ffmpeg exiting 0 while writing nothing. The row reads `status = "failed"` and
+  its `error`, verbatim, is `Could not process 'clip.mp4': ffmpeg wrote no
+  output at '<wavdir>/clip.wav'.` — one line, no glyph, and (new this round)
+  `identical()` to its own `cli::ansi_strip()`. The full derived wav path is
+  present: a first comparison read FALSE and was chased rather than recorded,
+  and the cause was the harness, not the message — `withr::local_tempdir()`
+  returns `T//Rtmp…` while the guard names the `fs::path_abs()` form; against
+  the absolutized path the match is TRUE.
+- **AC3 — verified.** Six clauses, each driven fresh rather than read off the
+  suite. (1) `os_check_config("egemaps/v99/nope")` aborts with `Can't find the
+  openSMILE config "egemaps/v99/nope".` (2) an unresolvable `config =` makes
+  `os_extract_dir()` signal rather than return, `boundary_tools()` length 0 —
+  no call at all. (3) the same with no `config` supplied, the default read from
+  `formals(os_extract)` (the emptied-config-directory test in the suite).
+  (4) `conf =` is resolved by `match_formals()` and pre-flighted, tools length
+  0. (5) an explicit `config = NULL` is checked as the supplied value it is:
+  `` `config` must be a single string, not NULL. `` (6) an unresolved openSMILE
+  names openSMILE rather than dying on `dirname(NULL)`. New alongside them,
+  from T12: `conf =` and `confi =` together abort with `` `config` is matched by
+  more than one argument: `conf` and `confi`. ``, tools length 0.
+- **AC4 — verified.** `os_fix_csv()` on a path nothing wrote aborts with
+  `Could not process 'agg.csv': openSMILE wrote no output at '<path>'.`,
+  condition class `openac_file_guard`. The wording changed this round — the
+  guard moved onto `abort_file()` — and the criterion's two parts are both
+  measured on the new text: the full path is present, and the openSMILE
+  attribution is present. The attribution's honesty was re-checked at both call
+  sites rather than carried over: `grep -n "os_fix_csv(" R/` returns the
+  definition and exactly two callers, both inside `os_extract_wav()` on the
+  file it just handed openSMILE as `-csvoutput` / `-lldcsvoutput`.
+- **AC5 — verified.** `devtools::document()` leaves the tree clean (no `man/`,
+  `NAMESPACE` or `DESCRIPTION` diff). `devtools::test()`: 1137 tests, 0
+  failures, 0 errors, 6 skips. `devtools::check()`: **Status OK — 0 errors,
+  0 warnings, 0 notes** in 1m10s; the pre-existing `spelling` NOTE the criterion
+  allows for did not appear, `spelling.R` passing as a test instead.
+
+- **Consistency gate — passed.** `cairn_validate.py` exit 0: 16 PASS, no FAIL,
+  one advisory — `sizing (split tripwires)`, M19 at 12 tasks against a
+  >10 tripwire. Recorded rather than waved past: the count is 10 tasks of
+  planned work plus 2 added by defect returns, so it measures the returns, not
+  a mis-cut plan, and the tripwire is advisory by design. No `DESIGN.md` IP/GP
+  principle line changed (the edit is a Known-issues correction), so
+  `cairn_impact` is a clean no-op. Toolchain slot (`r-package`): `document()`
+  no diff; the one generated file in the diff (`man/os_extract_dir.Rd`)
+  regenerates rather than being hand-edited; README.Rmd and README.md are
+  untouched by the branch and last written by the same commit (2fba1c6); no
+  pkgdown site, so that check and the reference-index row no-op, and NAMESPACE
+  is not in the diff so nothing new is exported; NEWS.md carries this
+  milestone's user-visible changes with no milestone number in them; no new
+  top-level files; `check()` clean as recorded under AC5.
