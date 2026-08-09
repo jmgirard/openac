@@ -5,7 +5,7 @@
 - **Depends on:** —
 - **Driving RR:** —
 - **Principles touched:** GP3, GP7
-- **Branch/PR:** m16-windows-installers-real-run
+- **Branch/PR:** m16-windows-installers-real-run / #16
 
 ## Goal
 
@@ -60,7 +60,7 @@ not this milestone.
       what the run measured and its date; it is replaced only for a link measured
       dead and then fixed, since "links of that shape die silently" stays true of
       a link that answered today.
-- [ ] AC6 `devtools::test()` passes, `devtools::check()` reports 0 errors, 0
+- [x] AC6 `devtools::test()` passes, `devtools::check()` reports 0 errors, 0
       warnings and no note absent from a same-day check of the default branch,
       and all five `R-CMD-check` jobs are green. The opt-in variable is unset in
       CI, so a green `windows-latest` job evidences AC6 alone and never AC2.
@@ -86,7 +86,7 @@ not this milestone.
 - [x] T3 **[Windows host]** Fix what T2 broke — dead or sign-in-page links, the
       patch-expert directory, the download-status handling in `:179-206` — and
       re-run there until AC1 passes.
-- [ ] T4 Annotate DESIGN's OneDrive known-issue line; `devtools::document()`,
+- [x] T4 Annotate DESIGN's OneDrive known-issue line; `devtools::document()`,
       `devtools::test()`, `devtools::check()`; open the PR and confirm all five CI
       jobs green.
 
@@ -98,6 +98,7 @@ not this milestone.
 - 2026-08-08: T3 repointed both. The patch experts go to the Dropbox URLs OpenFace's own `download_models.ps1`/`.sh` try FIRST — openac had copied only upstream's OneDrive fallback, which is why it inherited the dead half. openSMILE goes to `opensmile-3.0.2-windows-x86_64.zip`, read off the release's API listing rather than guessed.
 - 2026-08-08: T3 chose a byte floor AND a markup sniff over either alone, because each has a hole the other closes: a floor passes a large HTML error page, a sniff passes a truncated binary download. `model_byte_floor()` is a function rather than a constant so the mocked tests can lower it instead of writing 40 MB of fixture; falsified by a real model ever shipping under the floor.
 - 2026-08-08: the markup sniff needs `<!--` in its needle set, not just `<!DOCTYPE`/`<html>` — MEASURED, the live.com page opens with a copyright comment. A sniff written from the obvious needles would have missed the exact page it exists for.
+- 2026-08-08: T4 done — DESIGN's OneDrive known issue annotated with the measurement rather than deleted (the hazard shape is unchanged; only these four links were fixed), PR #16 opened, all five R-CMD-check jobs green. `curl` had to join Suggests: without it `R CMD check` warns `'::' or ':::' import not declared from: 'curl'`.
 - 2026-08-08: plan gate chose a full real install of all three tools, OpenFace included, over ffmpeg+openSMILE with the model links probed separately, because the OneDrive authkey links are the flagged time bomb and a probe cannot show whether the extracted tree puts `model/patch_experts` where the download expects it; falsified by the OpenFace download proving too large to run on the host.
 - 2026-08-08: plan chose temp config and data dirs via the existing `local_fake_config()`/`local_fake_data_dir()` helpers over letting the installers write the machine's real rappdirs config, because the run happens on the maintainer's working Windows machine and `set_*()` would overwrite the tool locations openac is actually used with there; falsified by an installer path that ignores the redirection.
 - 2026-08-08: criteria audit ([O], fresh context) returned findings on all five drafted criteria — AC1 contradicting AC3's failure branch, AC2 measuring a size after the file is `unlink()`ed and hand-counting seven URLs, AC3 blind to a 200-with-sign-in-page, AC4 resting on a false claim about `download.file()`'s status and a floor of mere non-emptiness, AC5 deleting a still-true known issue — all fixed in the wording above before the gate; none became a gate question.
@@ -196,5 +197,9 @@ a real-tools test, so it skips on every CI runner. `curl` was added to
 `Suggests` for the URL probe; without it `R CMD check` warns
 `'::' or ':::' import not declared from: 'curl'`.
 
-The five `R-CMD-check` jobs are still to run — the PR is not open yet, because
-`gh` is unauthenticated on this host.
+All five `R-CMD-check` jobs green on #16 (run 31286091312, 2026-08-08):
+`macos-latest (release)`, `ubuntu-latest (devel)`, `ubuntu-latest (oldrel-1)`,
+`ubuntu-latest (release)`, `windows-latest (release)`. `OPENAC_INSTALLER_RUN`
+is unset there, so all four of `test-installers-real.R`'s tests skipped on
+every runner — the green `windows-latest` job evidences AC6 alone and never
+AC2's measurements, exactly as AC6 says.
