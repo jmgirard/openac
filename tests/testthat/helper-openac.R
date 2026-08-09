@@ -325,6 +325,36 @@ test_that <- function(desc, code) {
 # Programs `find_program()` knows about; the fake resolver serves these.
 fake_programs <- function() c("ffmpeg", "ffprobe", "openface", "opensmile")
 
+# The hostile-name table (M15, AC1). One filename per character a shell can act
+# on, each used as a real output name in `test-real-tools.R` and, once M15's
+# quoting internal exists, as an input to its cross-platform assertions -- which
+# is why the table lives here rather than in either file.
+#
+# EVERY entry also carries a space, deliberately. The two Windows quoting styles
+# are not interchangeable and neither is a superset of the other -- MEASURED on
+# macOS, `shQuote(x, type = "cmd")` wraps in double quotes and leaves `%`
+# untouched, while `type = "cmd2"` prefixes `%` with `^` and adds no quotes at
+# all. So a name carrying only `%` is satisfied by escaping alone and a name
+# carrying only a space by quoting alone; a name carrying both is the case that
+# tells the two apart, and R's own `?shQuote` says the styles compose rather
+# than substitute.
+#
+# `$` is here because M13 fixed it and a regression must reappear as a failure
+# rather than as a name nobody tests any more; the rest are the characters
+# `cmd.exe` and `sh` respectively expand, escape, or split on.
+hostile_names <- function() {
+  c(
+    space      = "a space.wav",
+    dollar     = "a $dollar.wav",
+    percent    = "a %TEMP% token.wav",
+    caret      = "a ^caret.wav",
+    ampersand  = "a &ampersand.wav",
+    bang       = "a !bang.wav",
+    apostrophe = "a Jeff's clip.wav",
+    backtick   = "a `backtick`.wav"
+  )
+}
+
 # The file name a fixture binary must carry for `Sys.which()` to resolve it on
 # the platform being SIMULATED. Windows needs an extension (see
 # `fake_is_executable()`); an extensionless fixture there is what a real Windows
