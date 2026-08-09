@@ -8,6 +8,15 @@
 \description{
 Provides R wrappers to open-source affective computing tools.
 }
+\seealso{
+Useful links:
+\itemize{
+  \item \url{https://jmgirard.github.io/openac/}
+  \item \url{https://github.com/jmgirard/openac}
+  \item Report bugs at \url{https://github.com/jmgirard/openac/issues}
+}
+
+}
 \author{
 \strong{Maintainer}: Jeffrey Girard \email{me@jmgirard.com} (\href{https://orcid.org/0000-0002-7359-3746}{ORCID})
 

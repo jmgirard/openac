@@ -9,3 +9,4 @@ cairn/.merge-approved
 cairn/.merge-approved.pending
 tests/testthat/_problems/
 tests/testthat/testthat-problems.rds
+docs
