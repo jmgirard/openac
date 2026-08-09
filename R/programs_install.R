@@ -171,35 +171,46 @@ model_byte_floor <- function() 40e6
 # passes a truncated download. Returning FALSE with a warning naming the URL --
 # rather than aborting -- keeps the installer's documented `logical` contract.
 download_model <- function(url, destfile, floor = model_byte_floor()) {
-  status <- tryCatch(
-    utils::download.file(url = url, destfile = destfile, mode = "wb"),
-    error = function(e) {
-      warning("Download failed for ", url, ": ", conditionMessage(e))
-      -1L
-    }
+  model <- basename(destfile)
+  failed <- tryCatch(
+    {
+      status <- utils::download.file(url = url, destfile = destfile, mode = "wb")
+      if (identical(as.integer(status), 0L)) NULL else "download reported failure"
+    },
+    error = function(e) conditionMessage(e)
   )
-  if (!identical(as.integer(status), 0L)) {
-    warning("File download failed for ", url)
+  if (!is.null(failed)) {
+    cli::cli_warn(c(
+      "Could not download {.file {model}}.",
+      "x" = "{failed}",
+      "i" = "From {.url {url}}"
+    ))
     return(FALSE)
   }
   if (!file.exists(destfile)) {
-    warning("Download reported success but wrote no file: ", url)
+    cli::cli_warn(c(
+      "The download of {.file {model}} reported success but wrote no file.",
+      "i" = "From {.url {url}}"
+    ))
     return(FALSE)
   }
   size <- file.size(destfile)
   if (size < floor) {
-    warning(
-      "Downloaded ", basename(destfile), " is ", size, " bytes, below the ",
-      floor, "-byte floor for a model file -- ", url,
-      " is probably serving an error or sign-in page."
-    )
+    # Spelled out rather than interpolated raw: glue renders 40e6 as `4e+07`.
+    floor_txt <- format(floor, scientific = FALSE, big.mark = ",")
+    cli::cli_warn(c(
+      "{.file {model}} is {size} byte{?s}, below the {floor_txt}-byte floor for
+       a model file.",
+      "x" = "{.url {url}} is probably serving an error or sign-in page.",
+      "i" = "A real patch expert is tens of megabytes."
+    ))
     return(FALSE)
   }
   if (starts_with_markup(destfile)) {
-    warning(
-      basename(destfile), " is a markup document, not a model -- ", url,
-      " is serving a sign-in or error page."
-    )
+    cli::cli_warn(c(
+      "{.file {model}} is a markup document, not a model.",
+      "x" = "{.url {url}} is serving a sign-in or error page."
+    ))
     return(FALSE)
   }
   TRUE
