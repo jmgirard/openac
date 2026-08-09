@@ -5,7 +5,7 @@
 - **Depends on:** M17
 - **Driving RR:** —
 - **Principles touched:** GP6
-- **Branch/PR:** `m18-batch-skip-outcome`
+- **Branch/PR:** `m18-batch-skip-outcome` — https://github.com/jmgirard/openac/pull/19
 
 ## Goal
 
@@ -34,11 +34,11 @@ plumbing that work needs, so it is planned after this one lands, not now.
 
 ## Acceptance criteria
 
-- [ ] AC1 `dir_walk()` records three states: a test drives a `.f` that
+- [x] AC1 `dir_walk()` records three states: a test drives a `.f` that
       returns normally, one that signals the skip condition, and one that
       errors, and asserts the rows read `status` of `"ok"`, `"skipped"` and
       `"failed"` respectively, with `success` `TRUE`, `FALSE`, `FALSE`.
-- [ ] AC2 Every `*_dir()` wrapper returns a table carrying a `status` column,
+- [x] AC2 Every `*_dir()` wrapper returns a table carrying a `status` column,
       as does the zero-row table `dir_walk()` returns for an empty input
       (`R/utils.R:112-114`), and each wrapper's roxygen `@return` documents
       the three values. The test derives its wrapper list at run time from the
@@ -48,7 +48,7 @@ plumbing that work needs, so it is planned after this one lands, not now.
       vacuous exactly where it gates the merge), so a sixth wrapper reds the
       test until it is covered — the computed-domain shape D-010 adopted for
       the command contract.
-- [ ] AC3 The three deliberate-skip sites named in Scope signal the skip
+- [x] AC3 The three deliberate-skip sites named in Scope signal the skip
       condition instead of returning normally, and `aw_transcribe()`'s
       combined branch (`R/use_whisper.R:296-300`) is split so the two facts it
       currently conflates part company: a file with no audio stream is
@@ -56,14 +56,14 @@ plumbing that work needs, so it is planned after this one lands, not now.
       One test per site asserts `status == "skipped"`, `success == FALSE` and
       the reason in `error`; a fourth drives an unprobeable file through
       `aw_transcribe_dir()` and asserts `status == "failed"`.
-- [ ] AC4 The KNOWN GAP test in `tests/testthat/test-batch-dirs.R` — whatever
+- [x] AC4 The KNOWN GAP test in `tests/testthat/test-batch-dirs.R` — whatever
       M17 leaves of it, having rewritten its `os_prep_audio_dir` half — is
       replaced by tests asserting the skip state, and
       `dir_walk_reports_failure()` (`tests/testthat/helper-openac.R:882`) is
       updated or retired together with the comment that anticipates this fix
       (`:872-881`); a test pins that adding `status` has not made its
       `setdiff(names(x), known)` clause true for every table.
-- [ ] AC5 NEWS records the return-shape change and what a caller reading
+- [x] AC5 NEWS records the return-shape change and what a caller reading
       `success` must do differently; `devtools::document()` shows no drift,
       `devtools::test()` passes, and `devtools::check()` reports 0 errors, 0
       warnings and no NOTE other than the pre-existing `spelling` NOTE.
@@ -107,7 +107,61 @@ plumbing that work needs, so it is planned after this one lands, not now.
 - 2026-08-09: T6 NEWS entry added and the previous entry's now-false tail ("`aw_transcribe_dir()` … still records such a file as a success") corrected in place; `devtools::check()` **Status: OK** — 0 errors, 0 warnings, 0 notes, the spelling comparison clean after rewording two words the change introduced.
 - 2026-08-09: DESIGN Known-issues corrected in place (marked, 2026-08-09 M18) on two claims this milestone falsified — `aw_transcribe` skipping an unprobeable file, and `aw_transcribe_dir()` recording it as a success — and the three-state table recorded there.
 - 2026-08-09: amendment — AC2's run-time wrapper list moves from a `R/*.R` grep to `asNamespace("openac")`; MEASURED an installed package's `R/` holds only the lazy-load DB (withr: `withr`, `withr.rdb`, `withr.rdx`), so the grep would match nothing under `R CMD check` and the criterion would be vacuous there.
+- 2026-08-09: review round 1 checkpoint — PR #19 opened as a draft; consistency gate green (`cairn_validate` exit 0, `check()` Status: OK, `document()` no drift, 803 tests pass); all five criteria ticked against recorded evidence. Two defects found while gathering it (a leaked `#'` in the five rendered `@return` blocks, and the skip signal unwinding past the work `overwrite = FALSE` was meant to preserve in `os_extract_dir`/`aw_transcribe_dir`); fresh-context review still in flight, triage pending.
 
 ## Decisions
 
 ## Review
+
+_Round 1 — 2026-08-09. Fresh evidence gathered on `m18-batch-skip-outcome`
+at 8144b17, level with `origin/main`._
+
+### Acceptance-criterion evidence
+
+- **AC1** — `devtools::test(filter = "batch-skip-outcome")` green, 40
+  assertions. `test-batch-skip-outcome.R:16-40` drives one `.f` over three
+  inputs (returns normally / `skip_file()` / `stop()`) and asserts
+  `status` `c("ok", "skipped", "failed")` with `success`
+  `c(TRUE, FALSE, FALSE)`; `error` is `NA` for the ok row and carries the
+  reason for the other two.
+- **AC2** — same run. `:120-156` computes the wrapper domain from
+  `grep("_dir$", ls(asNamespace("openac")))` and `expect_setequal()`s it
+  against the five covered names, then asserts `status` present in each
+  wrapper's returned table; `:82-98` pins the zero-row table's column set
+  identical to a populated one (`infile`, `status`, `success`, `error`).
+  All five `@return` blocks document the three values (`git diff` on
+  `R/use_whisper.R`, `R/use_opensmile.R`, `R/use_openface.R`) — but see
+  finding **F1**: a stray `#'` leaked into the rendered prose.
+- **AC3** — same run. `:160-238` gives one test per site:
+  `aw_prep_audio_dir()` and `os_prep_audio_dir()` under `overwrite = FALSE`
+  read `status == "skipped"`, `success == FALSE`, `error` matching
+  `"overwrite"`, with `boundary_tools()` empty (nothing reached a tool); the
+  no-audio file reads `"skipped"` after exactly one `ffprobe`; the
+  unprobeable file reads `"failed"` with `"could not be counted"`. The split
+  is real in source (`R/use_whisper.R:302-330`).
+- **AC4** — `devtools::test()` full suite green, 803 pass / 0 fail. The
+  KNOWN GAP test is gone; `test-batch-dirs.R:357-385` replaces it and
+  asserts both split states (`c("skipped", "failed")`, both
+  `success = FALSE`). `dir_walk_reports_failure()` is retired with a comment
+  in its place (`helper-openac.R:872-881`), and its `setdiff(names(x), known)`
+  guarantee is re-pinned directly by the all-ok batch test
+  (`test-batch-skip-outcome.R:100-118`), which asserts the exact column set
+  on a table where nothing failed.
+- **AC5** — `NEWS.md` gains the return-shape entry naming what a `success`
+  reader must do differently, and the previous entry's now-false tail is
+  corrected in place. `devtools::document()` re-run: no drift (`git status`
+  clean but for this tracking file). `devtools::check()` **Status: OK** —
+  0 errors, 0 warnings, 0 notes (the criterion allowed a `spelling` NOTE;
+  none appeared).
+
+### Consistency gate
+
+- `cairn_validate.py` exit 0 — 16 CHECKs PASS, 8 advisories OK.
+- No `DESIGN.md` IP/GP principle changed (the diff sits in *Known issues*,
+  `:253-275`), so `cairn_impact --changed` is a clean no-op.
+- `r-package` `consistency-gate` slot: `document()` no diff · generated files
+  regenerate clean · `README.Rmd`/`README.md` untouched by this branch, so
+  their sync state is unchanged from the default branch · no `_pkgdown.yml`
+  in the repo, so no pkgdown check · `NEWS.md` (the declared changelog) has
+  this milestone's entry, with no milestone numbers in it · no new top-level
+  files · `check()` clean.
