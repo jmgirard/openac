@@ -331,6 +331,29 @@ test_that("one unprobeable file among three is a row, not the end of the batch",
   expect_true(any(grepl("b.mp4", warnings, fixed = TRUE)))
 })
 
+test_that("KNOWN GAP: two batch tables record a skipped file as a success", {
+  # Pinning a wart, not a contract. `aw_prep_audio_dir()` above reports an
+  # unprobeable file as a failed row; these two do not, because dir_walk()
+  # records a row as failed only on an ERROR -- `aw_transcribe()` skips such a
+  # file with a message and returns NULL, and `os_prep_audio()` never counts
+  # streams at all and never inspects ffmpeg's exit status.
+  #
+  # The test exists because NEWS names this limitation to users, and a claim in
+  # the changelog needs something that fails when it stops being true. When the
+  # ROADMAP candidate for it lands, this test SHOULD red -- update it and the
+  # NEWS entry together.
+  indir <- withr::local_tempdir()
+  file.create(file.path(indir, "b.mp4"))
+  outdir <- file.path(withr::local_tempdir(), "wavs")
+  local_fake_tools(results = list(fake_nonzero_exit()))
+
+  suppressWarnings(prep <- os_prep_audio_dir(indir, "mp4", outdir))
+
+  expect_identical(prep$success, TRUE)
+  expect_true(is.na(prep$error))
+  expect_false(file.exists(prep$outfile))
+})
+
 test_that("every file failing still returns a full report rather than erroring", {
   indir <- local_input_tree()
   outdir <- file.path(withr::local_tempdir(), "faces")

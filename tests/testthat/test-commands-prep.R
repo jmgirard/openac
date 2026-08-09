@@ -162,7 +162,7 @@ test_that("aw_prep_audio() aborts on a file it cannot probe, naming it", {
   state <- local_fake_tools(results = list(fake_nonzero_exit()))
 
   suppressWarnings(
-    expect_error(aw_prep_audio(infile, outfile), basename(infile))
+    expect_error(aw_prep_audio(infile, outfile), basename(infile), fixed = TRUE)
   )
 
   # ffmpeg was never reached: the count is the gate.
