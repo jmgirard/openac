@@ -1,6 +1,6 @@
 # M18: A skipped file is a skip, not a success
 
-- **Status:** review
+- **Status:** in-progress
 - **Priority:** normal
 - **Depends on:** M17
 - **Driving RR:** —
@@ -34,11 +34,11 @@ plumbing that work needs, so it is planned after this one lands, not now.
 
 ## Acceptance criteria
 
-- [x] AC1 `dir_walk()` records three states: a test drives a `.f` that
+- [ ] AC1 `dir_walk()` records three states: a test drives a `.f` that
       returns normally, one that signals the skip condition, and one that
       errors, and asserts the rows read `status` of `"ok"`, `"skipped"` and
       `"failed"` respectively, with `success` `TRUE`, `FALSE`, `FALSE`.
-- [x] AC2 Every `*_dir()` wrapper returns a table carrying a `status` column,
+- [ ] AC2 Every `*_dir()` wrapper returns a table carrying a `status` column,
       as does the zero-row table `dir_walk()` returns for an empty input
       (`R/utils.R:112-114`), and each wrapper's roxygen `@return` documents
       the three values. The test derives its wrapper list at run time from the
@@ -48,7 +48,7 @@ plumbing that work needs, so it is planned after this one lands, not now.
       vacuous exactly where it gates the merge), so a sixth wrapper reds the
       test until it is covered — the computed-domain shape D-010 adopted for
       the command contract.
-- [x] AC3 The three deliberate-skip sites named in Scope signal the skip
+- [ ] AC3 The three deliberate-skip sites named in Scope signal the skip
       condition instead of returning normally, and `aw_transcribe()`'s
       combined branch (`R/use_whisper.R:296-300`) is split so the two facts it
       currently conflates part company: a file with no audio stream is
@@ -56,14 +56,14 @@ plumbing that work needs, so it is planned after this one lands, not now.
       One test per site asserts `status == "skipped"`, `success == FALSE` and
       the reason in `error`; a fourth drives an unprobeable file through
       `aw_transcribe_dir()` and asserts `status == "failed"`.
-- [x] AC4 The KNOWN GAP test in `tests/testthat/test-batch-dirs.R` — whatever
+- [ ] AC4 The KNOWN GAP test in `tests/testthat/test-batch-dirs.R` — whatever
       M17 leaves of it, having rewritten its `os_prep_audio_dir` half — is
       replaced by tests asserting the skip state, and
       `dir_walk_reports_failure()` (`tests/testthat/helper-openac.R:882`) is
       updated or retired together with the comment that anticipates this fix
       (`:872-881`); a test pins that adding `status` has not made its
       `setdiff(names(x), known)` clause true for every table.
-- [x] AC5 NEWS records the return-shape change and what a caller reading
+- [ ] AC5 NEWS records the return-shape change and what a caller reading
       `success` must do differently; `devtools::document()` shows no drift,
       `devtools::test()` passes, and `devtools::check()` reports 0 errors, 0
       warnings and no NOTE other than the pre-existing `spelling` NOTE.
@@ -108,13 +108,17 @@ plumbing that work needs, so it is planned after this one lands, not now.
 - 2026-08-09: DESIGN Known-issues corrected in place (marked, 2026-08-09 M18) on two claims this milestone falsified — `aw_transcribe` skipping an unprobeable file, and `aw_transcribe_dir()` recording it as a success — and the three-state table recorded there.
 - 2026-08-09: amendment — AC2's run-time wrapper list moves from a `R/*.R` grep to `asNamespace("openac")`; MEASURED an installed package's `R/` holds only the lazy-load DB (withr: `withr`, `withr.rdb`, `withr.rdx`), so the grep would match nothing under `R CMD check` and the criterion would be vacuous there.
 - 2026-08-09: review round 1 checkpoint — PR #19 opened as a draft; consistency gate green (`cairn_validate` exit 0, `check()` Status: OK, `document()` no drift, 803 tests pass); all five criteria ticked against recorded evidence. Two defects found while gathering it (a leaked `#'` in the five rendered `@return` blocks, and the skip signal unwinding past the work `overwrite = FALSE` was meant to preserve in `os_extract_dir`/`aw_transcribe_dir`); fresh-context review still in flight, triage pending.
+- 2026-08-09: review round 1 RETURNED to in-progress under the return floor. F1 (scored 90) — `dir_walk()`'s `tryCatch` handler for `openac_file_skipped` is EXITING, so an `overwrite = FALSE` skip signalled by a NESTED `os_prep_audio()`/`aw_prep_audio()` unwinds the whole `.f` call: MEASURED, `os_extract_dir(wavdir=, aggdir=, overwrite = FALSE)` over a file whose wav already exists never calls openSMILE and writes no CSV, and F2 (88) is the same on the whisper path. F3 (95) — a literal `#'` leaks into the rendered prose of all five `@return` blocks and into all five `man/*_dir.Rd`. 11 further findings logged below the action bar. Criteria unticked with the return; gate checks were green and are recorded in the Review section.
 
 ## Decisions
 
 ## Review
 
 _Round 1 — 2026-08-09. Fresh evidence gathered on `m18-batch-skip-outcome`
-at 8144b17, level with `origin/main`._
+at 8144b17, level with `origin/main`. The five criterion
+ticks recorded below were UNTICKED when the round closed: F1/F2/F3 change the
+artifact each was measured against, so this evidence is a round-1 record, not a
+standing verification._
 
 ### Acceptance-criterion evidence
 
@@ -165,3 +169,77 @@ at 8144b17, level with `origin/main`._
   in the repo, so no pkgdown check · `NEWS.md` (the declared changelog) has
   this milestone's entry, with no milestone numbers in it · no new top-level
   files · `check()` clean.
+
+### Fresh-context review — round 1
+
+Three fresh-context reviewers, distinct evidence bases, then a scorer that
+generated none of the findings. The blame-history lens reported one finding
+(the leaked `#'`, the same defect as F3 below). The prior-review lens found
+no regression: it read the `## Review` sections of the M14 and M17 archives,
+which are the milestones that touched these files, and probed
+`repos/jmgirard/openac/pulls/comments` — `[]`, so no GitHub thread surface
+exists to walk. 14 candidate findings scored; three at or above 80.
+
+**Actioned — all three return the milestone to `in-progress`.**
+
+- **F1 (90) — an `overwrite = FALSE` skip aborts the whole pipeline step
+  under a batch.** `dir_walk()` catches `openac_file_skipped` with
+  `tryCatch`, an *exiting* handler, so it unwinds `.f` entirely rather than
+  just the nested `os_prep_audio()` call that signalled. MEASURED here and
+  by the reviewer independently: `os_extract_dir(indir, "mp4", wavdir = w,
+  aggdir = a, overwrite = FALSE)` with `w/a.wav` already present reaches the
+  boundary twice (`ffprobe`, `ffprobe`), never calls openSMILE, writes no
+  CSV, and records `status = "skipped"`. The same call before this branch —
+  and the direct `os_extract()` call today, where the signal is inert
+  because nothing handles it — reaches `opensmile` and writes the CSV. The
+  "resume an interrupted batch by reusing the wavs it already prepared"
+  idiom silently stopped producing features, and the row reporting a skip is
+  reporting a skip of work the caller did want done. Fix direction offered:
+  a calling handler plus `rlang::cnd_muffle()` on the restart
+  `rlang::signal()` already establishes, or signalling only from a top-level
+  `.f`, so a nested decline cannot cancel the rest of the step.
+- **F2 (88) — the same defect on the whisper path.** MEASURED:
+  `aw_transcribe_dir(indir, "mp4", wavdir = w, audio_args =
+  list(overwrite = FALSE))` with `w/a.wav` present records
+  `status = "skipped"` with zero whisper calls and no `.rds`/`.csv`; before
+  this branch `aw_prep_audio()` returned `"Skipped"` and `aw_transcribe()`
+  went on to transcribe the existing wav.
+- **F3 (95) — a literal `#'` leaks into the rendered docs of all five
+  `@return` blocks.** `R/use_openface.R:128`, `R/use_opensmile.R:238`,
+  `:426`, `R/use_whisper.R:208`, `:459` each read `it was called with, its
+  #'   \`status\`, whether it \`success\`ed`, and `document()` propagated it
+  verbatim into all five `man/*_dir.Rd`. `R CMD check` passes it as valid
+  Rd, which is why AC5's no-drift check read clean over it.
+
+**Logged below the action bar — 11 findings, surfaced not dropped.**
+
+- (70) The retained sentence "A file that fails is skipped with a warning"
+  in the same five `@return` blocks now contradicts the `"skipped"` /
+  `"failed"` vocabulary defined two sentences above it.
+- (65) `R/use_whisper.R:308-309`'s new comment says `os_prep_audio()`
+  already aborts on an unprobeable input; it never calls
+  `ffp_count_streams()` and has no NA branch.
+- (55) The AC2 wrapper test runs all five wrappers over an *empty* directory,
+  so it exercises only `dir_walk()`'s zero-row branch; its `info =` label is
+  positional against a separate vector; its comment says "a seventh".
+- (50) No populated `*_dir()` table (carrying `wavfile`/`aggfile`/…) has its
+  column set pinned anywhere — only `dir_walk()`'s own one-column input.
+- (35) `success = FALSE` for a skip makes a `while (any(!res$success))`
+  re-run loop non-terminating under `overwrite = FALSE`; NEWS names the
+  `success` change but not this consequence.
+- (28) The "announced but does not warn" test depends on the handler being
+  exiting to mean what it claims.
+- (28) `aw_transcribe()`'s direct path signals *and* warns, so a caller
+  installing a calling handler would get both reports.
+- (28) A missing ffprobe now yields N failed rows rather than one
+  installation error on the `aw_transcribe_dir()` path.
+- (25) One `cli_alert_info()` per skipped file still prints N lines on a
+  500-file re-run.
+- (20) The zero-row branch omits `stringsAsFactors = FALSE` — pre-existing,
+  the diff followed the existing pattern.
+- (10) `skip_file()` carries prose and no structured field; the plan's
+  Scope-Out defers the first consumer that would want one.
+
+**Disposition: return floor (M130) — F1 at 90 is a defect in what this
+package does for its users, so the milestone goes back to `in-progress`.**
+Defect returns for M18: 1.
