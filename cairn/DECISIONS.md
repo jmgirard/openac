@@ -470,3 +470,22 @@ be absorbed and reported as `"ok"`, so it needs its own handling rather than
 inheriting this one. The output-path-collision work parked on the ROADMAP is
 the first consumer of the channel, and would extend the condition to carry the
 offending path as a field.
+
+### D-020 (2026-08-09): Declare pkgdown as a website build dependency, not a package dependency
+
+**Context:** M20 publishes a pkgdown site to GitHub Pages, which makes pkgdown
+a real build-time requirement of the docs pipeline. The repo's dependency gate
+(D-005, D-011, D-016, D-018) is written against DESCRIPTION's `Imports` and
+`Suggests`; `Config/Needs/website` is neither, so the gate is not strictly
+owed. It was held anyway, because the field is still a dependency declaration
+and the alternative places the requirement outside DESCRIPTION entirely.
+**Decision:** Add `Config/Needs/website: pkgdown` to DESCRIPTION. Considered
+and rejected: naming pkgdown only in `.github/workflows/pkgdown.yaml`'s
+`extra-packages`. It works and adds no metadata, but it puts the requirement
+in exactly one place — a file routinely regenerated wholesale from the
+r-lib/actions template, which is how such a line gets dropped without notice.
+**Consequences:** `Config/Needs/website` is read by
+`r-lib/actions/setup-r-dependencies` under `needs: website`; it does not enter
+`Imports` or `Suggests`, so users installing openac never install pkgdown and
+`R CMD check` is unaffected. The field becomes the single declared home for
+anything the website build needs later (e.g. a bootstrap theme package).

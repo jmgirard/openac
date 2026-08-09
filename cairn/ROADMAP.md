@@ -8,6 +8,7 @@ _Released 0.1.0 (GitHub) 2026-07-11._
 
 | ID | Title | Status | Depends on | Priority | File/Archive |
 |---|---|---|---|---|---|
+| M20 | A published documentation site | planned | — | normal | milestones/M20-pkgdown-github-pages.md |
 | M17 | A tool that exited non-zero is a failed file | done | — | high | milestones/archive/M17-tool-exit-status.md |
 | M18 | A skipped file is a skip, not a success | done | M17 | normal | milestones/archive/M18-batch-skip-outcome.md |
 | M19 | A guard that names no file | done | — | normal | milestones/archive/M19-guards-name-the-file.md |
@@ -16,6 +17,7 @@ _Released 0.1.0 (GitHub) 2026-07-11._
 
 ## Candidates
 <!-- unnumbered ideas; one line each: idea — added YYYY-MM-DD — links -->
+- A "Get started" overview vignette (`vignettes/openac.Rmd`) tying the four tool families into one narrative — pkgdown shows it as the navbar's Get started entry; the README is the site's front page and covers install + one worked example, so this is additive rather than a gap — added 2026-08-09 — M20 Out
 - The tool path still writes console formatting into the batch `error` column — `run_checked()` was outside M19's scope, so it keeps a wrapped, glyphed message and carries no `defect` field, and `dir_walk()`'s warning names the file twice for a tool failure where a guard failure now names it once — and, alongside it, `run_checked()` (R/run_tool.R:128) still carries its own copy of the hold-warnings/read-the-status block that the ffprobe hotfix consolidated into `ffp_run()`/`ffp_failed()`, so the package now has two implementations of one rule rather than three — added 2026-08-09 — M19 review round 3, F1 (78); M17 Out; hotfix ffprobe-second-query, PR #21
 - Five guard-message findings the M19 reviews logged below the action bar in all three rounds: `abort_file()` messages name the file twice, once as basename and once inside the path (40); `abort_file()`'s `class` argument is dead and `openac_file_guard` is asserted nowhere (48); `aw_transcribe_wav()`'s `source != infile` branch is untested (42); the stream-index message pairs a 0-based index with a count (45); `os_extract_wav()` recommends `os_prep_audio()` on a file openac just ran it on (45) — added 2026-08-09 — M19 review rounds 1-3
 - Validate `os_read` fixtures against a real openSMILE run (name quoting, `frameTime` in functionals output), then drop/rework `os_fix_csv` on-disk normalization if that run proves it redundant — the second half waits on the first half's evidence — added 2026-07-11 — M01 review F5; M01; merged 2026-08-09
