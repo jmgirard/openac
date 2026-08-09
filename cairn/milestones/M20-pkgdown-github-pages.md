@@ -79,7 +79,7 @@ candidate row. Branch protection → existing candidate row.
 - [x] T4 Deploy the built site to a new `gh-pages` branch
       (`pkgdown::deploy_to_branch()`) and enable GitHub Pages against it via
       `gh api`; confirm the two AC5 URLs serve.
-- [ ] T5 Add `.github/workflows/pkgdown.yaml` from the r-lib/actions pkgdown
+- [x] T5 Add `.github/workflows/pkgdown.yaml` from the r-lib/actions pkgdown
       template, with the `audio.whisper`-absent assert placed after
       `setup-r-dependencies` (mirroring `.github/workflows/R-CMD-check.yaml`)
       and deploy gated off `pull_request`; push and confirm the PR run green.
@@ -97,6 +97,7 @@ candidate row. Branch protection → existing candidate row.
 - 2026-08-09: T3 — `pkgdown::check_pkgdown()` "No problems found"; `pkgdown::build_site()` finished with no error and, for each of the three `.Rmd` returned by `list.files("vignettes", pattern = "[.]Rmd$")`, the same-stem `docs/articles/*.html` was confirmed present by a scripted `file.exists()` over that list. No index gap to close — the reference index was complete on its first run.
 - 2026-08-09: T4 — `pkgdown::deploy_to_branch()` first failed on `library(openac)` (the package was not installed locally; `devtools::install()` fixed it) and, on the run before that, surfaced that pkgdown renders `CLAUDE.md` into the site — gated to the user, who chose to leave it published (see Decisions). Deploy pushed `gh-pages` at 964b583 and enabled Pages; `gh api repos/jmgirard/openac/pages` reports `source.branch: gh-pages`, `status: built`, `html_url: https://jmgirard.github.io/openac/`, matching DESCRIPTION's `URL:`.
 - 2026-08-09: T4 verification — `curl` returned HTTP 200 for the site root, `reference/index.html` and `articles/index.html`; the reference page's body was grepped for six exports spanning every index group (`os_extract_dir`, `aw_transcribe`, `of_read`, `find_program`, `ffp_count_streams`, `handlers`), all present, and the articles page carries all three vignette titles.
+- 2026-08-09: T5 — `.github/workflows/pkgdown.yaml` added with `dependencies: '"hard"'` and the `audio.whisper` assert placed after `setup-r-dependencies`; PR #22 opened. All six checks green (run 31325889814, job 93276085336). Step conclusions read from the jobs API: `Confirm audio.whisper is absent` success, `Deploy to GitHub pages` **skipped** on the `pull_request` event. The assert step's `installed.packages()` output listed 108 packages including `openac` and not `audio.whisper`; pak's resolution JSON names the `Remotes:` ref, which is resolution rather than installation.
 - 2026-08-09: criteria audit ([O], fresh context) returned five findings plus an AC1 vacuity note; findings 2, 4, 5 and the AC1 note were fixed in the wording before this file was written (assert placement pinned after dependency install; the unbounded "never compiles whisper.cpp" narrowed to the named run's install log; the unexercisable deploy-path claim narrowed to a YAML condition read plus a green PR build; an explicit `reference:` section required). Findings 1 and 3 went to the question gate as one question and were settled by the user choosing to publish during the work.
 
 ## Decisions
