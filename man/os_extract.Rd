@@ -43,7 +43,8 @@ be skipped otherwise. Defaults to TRUE.}
   }}
 }
 \value{
-A character vector including opensmile output.
+A character vector including opensmile output. Errors, naming the
+file, if openSMILE exits non-zero.
 }
 \description{
 Extract openSMILE acoustic features from an audio file based on a config

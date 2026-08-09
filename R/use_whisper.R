@@ -92,7 +92,8 @@ aw_check_audio <- function(infile, verbose = FALSE) {
 #'   be silently skipped otherwise. Defaults to TRUE.
 #' @param afilters Should audio filters be used to try to improve audio quality?
 #'   (See Details.) Defaults to FALSE.
-#' @return A string containing the text output from ffmpeg.
+#' @return A string containing the text output from ffmpeg. Errors, naming the
+#'   file, if ffmpeg exits non-zero.
 #' @export
 aw_prep_audio <- function(
   infile,
@@ -164,8 +165,8 @@ aw_prep_audio <- function(
     "-c:a", "pcm_s16le", # set to 16-bit PCM codec
     outfile
   )
-  # Run ffmpeg command
-  ffmpeg(arg)
+  # Run ffmpeg command, failing the file if ffmpeg does (M17)
+  run_checked("ffmpeg", arg, infile)
 }
 
 

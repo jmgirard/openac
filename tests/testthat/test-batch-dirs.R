@@ -331,29 +331,39 @@ test_that("one unprobeable file among three is a row, not the end of the batch",
   expect_true(any(grepl("b.mp4", warnings, fixed = TRUE)))
 })
 
-test_that("KNOWN GAP: two batch tables record a skipped file as a success", {
-  # Pinning a wart, not a contract. `aw_prep_audio_dir()` above reports an
-  # unprobeable file as a failed row; these two do not, because dir_walk()
-  # records a row as failed only on an ERROR -- `aw_transcribe()` skips such a
-  # file with a message and returns NULL, and `os_prep_audio()` never counts
-  # streams at all and never inspects ffmpeg's exit status.
-  #
-  # The test exists because NEWS names this limitation to users, and a claim in
-  # the changelog needs something that fails when it stops being true. When the
-  # ROADMAP candidate for it lands, this test SHOULD red -- update it and the
-  # NEWS entry together.
-  #
-  # BOTH functions NEWS names are exercised, and each is asserted through
-  # `dir_walk_reports_failure()` rather than on `success` alone: the candidate
-  # offers two routes -- abort, or a third outcome column -- and an assertion on
-  # `success` alone stays green under the second while NEWS goes stale.
+test_that("os_prep_audio_dir() records a failed conversion as a failed row", {
+  # This half was the KNOWN GAP until M17. `os_prep_audio()` never inspected
+  # ffmpeg's exit status, so a conversion that wrote no file returned normally
+  # and dir_walk() -- which records a row as failed only on an ERROR -- called
+  # it a success. The assertion below is the discriminating one: `success`
+  # alone was TRUE here before M17, and the message names what went wrong.
   indir <- withr::local_tempdir()
   file.create(file.path(indir, "b.mp4"))
   outdir <- file.path(withr::local_tempdir(), "wavs")
 
-  local_fake_tools(results = list(fake_nonzero_exit()))
+  local_fake_tools(results = list(
+    fake_nonzero_exit(status = 254L, output = "Invalid data found")
+  ))
   suppressWarnings(prep <- os_prep_audio_dir(indir, "mp4", outdir))
-  expect_false(dir_walk_reports_failure(prep))
+
+  expect_identical(prep$success, FALSE)
+  expect_match(gsub("\\s+", " ", prep$error[[1]]), "ffmpeg exited with status 254")
+  expect_match(prep$error[[1]], "Invalid data found", fixed = TRUE)
+})
+
+test_that("KNOWN GAP: aw_transcribe_dir() records a skipped file as a success", {
+  # Pinning a wart, not a contract, and the last of the two NEWS names:
+  # `aw_transcribe()` skips an unprobeable file with a message and returns
+  # NULL, which dir_walk() cannot tell from a completed transcription. M17
+  # closed the `os_prep_audio_dir()` half above by reading the exit status;
+  # this half needs a third outcome state and is M18's.
+  #
+  # Asserted through `dir_walk_reports_failure()` rather than on `success`
+  # alone: M18 adds a `status` column, and an assertion on `success` alone
+  # would stay green under that fix while the NEWS entry it enforces went
+  # stale. When M18 lands, this test SHOULD red -- update it and NEWS together.
+  indir <- withr::local_tempdir()
+  file.create(file.path(indir, "b.mp4"))
 
   local_fake_tools(results = list(fake_nonzero_exit()))
   suppressWarnings(suppressMessages(

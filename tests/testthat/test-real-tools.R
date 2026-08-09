@@ -158,6 +158,38 @@ test_that("ffmpeg really transcodes to the format openSMILE expects", {
   expect_true(os_check_audio(outfile))
 })
 
+test_that("a real ffmpeg failure really sets the status the wrapper reads", {
+  # The layer-2 counterpart of test-tool-exit-status.R, and the one assertion
+  # the mocked layer structurally cannot make. Every mocked test there proves
+  # openac reacts correctly to a `status` attribute that `fake_nonzero_exit()`
+  # puts there itself; none of them can show that a real failing ffmpeg sets
+  # one at all. If it signalled failure some other way -- or exited 0 on an
+  # unreadable input -- every mocked test would stay green while the wrapper
+  # reported nothing, which is the shape of blindness M16 found in the mocked
+  # installer suite.
+  #
+  # The input is a real file containing text rather than a nonexistent path:
+  # a missing file would trip os_prep_audio()'s own `file.exists()` guard and
+  # never reach ffmpeg, so the test would pass without exercising the status
+  # path at all.
+  skip_on_cran()
+  skip_if(!have(check_ffmpeg), "ffmpeg is not installed")
+
+  infile <- withr::local_tempfile(fileext = ".mp4")
+  writeLines("this is not a media file", infile)
+  outfile <- file.path(withr::local_tempdir(), "out.wav")
+
+  err <- expect_error(
+    suppressWarnings(os_prep_audio(infile, outfile)),
+    class = "openac_tool_failed"
+  )
+
+  msg <- gsub("\\s+", " ", conditionMessage(err))
+  expect_match(msg, basename(infile), fixed = TRUE)
+  expect_match(msg, "ffmpeg exited with status")
+  expect_false(file.exists(outfile))
+})
+
 test_that("aw_prep_audio really produces a file whisper accepts", {
   skip_on_cran()
   skip_if(!have(check_ffmpeg), "ffmpeg is not installed")

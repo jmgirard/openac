@@ -171,7 +171,8 @@ os_check_audio <- function(infile, verbose = FALSE) {
 #' (ffmpeg uses zero-indexing so 0 is the first stream).
 #' @param overwrite Should outfile be overwritten if it already exists? It will
 #'   be skipped otherwise. Defaults to TRUE.
-#' @return A character vector containing the output of ffmpeg.
+#' @return A character vector containing the output of ffmpeg. Errors, naming
+#'   the file, if ffmpeg exits non-zero.
 #' @export
 #'
 os_prep_audio <- function(infile, outfile, stream = 0, overwrite = TRUE) {
@@ -198,8 +199,8 @@ os_prep_audio <- function(infile, outfile, stream = 0, overwrite = TRUE) {
     "-c:a", "pcm_s16le", # set to 16-bit PCM Little-Endian codec
     outfile
   )
-  # Run ffmpeg command
-  ffmpeg(arg)
+  # Run ffmpeg command, failing the file if ffmpeg does (M17)
+  run_checked("ffmpeg", arg, infile)
 }
 
 
@@ -281,7 +282,8 @@ os_prep_audio_dir <- function(
 #' should be used to analyze `infile`? A list of available config files can be
 #' generated using `os_list_configs()`.
 #' @inheritDotParams os_prep_audio stream overwrite
-#' @return A character vector including opensmile output.
+#' @return A character vector including opensmile output. Errors, naming the
+#'   file, if openSMILE exits non-zero.
 #' @export
 #'
 os_extract <- function(
@@ -354,8 +356,8 @@ os_extract_wav <- function(
     opt_arg(!is.null(lldfile), "-lldcsvoutput", lldfile),
     "-instname", basename(infile)
   )
-  # Run opensmile command
-  out <- opensmile(arg)
+  # Run opensmile command, failing the file if openSMILE does (M17)
+  out <- run_checked("opensmile", arg, infile)
   # Fix the output CSV files
   if (!is.null(aggfile)) {
     os_fix_csv(aggfile)

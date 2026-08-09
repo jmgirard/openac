@@ -1,11 +1,11 @@
 # M17: A tool that exited non-zero is a failed file
 
-- **Status:** planned
+- **Status:** in-progress
 - **Priority:** high
 - **Depends on:** —
 - **Driving RR:** —
 - **Principles touched:** GP6, GP9
-- **Branch/PR:** —
+- **Branch/PR:** `m17-tool-exit-status`
 
 ## Goal
 
@@ -69,19 +69,22 @@ collisions → the standing ROADMAP candidate, behind M18.
 
 ## Tasks
 
-- [ ] T1 Add the internal exit-status check (`R/run_tool.R` or `R/utils.R`),
+- [x] T1 Add the internal exit-status check (`R/run_tool.R` or `R/utils.R`),
       reading `attr(x, "status")` and suppressing R's own status warning by
       position — mirror the mechanism and comments at `R/use_ffprobe.R:120-160`.
-- [ ] T2 Test-first: one failing test per tool asserting the error names the
+- [x] T2 Test-first: one failing test per tool asserting the error names the
       file, the program and the status, using `fake_nonzero_exit()`.
-- [ ] T3 Call the check from the per-file wrapper sites — `os_prep_audio()`
+- [x] T3 Call the check from the per-file wrapper sites — `os_prep_audio()`
       (`R/use_opensmile.R:201`), `aw_prep_audio()`, `os_extract_wav()` and
       `of_extract()`; confirm the site list against
       `grep -n "ffmpeg(\|opensmile(\|openface(" R/use_*.R` less the
       passthrough definitions.
-- [ ] T4 Add the AC1 test pinning the exported passthroughs' unchanged return.
-- [ ] T5 Rewrite the `os_prep_audio_dir` half of the KNOWN GAP test; update
+- [x] T4 Add the AC1 test pinning the exported passthroughs' unchanged return.
+- [x] T5 Rewrite the `os_prep_audio_dir` half of the KNOWN GAP test; update
       the NEWS.md paragraph that names it (`NEWS.md:13-16`).
+- [x] T5b (added at implementation) A GP7 layer-2 test in
+      `test-real-tools.R`: a real failing ffmpeg really sets the status the
+      wrapper reads — the one assertion the mocked boundary cannot make.
 - [ ] T6 `devtools::document()`, `devtools::test()`, `devtools::check()`.
 
 ## Work log
@@ -89,6 +92,11 @@ collisions → the standing ROADMAP candidate, behind M18.
 - 2026-08-08: created by /milestone-plan.
 - 2026-08-08: criteria audit ([O], fresh context) returned five findings on this file — AC4 unsatisfiable (its grep matches three explanatory comments today), AC2 indefinite where ffmpeg has two per-file wrappers, AC1 over-claiming "unchanged" and omitting the four exported aliases, AC5 comparing against an unnamed baseline; all five fixed before the gate, none deferred.
 - 2026-08-08: plan gate chose the exit-status check in the per-file callers over one check inside `run_tool()` because `run_tool()` has no file context and the message must name the file, and because `ffp_count_streams()` would need an opt-out to keep its contractual NA return (M14); falsified by a call site needing the check where the caller cannot know the file.
+- 2026-08-08: implementation gate confirmed both plan recommendations — the check covers all three tools including OpenFace (unverifiable locally, mocked-boundary only), and the error carries the tool's own last output lines.
+- 2026-08-08: MEASURED on this host (R 4.6.1, macOS 15, ffmpeg 8.0) before writing the check: a SUCCESSFUL ffmpeg run sets NO `status` attribute (NULL, not 0), a failing one sets 254 and R warns `... had status 254`. Both facts are load-bearing — `status != 0` would abort every successful call.
+- 2026-08-08: T1–T5 done. `run_checked()` added to R/run_tool.R and wired into the four per-file sites; 17 tests in the new test-tool-exit-status.R, red before the change (16 failures) and green after; suite 753 pass / 0 fail / 6 pre-existing skips.
+- 2026-08-08: D-010's command-contract gate reddened on the new function, exactly as designed — `run_checked` entered the computed `system2` closure with no command test. Satisfied with a real command test asserting it forwards its tokens quoted, not with a deferral entry.
+- 2026-08-08: added T5b, a GP7 layer-2 real-ffmpeg test, after noting the mocked suite is structurally blind to whether a real failing tool sets `status` at all — the shape of blindness M16 found in the mocked installer suite. Mutation-verified: neutering the check reds it (2 failures), restoring it passes 44.
 - 2026-08-08: plan gate chose three milestones over one because the combined scope is ~15 criteria and ~20 tasks, well past the split tripwires; falsified by the three proving inseparable in implementation.
 
 ## Decisions
