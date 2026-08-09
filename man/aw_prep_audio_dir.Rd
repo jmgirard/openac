@@ -44,16 +44,21 @@ render using any available handler.
 \code{infile} to convert or extract. Note that ffmpeg uses zero-indexing so the
 default of 0 is the first stream. Defaults to 0.}
     \item{\code{overwrite}}{Should outfile be overwritten if it already exists? It will
-be silently skipped otherwise. Defaults to TRUE.}
+be skipped otherwise --- silently for a direct call, and as a \code{"skipped"}
+row when run under one of the \verb{*_dir()} batch wrappers. Defaults to TRUE.}
     \item{\code{afilters}}{Should audio filters be used to try to improve audio quality?
 (See Details.) Defaults to FALSE.}
   }}
 }
 \value{
 (Invisibly) a data frame with one row per input file, giving the
-\code{infile} and \code{outfile} it was called with, whether it \code{success}ed, and the
-\code{error} message if it did not. A file that fails is skipped with a warning
-rather than aborting the batch.
+\code{infile} and \code{outfile} it was called with, its #'   \code{status}, whether it \code{success}ed, and the \code{error} message if it did not.
+\code{status} is one of \code{"ok"} (the operation completed), \code{"skipped"} (the file
+was deliberately not processed) or \code{"failed"} (the operation errored);
+\code{success} is \code{status == "ok"}, so a skipped file reads \code{FALSE}, and
+\code{error} carries the reason for a skipped file as well as for a failed one.
+A file that fails is skipped with a warning rather than aborting the
+batch.
 }
 \description{
 Find all media files with a specified extension in a specified directory and

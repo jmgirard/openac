@@ -62,9 +62,13 @@ all languages the model can handle: see
 }
 \value{
 (Invisibly) a data frame with one row per input file, giving the
-paths it was called with, whether it \code{success}ed, and the \code{error} message
-if it did not. A file that fails is skipped with a warning rather than
-aborting the batch.
+paths it was called with, its #'   \code{status}, whether it \code{success}ed, and the \code{error} message if it did not.
+\code{status} is one of \code{"ok"} (the operation completed), \code{"skipped"} (the file
+was deliberately not processed) or \code{"failed"} (the operation errored);
+\code{success} is \code{status == "ok"}, so a skipped file reads \code{FALSE}, and
+\code{error} carries the reason for a skipped file as well as for a failed one.
+A file that fails is skipped with a warning rather than aborting the
+batch.
 }
 \description{
 Find all files in a specified directory with a specified extension and then

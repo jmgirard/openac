@@ -84,7 +84,7 @@ plumbing that work needs, so it is planned after this one lands, not now.
       `dir_walk()` (`R/utils.R:111-140`), including the zero-row branch
       (`R/utils.R:112-114`) whose column set must match.
 - [x] T3 Convert the three deliberate-skip sites to signal the condition.
-- [ ] T4 Update the five `@return` blocks (`R/use_whisper.R:199-202`, `:428-431`;
+- [x] T4 Update the five `@return` blocks (`R/use_whisper.R:199-202`, `:428-431`;
       `R/use_opensmile.R:229-232`, `:403-406`; `R/use_openface.R:126-129`) and
       run `devtools::document()`.
 - [x] T5 Replace the KNOWN GAP test and update the helper and its comment.
@@ -103,6 +103,7 @@ plumbing that work needs, so it is planned after this one lands, not now.
 - 2026-08-09: T3 the three deliberate-skip sites signal it; `aw_transcribe()`'s combined branch split — an unprobeable file now aborts, a probed file with no audio skips. Its direct-call message survives by sitting AFTER the signal, which `dir_walk()`'s exiting handler unwinds past.
 - 2026-08-09: T3 discovered sub-task — `test-whisper-transcribe.R:278` pinned the old conflated branch; rewritten to assert the abort, keeping its warning-based discriminator for the NA path.
 - 2026-08-09: T5 KNOWN GAP test replaced by one asserting both split states; `dir_walk_reports_failure()` RETIRED (its sole caller was that test, and its column-set proxy would now report every table) with a comment in its place, and its guarantee re-pinned directly by an all-ok batch test asserting the exact column set.
+- 2026-08-09: T4 five `*_dir()` `@return` blocks document the `status` vocabulary and that `success` is `status == "ok"`; both `overwrite` `@param`s note the batch now records the skip; `devtools::document()` re-run, `devtools::test()` clean (803 pass).
 - 2026-08-09: amendment — AC2's run-time wrapper list moves from a `R/*.R` grep to `asNamespace("openac")`; MEASURED an installed package's `R/` holds only the lazy-load DB (withr: `withr`, `withr.rdb`, `withr.rdx`), so the grep would match nothing under `R CMD check` and the criterion would be vacuous there.
 
 ## Decisions

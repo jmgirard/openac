@@ -18,7 +18,8 @@ file to create containing only the specified audio stream from \code{infile}.}
 default of 0 is the first stream. Defaults to 0.}
 
 \item{overwrite}{Should outfile be overwritten if it already exists? It will
-be silently skipped otherwise. Defaults to TRUE.}
+be skipped otherwise --- silently for a direct call, and as a \code{"skipped"}
+row when run under one of the \verb{*_dir()} batch wrappers. Defaults to TRUE.}
 
 \item{afilters}{Should audio filters be used to try to improve audio quality?
 (See Details.) Defaults to FALSE.}

@@ -46,14 +46,19 @@ generated using \code{os_list_configs()}.}
     \item{\code{stream}}{(numeric, default=0) The index of the audio stream to extract
 (ffmpeg uses zero-indexing so 0 is the first stream).}
     \item{\code{overwrite}}{Should outfile be overwritten if it already exists? It will
-be skipped otherwise. Defaults to TRUE.}
+be skipped otherwise --- silently for a direct call, and as a \code{"skipped"}
+row when run under one of the \verb{*_dir()} batch wrappers. Defaults to TRUE.}
   }}
 }
 \value{
 (Invisibly) a data frame with one row per input file, giving the
-paths it was called with, whether it \code{success}ed, and the \code{error} message
-if it did not. A file that fails is skipped with a warning rather than
-aborting the batch.
+paths it was called with, its #'   \code{status}, whether it \code{success}ed, and the \code{error} message if it did not.
+\code{status} is one of \code{"ok"} (the operation completed), \code{"skipped"} (the file
+was deliberately not processed) or \code{"failed"} (the operation errored);
+\code{success} is \code{status == "ok"}, so a skipped file reads \code{FALSE}, and
+\code{error} carries the reason for a skipped file as well as for a failed one.
+A file that fails is skipped with a warning rather than aborting the
+batch.
 }
 \description{
 Find all .wav files in a specified directory and then extract opensmile
