@@ -314,3 +314,23 @@ F4 is the finding that matters most for what this milestone learned: the fix for
 an unverified-prose defect introduced another one, in the same paragraph. Both
 times the sentence described what the failure was ABOUT rather than what was
 actually observed.
+
+### Final verification (2026-08-08, after both fix rounds)
+
+All five criteria re-executed against the final tree, since the code changed
+after the first evidence pass. AC1/AC2/AC3 test files: `test-commands-probe.R`
+25 tests / 79 assertions, `test-commands-prep.R` 14 / 26,
+`test-whisper-transcribe.R` 14 / 47, `test-batch-dirs.R` 18 / 58 — 0 failures.
+AC4 re-verified against the twice-corrected DESIGN line, every claim in it read
+off an executed batch table. AC5: `devtools::test()` 712 passing / 0 failing /
+6 pre-existing opt-in skips; `devtools::check()` 0 errors, 0 warnings, 0 notes;
+`cairn_validate` exit 0; `document()` no diff. CI green on all five jobs
+(ubuntu release/devel/oldrel-1, macOS, Windows) at `59335a6`.
+
+Process note: the first review round returned the milestone to `in-progress`
+(defect return 1). The second round's findings were fixed with the milestone
+left at `review` rather than cycling the status again — the fixing was
+continuous with the user's instruction to fix the actioned list, and no
+criterion was unticked in that round except by the F4 correction, which was
+repaired before the gate. Recorded rather than smoothed over: a strict reading
+sets `in-progress` for F1 as well, on its score alone.
