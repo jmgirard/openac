@@ -281,12 +281,17 @@ them without attaching the upstream packages.
   `aw_check_audio`, `aw_prep_audio`, `aw_transcribe_wav` and `of_extract` abort
   on a missing input (**corrected 2026-08-09, M19**, superseding "the abort
   messages name the file in only one of them, the rest being bare `stopifnot()`
-  deparses"): every guard inside a per-file function now aborts through
-  `abort_file()` (`R/utils.R`), whose message leads with the file and states
-  the defect, so a failed row reads the same way whether a guard or a tool
-  stopped it. `os_check_config()` names the config it could not resolve, and
-  `os_extract_dir()` resolves it once pre-flight rather than once per file, so
-  a bad `config` costs no ffprobe rounds and produces no rows. The `*_dir()`
+  deparses"): every guard inside a per-file function that has one file to name
+  now aborts through `abort_file()` (`R/utils.R`), whose message leads with the
+  file and states the defect on one line, so a failed row reads the same way
+  whether a guard or a tool stopped it. Two kinds sit outside that helper and
+  are not defects in it (**M19 review round 1**): `os_fix_csv()` hand-rolls an
+  abort of the same shape, and `check_file_arg()` rejects an `infile` that is
+  not one path at all, where there is no file to name and the argument is named
+  instead. `os_check_config()` names the config it could not resolve, and
+  `os_extract_dir()` validates it once before the loop — so a bad `config`
+  costs no ffprobe rounds and produces no rows, though `os_extract_wav()` still
+  resolves it per file, making the count N+1 rather than 1. The `*_dir()`
   wrappers' own pre-flight guards and the readers keep their `stopifnot()`s:
   they abort before `dir_walk()` is entered or sit outside the batch path, so
   no row exists to carry their message.

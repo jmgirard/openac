@@ -51,8 +51,14 @@ os <- opensmile
 #' }
 #'
 os_list_configs <- function() {
-  # Find opensmile install directory
-  fd <- dirname(find_opensmile())
+  # Find opensmile install directory. `require_program()` rather than
+  # `find_opensmile()`: the latter WARNS and returns NULL when openSMILE cannot
+  # be resolved, and `dirname(NULL)` then dies on base R's "a character vector
+  # argument expected" -- raised before `os_check_config()`, whose message this
+  # feeds, could say anything. Since M19 that abort happens pre-flight, so it
+  # was the whole batch's death with a message about a character vector
+  # (M19 review round 1, F6).
+  fd <- dirname(require_program("opensmile"))
   # Find all config files
   configs <- list.files(
     path = file.path(fd, "..", "config"),
@@ -108,7 +114,7 @@ os_check_config <- function(config) {
     )
   }
   # Get absolute path to config
-  fd <- dirname(find_opensmile())
+  fd <- dirname(require_program("opensmile"))
   config <- file.path(fd, "..", "config", paste0(config_sans, ".conf"))
   tools::file_path_as_absolute(config)
 }
@@ -128,6 +134,7 @@ os_check_config <- function(config) {
 #' @export
 os_check_audio <- function(infile, verbose = FALSE) {
   # Validate input
+  check_file_arg(infile)
   if (!file.exists(infile)) {
     abort_file(infile, "No file exists at {.file {guarded_path}}.")
   }
@@ -159,6 +166,18 @@ os_check_audio <- function(infile, verbose = FALSE) {
   )
   # Run ffprobe command
   dat <- ffprobe(arg)
+  # Validate ffprobe output. The sibling `aw_check_audio()` has always had this
+  # branch; without it `dat[[3]]` below indexed a short answer straight into
+  # base R's "subscript out of bounds" (M19 review round 1, F3).
+  if (length(dat) < 3) {
+    if (verbose) {
+      cli::cli_warn(c(
+        "!" = "No audio stream found in {.file {basename(infile)}}",
+        "i" = "Returning FALSE."
+      ))
+    }
+    return(FALSE)
+  }
   # Check ffprobe output
   tests <- c(
     No_Video = streams["Video"] == 0,
@@ -169,12 +188,17 @@ os_check_audio <- function(infile, verbose = FALSE) {
   # If verbose, state the result
   if (verbose) {
     print(tests)
-    if (dat[[2]] != "44100") {
+    if (!isTRUE(dat[[2]] == "44100")) {
       cli::cli_warn("A sampling rate of 44100 is recommended.")
     }
   }
-  # Return single logical
-  all(tests)
+  # Return single logical -- `isTRUE()`, never a bare `all()`. A field ffprobe
+  # left blank makes its test NA and `all()` NA with it, and this function's
+  # callers ask `if (!os_check_audio(x))`, which dies on `missing value where
+  # TRUE/FALSE needed` naming no file. The contract is one logical, and a check
+  # that could not be answered is not a pass -- the same disposition the
+  # unreadable-streams branch above already takes (M19 review round 1, F3).
+  isTRUE(all(tests))
 }
 
 
@@ -203,6 +227,7 @@ os_check_audio <- function(infile, verbose = FALSE) {
 #'
 os_prep_audio <- function(infile, outfile, stream = 0, overwrite = TRUE) {
   # Validate input
+  check_file_arg(infile)
   if (!file.exists(infile)) {
     abort_file(infile, "No file exists at {.file {guarded_path}}.")
   }
@@ -210,7 +235,11 @@ os_prep_audio <- function(infile, outfile, stream = 0, overwrite = TRUE) {
     abort_file(infile, "{.arg outfile} must be a single file path,
                         not {.obj_type_friendly {outfile}}.")
   }
-  if (!rlang::is_integerish(stream, n = 1) || stream < 0) {
+  # `is.na()` before the comparison: `is_integerish(NA_integer_, n = 1)` is
+  # TRUE, so a TYPED missing value passed the first test and left `NA < 0` for
+  # `if` to die on, naming no file (M19 review round 1, F1). A bare `NA` is
+  # logical and never got that far, which is why only the typed one showed.
+  if (!rlang::is_integerish(stream, n = 1) || is.na(stream) || stream < 0) {
     abort_file(infile, "{.arg stream} must be a single whole number
                         {.code >= 0}, not {.val {stream}}.")
   }
@@ -401,6 +430,8 @@ os_extract_wav <- function(
   # absence openac caused, and the batch row says so rather than reporting a
   # missing file about a temp path the user never chose. When they are the
   # same file, the user handed openSMILE a path with nothing at it.
+  check_file_arg(infile)
+  check_file_arg(source)
   if (!file.exists(infile)) {
     if (identical(infile, source)) {
       abort_file(source, "No file exists at {.file {guarded_path}}.")
@@ -526,8 +557,21 @@ os_extract_dir <- function(
   # here, because the commonest call of all supplies no `config` at all: a check
   # reading only `...` would validate nothing precisely when the caller relied
   # on the default, and a second copy of the literal could drift from it.
-  config <- extra_args$config
-  if (is.null(config)) config <- eval(formals(os_extract)$config)
+  # `...` is forwarded through `do.call()`, which matches names PARTIALLY: a
+  # caller writing `conf =` reaches `os_extract()`'s `config`, while an exact
+  # read of `extra_args$config` saw nothing and pre-flighted the default. The
+  # abbreviation is resolved here the same way the call below will resolve it,
+  # so the check and the call read one argument (M19 review round 1, F5).
+  extra_args <- match_formals(extra_args, os_extract)
+  # SUPPLIED, not non-NULL. `config = NULL` is a value the caller chose and it
+  # is wrong; testing `is.null()` made it indistinguishable from `config` absent,
+  # so the pre-flight validated the default and every file then failed inside
+  # the loop with a message naming no file (M19 review round 1, F12).
+  config <- if ("config" %in% names(extra_args)) {
+    extra_args$config
+  } else {
+    eval(formals(os_extract)$config)
+  }
   os_check_config(config)
   # Find input filepaths
   infiles <- dir_inputs(indir, inext, recursive)

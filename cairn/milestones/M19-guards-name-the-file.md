@@ -66,11 +66,11 @@ messages; this milestone is scoped to what a batch row can carry.
 
 ## Coverage
 
-- AC1 → T1, T2, T3
+- AC1 → T1, T2, T3, T8
 - AC2 → T1, T3
-- AC3 → T4, T5
+- AC3 → T4, T5, T9
 - AC4 → T3, T6
-- AC5 → T7
+- AC5 → T7, T10
 
 ## Tasks
 
@@ -91,6 +91,15 @@ messages; this milestone is scoped to what a batch row can carry.
       `test-commands-prep.R:112`, `:148`, `:213`;
       `test-whisper-transcribe.R:134`, `:161`.
 - [x] T7 `devtools::document()`, `devtools::test()`, `devtools::check()`.
+- [x] T8 Review round 1, AC1: no batch-reachable guard raises a raw R
+      condition — the typed-`NA` `stream`, the non-scalar `infile`, and the
+      `NA` field from the second ffprobe query (F1, F2, F3).
+- [x] T9 Review round 1, AC3: the pre-flight `config` check reads the argument
+      the call will read — a partially-matched name, an explicit `NULL`, and an
+      unresolved openSMILE (F5, F6, F12).
+- [x] T10 Review round 1, actioned beyond the criteria: the `error` column is
+      one unglyphed line naming the file once (F14), and the DESIGN/NEWS
+      claims narrow to what the branch does (F8).
 
 ## Work log
 
@@ -110,6 +119,13 @@ messages; this milestone is scoped to what a batch row can carry.
 - 2026-08-09: T7 also added `os_extract_dir()`'s `@return` note that an unresolvable `config` errors before any file is touched and returns no table — the abort T5 introduces was absent from its own documented contract, which is the shape of finding the M18 review logged against `aw_transcribe()`.
 - 2026-08-09: status → review.
 - 2026-08-09: review round 1 returned the milestone to `in-progress` (defect return 1). What failed: AC1, falsified by three guards that raise a raw R condition instead of reaching `abort_file()` — a typed `NA_integer_` `stream` (`use_opensmile.R:213`, `use_whisper.R:122`), a non-scalar `infile` (`use_opensmile.R:131`, `:206`, `use_whisper.R:115`, `use_openface.R:75`), and an `NA` field from the SECOND ffprobe query reaching `if (!os_check_audio(infile))` (`use_opensmile.R:410`, `use_whisper.R:422`); and AC3, falsified by `do.call()`'s partial matching letting `conf =` bypass the pre-flight check entirely (`use_opensmile.R:529`), by an unresolved openSMILE killing the whole batch on `dirname(NULL)` before `os_check_config()` can speak (`:531`), and by `config = NULL` pre-flighting the default instead. Also actioned: DESIGN/NEWS overclaim three behaviors the branch lacks, and `dir_walk()`'s `error` column now carries wrapped newlines, a glyph, and the filename twice. AC2, AC4, AC5 verified and unaffected.
+- 2026-08-09: minor amendment — T8, T9, T10 added for the round-1 return, one per group of findings; the Coverage map gains T8 under AC1, T9 under AC3, and T10 under AC5. No acceptance criterion's text changes: round 1 was a defect return, and both criteria failed as written.
+- 2026-08-09: T8 wrote 25 tests for F1/F2/F3 before any source change and MEASURED them red, each reproducing its finding's own condition rather than a bare failure — `the condition has length > 1`, `argument is of length zero`, `invalid 'file' argument`, `subscript out of bounds`. Fixes: `is.na(stream)` ahead of the `stream < 0` comparison (`is_integerish(NA_integer_, n = 1)` is TRUE, so a TYPED NA reached it); a shared `check_file_arg()` run before any guard that would interpolate the path, in all nine per-file entry points plus `ffp_count_streams()`, whose hand-written twin of it moved into the helper; and `isTRUE(all(tests))` in both `*_check_audio()`, plus the `length(dat) < 3` branch `aw_check_audio()` already had and `os_check_audio()` did not.
+- 2026-08-09: T8 disposition — `check_file_arg()` names the ARGUMENT, not a file, and is classified NOT batch-reachable for the reason T2 gave `ffp_count_streams()`'s identical guard: `dir_walk()`'s `infile` column is always a length-1 character from `fs::path_abs()`. It cannot honestly name a file: `basename()` of a length-2 path names two and of `character(0)` names none, which is F11's below-bar defect removed by the same guard.
+- 2026-08-09: T9 wrote three tests red, then fixed F5 with `match_formals()` (resolves an unambiguous prefix the way `do.call()` will, so `conf =` is checked rather than silently reaching `config`), F12 by testing `"config" %in% names(extra_args)` instead of `is.null(config)` (supplied means checked, whatever the value), and F6 by routing `os_list_configs()` and `os_check_config()` through `require_program("opensmile")` rather than `find_opensmile()`, whose NULL made `dirname(NULL)` kill the batch. All three assert `boundary_tools()` is `character(0)` or that the message names openSMILE, so the pre-flight is shown to hold before any tool runs.
+- 2026-08-09: T10 F14 — `abort_file()` now formats its message eagerly with `cli::format_inline()` and signals it through `rlang::abort()`. cli formats LAZILY and for a terminal, so a `cli_abort()` template was still being wrapped at the console width and given an "x" glyph when `conditionMessage()` ran, and setting `cli.width` around the call could not reach it. MEASURED 2026-08-09 on R 4.6.1 / cli 3.6.6: the old form returned `"Could not process 'clip.mp4'.\n<glyph> No file exists at '/nope/clip.mp4'."`; it now returns that text on one line, joined by a colon. The condition also carries `defect` — the message without the leading file — which `dir_walk()`'s warning uses so the basename it already prints is not printed twice.
+- 2026-08-09: T10 F8 — the DESIGN Known-issues sentence and the NEWS entries narrowed to what the branch does. Two claims were false and are gone: that EVERY per-file guard routes through `abort_file()` (`os_fix_csv()` hand-rolls one, and `check_file_arg()` names no file), and that `config` is resolved once rather than per file (`os_extract_wav()` still resolves it, so the count is N+1). The third, that a bad `config` costs no ffprobe rounds, was false only under F5 and is now true and asserted.
+- 2026-08-09: T8-T10 verify slot MEASURED on R 4.6.1 / macOS 15: `devtools::document()` writes no diff, `devtools::test()` 1009 tests 0 failures 0 errors 6 skips, `devtools::check()` Status OK — 0 errors, 0 warnings, 0 notes. The round's own delta was measured by stashing it: the same command at commit 882df74 reports 928 passing, so this round adds 81. That 928 supersedes the `308` the T7 line above records for the same command — T7's figure is not reproducible at the commit it names and the procedure behind it is unknown, so it is superseded rather than relied on.
 
 ## Decisions
 

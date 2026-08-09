@@ -6,14 +6,16 @@
   `file.exists(infile) is not TRUE`, naming neither the file nor the defect,
   which was of little use when you came back to a 500-file run to find out
   which inputs to fix. Every such check in the batch path now reads like
-  `Could not process 'clip.mp4'.` followed by the reason. Two of those reasons
+  `Could not process 'clip.mp4': No file exists at '/data/clip.mp4'.` — one line, so it stays
+  readable in the `error` column of a table you print or write to CSV. Two of those reasons
   are new rather than reworded: an intermediate `.wav` that ffmpeg was asked
   for and never wrote is now reported as ffmpeg having written no output there,
   rather than as a missing file with no explanation, and a missing openSMILE
   output CSV is attributed to openSMILE the same way.
 
 * An openSMILE config that cannot be resolved is now reported by name, and
-  `os_extract_dir()` checks it once before the run instead of once per file. A
+  `os_extract_dir()` checks it once before the run rather than letting each file
+  discover it in turn. A
   typo in `config` used to cost a full audio check on every input in the
   directory and then return a table of failed rows, each saying only that a
   config file was not found. It now stops immediately, naming the config you

@@ -72,6 +72,7 @@ of_extract <- function(
   multiview = FALSE
 ) {
   # Validate input
+  check_file_arg(infile)
   if (!file.exists(infile)) {
     abort_file(infile, "No file exists at {.file {guarded_path}}.")
   }

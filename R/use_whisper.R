@@ -12,6 +12,7 @@
 #' @export
 aw_check_audio <- function(infile, verbose = FALSE) {
   # Validate input
+  check_file_arg(infile)
   if (!file.exists(infile)) {
     abort_file(infile, "No file exists at {.file {guarded_path}}.")
   }
@@ -67,8 +68,13 @@ aw_check_audio <- function(infile, verbose = FALSE) {
     cli::cli_h2("Audio Check Results")
     cli::cli_ul(items = tests)
   }
-  # Return single logical
-  all(tests)
+  # Return single logical -- `isTRUE()`, never a bare `all()`. A field ffprobe
+  # left blank makes its test NA and `all()` NA with it, and this function's
+  # callers ask `if (!aw_check_audio(x))`, which dies on `missing value where
+  # TRUE/FALSE needed` naming no file. The contract is one logical, and a check
+  # that could not be answered is not a pass -- the same disposition the
+  # unreadable-streams branch above already takes (M19 review round 1, F3).
+  isTRUE(all(tests))
 }
 
 
@@ -112,6 +118,7 @@ aw_prep_audio <- function(
   afilters = FALSE
 ) {
   # Validate input
+  check_file_arg(infile)
   if (!file.exists(infile)) {
     abort_file(infile, "No file exists at {.file {guarded_path}}.")
   }
@@ -119,7 +126,10 @@ aw_prep_audio <- function(
     abort_file(infile, "{.arg outfile} must be a single file path,
                         not {.obj_type_friendly {outfile}}.")
   }
-  if (!rlang::is_integerish(stream, n = 1) || stream < 0) {
+  # `is.na()` before the comparison: `is_integerish(NA_integer_, n = 1)` is
+  # TRUE, so a TYPED missing value passed the first test and left `NA < 0` for
+  # `if` to die on, naming no file (M19 review round 1, F1).
+  if (!rlang::is_integerish(stream, n = 1) || is.na(stream) || stream < 0) {
     abort_file(infile, "{.arg stream} must be a single whole number
                         {.code >= 0}, not {.val {stream}}.")
   }
@@ -333,6 +343,7 @@ aw_transcribe <- function(
   # does NOT: it never counts streams, so it has no such branch to match.)
   # A file that probed cleanly and carries no audio stream is a genuine SKIP:
   # the answer is known and there is nothing to transcribe.
+  check_file_arg(infile)
   streams <- ffp_count_streams(infile)
   if (is.na(streams[["Audio"]])) {
     abort_file(infile, "Its streams could not be counted.")
@@ -413,6 +424,8 @@ aw_transcribe_wav <- function(
   # Validate inputs. The missing-`infile` split is `os_extract_wav()`'s: when
   # `source` differs, `infile` is the wav `aw_prep_audio()` was asked to write
   # and ffmpeg returned success without writing.
+  check_file_arg(infile)
+  check_file_arg(source)
   if (!file.exists(infile)) {
     if (identical(infile, source)) {
       abort_file(source, "No file exists at {.file {guarded_path}}.")

@@ -471,3 +471,233 @@ test_that("os_fix_csv() names the path it looked for and says who should have wr
   expect_match(msg, missing, fixed = TRUE)
   expect_match(msg, "openSMILE wrote no output", fixed = TRUE)
 })
+
+# --- review round 1 (2026-08-09): guards that raised a raw R condition --------
+#
+# Three shapes escaped `abort_file()` entirely and reached `dir_walk()`'s
+# `error` column as base R's own text -- `missing value where TRUE/FALSE
+# needed`, `the condition has length > 1`, `argument is of length zero` --
+# naming neither the file nor the defect, which is the whole of what AC1
+# removes. Each is asserted below as the openac condition it must be, never as
+# "some error occurred".
+
+# F2: a non-scalar or non-character `infile` reaches `if (!file.exists(infile))`,
+# whose condition is then length 2 or length 0. This guard names the ARGUMENT
+# and not a file, and cannot do otherwise: `basename()` of a length-2 path names
+# two files and of `character(0)` names none, so there is no one file it stopped
+# on. It is outside AC1's batch-reachable domain for the reason T2 gave
+# `ffp_count_streams()`'s identical guard -- `dir_walk()`'s `infile` column is
+# always a length-1 character from `fs::path_abs()`.
+
+scalar_infile_cases <- function() {
+  list(
+    list(label = "os_check_audio()", run = function(x) os_check_audio(x)),
+    list(
+      label = "os_prep_audio()",
+      run = function(x) os_prep_audio(x, local_outpath(.env = parent.frame()))
+    ),
+    list(label = "os_extract_wav()", run = function(x) openac:::os_extract_wav(x)),
+    list(label = "os_extract()", run = function(x) os_extract(x, aggfile = "a.csv")),
+    list(
+      label = "of_extract()",
+      run = function(x) of_extract(x, local_outpath("faces.csv", .env = parent.frame()))
+    ),
+    list(label = "aw_check_audio()", run = function(x) aw_check_audio(x)),
+    list(
+      label = "aw_prep_audio()",
+      run = function(x) aw_prep_audio(x, local_outpath(.env = parent.frame()))
+    ),
+    list(
+      label = "aw_transcribe()",
+      run = function(x) aw_transcribe(x, model = fake_model())
+    ),
+    list(
+      label = "aw_transcribe_wav()",
+      run = function(x) openac:::aw_transcribe_wav(x, model = fake_model())
+    )
+  )
+}
+
+for (case in scalar_infile_cases()) {
+  test_that(paste0("a non-scalar infile is openac's error, not R's -- ", case$label), {
+    local_fake_tools(results = list())
+    # Length 2, length 0, and the wrong type: the first two are what base R's
+    # `if` dies on, the third is what `file.exists()` coerces silently.
+    for (bad in list(c("a.wav", "b.wav"), character(0), 1L)) {
+      cnd <- rlang::catch_cnd(case$run(bad), classes = "error")
+      expect_s3_class(cnd, "openac_bad_argument")
+      expect_match(
+        gsub("\\s+", " ", conditionMessage(cnd)), "infile",
+        fixed = TRUE, info = paste(case$label, class(bad), length(bad))
+      )
+    }
+  })
+}
+
+# F3: `os_check_audio()` / `aw_check_audio()` returned `NA` when the SECOND
+# ffprobe query answered with a missing field, and `if (!os_check_audio(x))` in
+# `os_extract_wav()` then died on `missing value where TRUE/FALSE needed`. The
+# early `anyNA(streams)` return covers only the stream COUNT, which is the first
+# query. The contract is a single logical, so an unanswerable check is FALSE --
+# the same disposition the count branch already takes.
+
+test_that("os_check_audio() answers FALSE, never NA, when ffprobe leaves a field blank", {
+  infile <- local_media(".wav")
+  local_fake_tools(results = list("audio", c(NA_character_, "44100", "1")))
+
+  expect_identical(os_check_audio(infile), FALSE)
+})
+
+test_that("aw_check_audio() answers FALSE, never NA, when ffprobe leaves a field blank", {
+  infile <- local_media(".wav")
+  local_fake_tools(results = list("audio", c(NA_character_, "16000", "1")))
+
+  expect_identical(aw_check_audio(infile), FALSE)
+})
+
+test_that("os_check_audio() answers FALSE when the second query returns nothing", {
+  # `aw_check_audio()` already guards this; `os_check_audio()` indexed `dat[[3]]`
+  # straight into a subscript-out-of-bounds.
+  infile <- local_media(".wav")
+  local_fake_tools(results = list("audio", character(0)))
+
+  expect_identical(os_check_audio(infile), FALSE)
+})
+
+test_that("os_extract_wav() names the file when ffprobe leaves a field blank", {
+  infile <- local_media(".wav")
+  local_fake_tools(results = list("audio", c(NA_character_, "44100", "1")))
+
+  msg <- collapsed_guard(openac:::os_extract_wav(infile))
+
+  expect_match(msg, basename(infile), fixed = TRUE)
+  expect_match(msg, "16-bit", fixed = TRUE)
+})
+
+test_that("aw_transcribe_wav() names the file when ffprobe leaves a field blank", {
+  infile <- local_media(".wav")
+  local_fake_tools(results = list("audio", c(NA_character_, "16000", "1")))
+
+  msg <- collapsed_guard(openac:::aw_transcribe_wav(infile, model = fake_model()))
+
+  expect_match(msg, basename(infile), fixed = TRUE)
+  expect_match(msg, "16-bit", fixed = TRUE)
+})
+
+# --- review round 1: AC3's pre-flight, as written -----------------------------
+
+test_that("os_extract_dir() pre-flights a config named by an abbreviation", {
+  # F5: `...` is forwarded through `do.call()`, which matches names PARTIALLY --
+  # so `conf =` reaches `os_extract()`'s `config` while an exact read of
+  # `list(...)$config` sees nothing and validates the default instead. The batch
+  # then probed every input before failing each one.
+  indir <- withr::local_tempdir()
+  file.create(file.path(indir, "clip.mp4"))
+  aggdir <- withr::local_tempdir()
+  state <- local_fake_tools(results = list())
+
+  msg <- collapsed_guard(
+    os_extract_dir(indir, "mp4", aggdir = aggdir, conf = "egemaps/v99/nope")
+  )
+
+  expect_match(msg, "egemaps/v99/nope", fixed = TRUE)
+  expect_identical(boundary_tools(state), character(0))
+})
+
+test_that("os_extract_dir() pre-flights an explicit NULL config", {
+  # F12: `config = NULL` was indistinguishable from `config` absent, so the
+  # pre-flight validated the DEFAULT and the batch then failed per file with a
+  # message naming no file. Supplied means checked, whatever the value.
+  indir <- withr::local_tempdir()
+  file.create(file.path(indir, "clip.mp4"))
+  aggdir <- withr::local_tempdir()
+  state <- local_fake_tools(results = list())
+
+  msg <- collapsed_guard(
+    os_extract_dir(indir, "mp4", aggdir = aggdir, config = NULL)
+  )
+
+  expect_match(msg, "config", fixed = TRUE)
+  expect_identical(boundary_tools(state), character(0))
+})
+
+test_that("an unresolved openSMILE is named, not a dirname() failure", {
+  # F6: `os_list_configs()` called `dirname(find_opensmile())`, and with
+  # openSMILE unresolved that is `dirname(NULL)` -- `a character vector argument
+  # expected`, raised before `os_check_config()` could say anything. Pre-flight
+  # made it the whole batch's death rather than one file's.
+  indir <- withr::local_tempdir()
+  file.create(file.path(indir, "clip.mp4"))
+  aggdir <- withr::local_tempdir()
+  local_fake_tools(results = list(), resolve = c("ffmpeg", "ffprobe"))
+
+  msg <- suppressWarnings(
+    collapsed_guard(os_extract_dir(indir, "mp4", aggdir = aggdir))
+  )
+
+  expect_match(msg, "opensmile", fixed = TRUE)
+  expect_no_match(msg, "character vector argument expected", fixed = TRUE)
+})
+
+# --- review round 1: the error column is a data column, not a console ---------
+
+test_that("a failed row's error is one line, unglyphed, and names the file once", {
+  # F14: `cli_abort()` formats for a terminal -- it hard-wraps at the console
+  # width and prefixes each bullet with a glyph -- and both survive
+  # `conditionMessage()` into a character column a user prints in a data frame
+  # and writes to CSV. `dir_walk()`'s own warning then prepended the basename a
+  # second time.
+  indir <- withr::local_tempdir()
+  file.create(file.path(indir, "clip.mp4"))
+  aggdir <- withr::local_tempdir()
+  local_fake_tools(results = list("video audio", c("aac", "44100", "2"), "ok"))
+
+  warnings <- collect_warnings(
+    out <- os_extract_dir(indir, "mp4", aggdir = aggdir)
+  )
+
+  expect_identical(out$status, "failed")
+  expect_false(grepl("\n", out$error, fixed = TRUE))
+  expect_false(grepl("✖", out$error, fixed = TRUE))
+  # The row's own message still names the file -- that is AC1 -- but the
+  # warning, which already leads with the basename, must not say it twice.
+  expect_match(out$error, "clip.mp4", fixed = TRUE)
+  failure <- grep("clip.mp4", warnings, value = TRUE)
+  expect_length(failure, 1L)
+  expect_identical(lengths(regmatches(failure, gregexpr("clip.mp4", failure))), 1L)
+})
+
+# F1: `!is_integerish(stream, n = 1) || stream < 0` is NA for a TYPED
+# `NA_integer_` -- `is_integerish(NA_integer_, n = 1)` is TRUE, so the guard
+# falls through to `NA < 0` and `if (NA)` dies naming no file. A bare `NA` is
+# logical and fails the first test, which is why only the typed one got through.
+
+stream_na_cases <- function() {
+  list(
+    list(
+      label = "os_prep_audio()",
+      run = function(file, stream) {
+        os_prep_audio(file, local_outpath(.env = parent.frame()), stream = stream)
+      }
+    ),
+    list(
+      label = "aw_prep_audio()",
+      run = function(file, stream) {
+        aw_prep_audio(file, local_outpath(.env = parent.frame()), stream = stream)
+      }
+    )
+  )
+}
+
+for (case in stream_na_cases()) {
+  test_that(paste0("a typed NA stream names the file and the defect -- ", case$label), {
+    infile <- local_media(".mp4")
+    local_fake_tools(results = list())
+
+    for (bad in list(NA_integer_, NA_real_)) {
+      msg <- collapsed_guard(case$run(infile, bad))
+      expect_match(msg, basename(infile), fixed = TRUE, info = case$label)
+      expect_match(msg, "stream", fixed = TRUE, info = case$label)
+    }
+  })
+}

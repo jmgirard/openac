@@ -113,18 +113,99 @@ dir_outputs <- function(infiles, indir, outdir, ext) {
 # here. The file is interpolated as a VALUE, never pasted into the format
 # string, so a `{` in a filename cannot be read as glue markup and abort inside
 # the abort -- the same rule `run_checked()` follows for tool output.
+#
+# The message is formatted HERE and signalled as a finished string, rather than
+# handed to `cli_abort()` as a template. cli formats for a terminal, and lazily:
+# it hard-wraps at the console width and prefixes each bullet with a glyph when
+# `conditionMessage()` is finally called, so a `cli_abort()` message arrives in
+# the `error` column carrying embedded newlines and an unprintable "x" -- in a
+# character column a user prints in a data frame and writes to CSV. Setting
+# `cli.width` around the call does not help, precisely because the formatting
+# happens after the option is gone. MEASURED 2026-08-09 on R 4.6.1 / cli 3.6.6:
+# `conditionMessage()` of the old form returned
+# `"Could not process 'clip.mp4'.\n<glyph> No file exists at ..."` (M19 review
+# round 1, F14).
+#
+# The condition also carries `defect` -- the same text WITHOUT the leading
+# "Could not process <file>". `dir_walk()`'s warning already opens with the
+# basename, so it reads that field and names the file once; the `error` column
+# reads the whole message, which is where AC1's naming has to live.
 abort_file <- function(file,
                        message,
                        class = character(),
                        call = rlang::caller_env()) {
   caller <- rlang::caller_env()
   envir <- rlang::env(caller, guarded_name = basename(file), guarded_path = file)
-  cli::cli_abort(
-    c("Could not process {.file {guarded_name}}.", "x" = message),
+  # Source-formatting whitespace: these templates are wrapped and indented to
+  # fit the R sources, and cli keeps that whitespace verbatim in inline output.
+  defect <- cli::format_inline(gsub("[[:space:]]+", " ", message), .envir = envir)
+  full <- cli::format_inline(
+    "Could not process {.file {guarded_name}}: {defect}",
+    .envir = rlang::env(envir, defect = defect)
+  )
+  rlang::abort(
+    full,
     class = c(class, "openac_file_guard"),
     call = call,
-    .envir = envir
+    defect = defect
   )
+}
+
+# Reject an `infile` that is not one file path (M19 review round 1, F2).
+#
+# Every guard below names the file it stopped on, which is only possible when
+# there IS one file: `basename()` of a length-2 path names two and of
+# `character(0)` names none. Worse, `if (!file.exists(infile))` takes a length-1
+# condition, so without this check a length-2 `infile` died on base R's "the
+# condition has length > 1", `character(0)` on "argument is of length zero", and
+# a number on "invalid 'file' argument" -- all raw, all naming neither the
+# argument nor the file, and all of them reaching a batch row that way. (The
+# `stopifnot()` these guards replaced tolerated every one of those shapes,
+# passing vacuously; neither shape was ever meaningful.)
+#
+# So this one names the ARGUMENT rather than a file, and runs BEFORE any guard
+# that would interpolate the path. It is outside the batch-reachable domain for
+# the reason `ffp_count_streams()`'s identical guard is: `dir_walk()`'s `infile`
+# column is always a length-1 character from `fs::path_abs()`.
+check_file_arg <- function(x,
+                           arg = rlang::caller_arg(x),
+                           call = rlang::caller_env()) {
+  if (!rlang::is_string(x)) {
+    cli::cli_abort(
+      "{.arg {arg}} must be a single file path, not {.obj_type_friendly {x}}.",
+      class = "openac_bad_argument",
+      call = call
+    )
+  }
+  invisible(x)
+}
+
+# Expand partially-matched names in an argument list bound for `do.call()`.
+#
+# R matches argument names by prefix and `do.call()` is no exception, so a
+# caller writing `os_extract_dir(..., conf = "typo")` reaches `os_extract()`'s
+# `config`. A pre-flight check reading `list(...)$config` finds nothing there,
+# validates the default instead, and the batch runs to completion on an argument
+# nothing checked (M19 review round 1, F5). Resolving the names here means the
+# check and the call that follows it read the same argument.
+#
+# Only unambiguous prefixes are expanded. Anything else -- an ambiguous
+# abbreviation, a name bound for `fn`'s own `...` -- is left exactly as it was,
+# for `do.call()` to accept or reject as it would have.
+match_formals <- function(args, fn) {
+  nms <- names(args)
+  if (is.null(nms)) {
+    return(args)
+  }
+  targets <- setdiff(names(formals(fn)), "...")
+  idx <- which(nzchar(nms) & !(nms %in% targets))
+  if (length(idx)) {
+    hit <- pmatch(nms[idx], targets)
+    ok <- !is.na(hit)
+    nms[idx[ok]] <- targets[hit[ok]]
+    names(args) <- nms
+  }
+  args
 }
 
 # Run `run` under the progress mode the caller asked for, returning its value.
@@ -226,10 +307,16 @@ dir_walk <- function(.l, .f, parallel = TRUE) {
         )
       },
       error = function(e) {
-        cli::cli_warn(
-          "Skipping {.file {basename(infile)}}: {conditionMessage(e)}"
-        )
-        list(status = "failed", success = FALSE, error = conditionMessage(e))
+        # The `error` column takes the WHOLE message, which leads with the file
+        # the guard stopped on -- that naming is the column's whole point. The
+        # warning takes the `defect` field instead where there is one, because
+        # it opens with the basename itself and would otherwise name the file
+        # twice (M19 review round 1, F14). A plain R error carries no such
+        # field and keeps the prefix, which is the only thing naming it at all.
+        full <- conditionMessage(e)
+        defect <- if (is.null(e$defect)) full else e$defect
+        cli::cli_warn("Skipping {.file {basename(infile)}}: {defect}")
+        list(status = "failed", success = FALSE, error = full)
       }
     )
     p(message = basename(infile))

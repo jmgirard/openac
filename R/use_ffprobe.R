@@ -64,12 +64,10 @@ ffp_count_streams <- function(infile) {
   # both from an exported function whose contract is to warn rather than stop.
   # (The `stopifnot()` this replaced accepted a vector and passed vacuously on
   # `character(0)`; neither shape was ever meaningful here.)
-  if (!rlang::is_string(infile)) {
-    cli::cli_abort(
-      "{.arg infile} must be a single file path, not
-       {.obj_type_friendly {infile}}."
-    )
-  }
+  # The same guard the per-file functions run, and the same message: M19's
+  # review round 1 found every one of them missing it, so it moved into a shared
+  # helper rather than staying written out here alone.
+  check_file_arg(infile)
 
   # An unprobeable file is that file's outcome, not the end of the batch (GP6).
   # Both failure branches below return NA counts with a warning naming the
