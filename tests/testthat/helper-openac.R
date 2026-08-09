@@ -837,6 +837,25 @@ extract_dirs <- function(state) {
   vapply(state$extracts, function(x) as.character(x$dir), character(1))
 }
 
+# Every warning `expr` emits, in order, as a character vector.
+#
+# `expect_warning()` consumes ONE warning and matches it against a regexp, which
+# says nothing about how many were emitted or in what order. A call that warns
+# twice -- a failed probe, then the caller's own report of it -- needs both
+# facts, and nesting `expect_warning()` to get them is order-dependent and
+# reports the wrong one as missing when the order changes.
+collect_warnings <- function(expr) {
+  seen <- character()
+  withCallingHandlers(
+    expr,
+    warning = function(w) {
+      seen <<- c(seen, conditionMessage(w))
+      invokeRestart("muffleWarning")
+    }
+  )
+  seen
+}
+
 # --- accessors over a recorder returned by local_fake_tools() ----------------
 
 # The ordered (tool, args) pairs seen at the boundary.

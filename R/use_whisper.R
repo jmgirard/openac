@@ -16,6 +16,19 @@ aw_check_audio <- function(infile, verbose = FALSE) {
   stopifnot(rlang::is_bool(verbose))
   # Count streams
   streams <- ffp_count_streams(infile)
+  # A file ffprobe could not read cannot be checked, and every test below would
+  # be NA rather than a logical. Return before the second query, which would
+  # fail on that same file. ffp_count_streams() has already warned naming it, so
+  # this second message is verbose-gated like the sibling warning below.
+  if (anyNA(streams)) {
+    if (verbose) {
+      cli::cli_warn(c(
+        "!" = "Could not count the streams in {.file {basename(infile)}}",
+        "i" = "Returning FALSE."
+      ))
+    }
+    return(FALSE)
+  }
   # Create ffprobe command
   arg <- c(
     "-v", "error",

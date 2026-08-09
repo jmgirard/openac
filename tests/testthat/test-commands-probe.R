@@ -205,14 +205,7 @@ test_that("a failed probe warns once, naming the file rather than the command", 
   infile <- local_media(".mp4")
   local_fake_tools(results = list(fake_nonzero_exit()))
 
-  warnings <- character()
-  withCallingHandlers(
-    ffp_count_streams(infile),
-    warning = function(w) {
-      warnings <<- c(warnings, conditionMessage(w))
-      invokeRestart("muffleWarning")
-    }
-  )
+  warnings <- collect_warnings(ffp_count_streams(infile))
 
   expect_length(warnings, 1L)
   expect_match(warnings, basename(infile), fixed = TRUE)
@@ -278,6 +271,33 @@ test_that("os_check_audio() accepts a conforming file and rejects others", {
   expect_false(os_check_audio(infile))
 })
 
+test_that("os_check_audio() returns FALSE on a file it cannot probe", {
+  # The stream count is NA, so every test built on it would be NA and `all()`
+  # would return NA rather than a logical. The queue holds ONE result: the
+  # second ffprobe query must not be issued, because it would fail identically.
+  infile <- local_media()
+  state <- local_fake_tools(results = list(fake_nonzero_exit()))
+
+  expect_warning(result <- os_check_audio(infile), "status 1")
+
+  expect_false(result)
+  expect_identical(boundary_tools(state), "ffprobe")
+})
+
+test_that("os_check_audio(verbose = TRUE) names the file it could not probe", {
+  infile <- local_media()
+  local_fake_tools(results = list(fake_nonzero_exit()))
+
+  warnings <- collect_warnings(
+    expect_false(os_check_audio(infile, verbose = TRUE))
+  )
+
+  # Two messages, both naming the file: the probe's own, then the check's.
+  expect_length(warnings, 2L)
+  expect_true(all(grepl(basename(infile), warnings, fixed = TRUE)))
+  expect_match(warnings[[2]], "Could not count the streams")
+})
+
 test_that("os_check_audio(verbose = TRUE) warns about a non-44.1kHz rate", {
   infile <- local_media()
   local_fake_tools(results = list("audio", c("pcm_s16le", "48000", "1")))
@@ -323,6 +343,30 @@ test_that("aw_check_audio() accepts a conforming file and rejects others", {
 
   local_fake_tools(results = list("audio", c("mp3", "16000", "1")))
   expect_false(aw_check_audio(infile))
+})
+
+test_that("aw_check_audio() returns FALSE on a file it cannot probe", {
+  infile <- local_media()
+  state <- local_fake_tools(results = list(fake_nonzero_exit()))
+
+  expect_warning(result <- aw_check_audio(infile), "status 1")
+
+  expect_false(result)
+  # One call, not two: the second query would fail on the same file.
+  expect_identical(boundary_tools(state), "ffprobe")
+})
+
+test_that("aw_check_audio(verbose = TRUE) names the file it could not probe", {
+  infile <- local_media()
+  local_fake_tools(results = list(fake_nonzero_exit()))
+
+  warnings <- collect_warnings(
+    expect_false(aw_check_audio(infile, verbose = TRUE))
+  )
+
+  expect_length(warnings, 2L)
+  expect_true(all(grepl(basename(infile), warnings, fixed = TRUE)))
+  expect_match(warnings[[2]], "Could not count the streams")
 })
 
 test_that("aw_check_audio() returns FALSE when ffprobe reports under 3 fields", {
