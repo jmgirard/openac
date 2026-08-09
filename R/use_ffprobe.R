@@ -107,12 +107,24 @@ ffp_count_streams <- function(infile) {
   # conditions themselves, rather than their text, also keeps a warning that is
   # NOT about the exit status -- and would otherwise be swallowed -- reaching
   # the caller intact on the success path.
+  # The error handler is not ceremony. `ffprobe()` aborts when the tool cannot
+  # be resolved, and `find_program()` WARNS on its way there with the
+  # `set_program()` hint -- a warning raised inside the held region. Without
+  # this, that hint is held and then thrown away as the error unwinds past the
+  # release below, so a user with no ffprobe on their PATH lost the one message
+  # telling them how to point openac at it. MEASURED while fixing M14's review.
   held <- list()
-  stream_types <- withCallingHandlers(
-    ffprobe(arg),
-    warning = function(w) {
-      held[[length(held) + 1L]] <<- w
-      invokeRestart("muffleWarning")
+  stream_types <- tryCatch(
+    withCallingHandlers(
+      ffprobe(arg),
+      warning = function(w) {
+        held[[length(held) + 1L]] <<- w
+        invokeRestart("muffleWarning")
+      }
+    ),
+    error = function(e) {
+      for (w in held) warning(w)
+      stop(e)
     }
   )
 

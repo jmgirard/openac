@@ -237,8 +237,14 @@ test_that("ffp_count_streams() still aborts when ffprobe itself is unavailable",
   infile <- local_media(".mp4")
   local_fake_tools(resolve = character())
 
-  suppressWarnings(
-    expect_error(ffp_count_streams(infile), "could not be found")
+  # And the hint survives the abort. `find_program()` warns with the
+  # `set_program()` pointer on its way to the error, from inside the region
+  # where warnings are held pending the exit status -- so it has to be released
+  # as the error unwinds, or the one message telling the user how to fix this
+  # is lost. It was, until this test.
+  expect_warning(
+    expect_error(ffp_count_streams(infile), "could not be found"),
+    "set_program"
   )
 })
 
