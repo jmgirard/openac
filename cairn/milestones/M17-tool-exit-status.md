@@ -1,6 +1,6 @@
 # M17: A tool that exited non-zero is a failed file
 
-- **Status:** review
+- **Status:** in-progress
 - **Priority:** high
 - **Depends on:** —
 - **Driving RR:** —
@@ -41,7 +41,7 @@ collisions → the standing ROADMAP candidate, behind M18.
       `opensmile`/`os`, which D-010 records as separate bindings — under
       `fake_nonzero_exit()` (`tests/testthat/helper-openac.R:860`) and asserts
       each returns a value carrying a `status` attribute.
-- [x] AC2 Each of the four per-file call sites T3 wires — `os_prep_audio()`,
+- [ ] AC2 Each of the four per-file call sites T3 wires — `os_prep_audio()`,
       `aw_prep_audio()`, `os_extract_wav()` and `of_extract()` — raises an
       error on a non-zero tool exit whose message, with whitespace collapsed
       as `collect_warnings()` documents (`helper-openac.R:896-905`), contains
@@ -98,6 +98,7 @@ collisions → the standing ROADMAP candidate, behind M18.
 - 2026-08-08: D-010's command-contract gate reddened on the new function, exactly as designed — `run_checked` entered the computed `system2` closure with no command test. Satisfied with a real command test asserting it forwards its tokens quoted, not with a deferral entry.
 - 2026-08-08: added T5b, a GP7 layer-2 real-ffmpeg test, after noting the mocked suite is structurally blind to whether a real failing tool sets `status` at all — the shape of blindness M16 found in the mocked installer suite. Mutation-verified: neutering the check reds it (2 failures), restoring it passes 44.
 - 2026-08-08: T6 done, status → review. `devtools::check()` 0 errors / 0 warnings / 0 notes; `devtools::document()` no drift; suite 753 pass / 0 fail; real-tools layer 44 pass with ffmpeg, ffprobe and openSMILE present, OpenFace and audio.whisper skipped as absent.
+- 2026-08-09: review round 1 RETURNED (defect return 1). Finding A (93): `run_checked()` nests `withCallingHandlers(tryCatch(...))` where M14's sibling nests `tryCatch(withCallingHandlers(...))`, so the error handler's warning replay is re-captured by the still-active handler and the `set_program()` hint is lost from all four wrappers — MEASURED, 0 warnings surfaced against the passthrough's 1. Also actioned: D (85) two status assertions that cannot fail, B (84) `os_extract()` naming a tempfile NEWS says is the user's file, F (82) no test for the error path. 15 findings logged sub-threshold.
 - 2026-08-08: plan gate chose three milestones over one because the combined scope is ~15 criteria and ~20 tasks, well past the split tripwires; falsified by the three proving inseparable in implementation.
 
 ## Decisions
@@ -111,7 +112,11 @@ all eight bindings (`ffmpeg`/`ffm`, `ffprobe`/`ffp`, `openface`/`of`,
 `fake_nonzero_exit(status = 3L)`, plus the boundary-call count. No binding
 errors.
 
-**AC2 — verified 2026-08-08.** Four tests, one per wired site, 4 passing
+**AC2 — UNTICKED 2026-08-09**, finding D: two of the four site tests assert
+`"1"` and `"11"` against a message carrying a random-hex tempfile basename, so
+they pass on noise and do not demonstrate the exit status reaching the message.
+The openSMILE and OpenFace sites are unverified until those assertions pin the
+phrase. Round-1 evidence, now insufficient: Four tests, one per wired site, 4 passing
 expectations each: `os_prep_audio()`, `aw_prep_audio()`, `os_extract_wav()` and
 `of_extract()` each raise `openac_tool_failed` whose whitespace-collapsed
 message contains the input basename, the program name and the exit status
@@ -140,6 +145,52 @@ audio.whisper absent). `devtools::document()` produces no drift.
 `cairn_impact --changed`: no changed principles (M17 works under GP6/GP9, it
 changes neither). Profile `consistency-gate` slot: `document()` no-diff
 verified; no generated file hand-edited.
+
+**Round 1 — RETURNED 2026-08-09 (defect return 1).** Three fresh-context lenses
+(diff-bug [O], blame-history [S], prior-review [S]) reported 19 distinct
+findings; a fresh [S] scorer with the diff and the plan scored them. Four
+scored ≥80 and are actioned; 15 scored below 80 and are logged.
+
+Actioned (≥80), all four to be fixed on the branch:
+
+- **A (93) — `run_checked()` inverts M14's handler nesting, and the
+  `set_program()` hint is lost.** `R/run_tool.R:135-147` is
+  `withCallingHandlers(tryCatch(...), warning=)` where the sibling
+  `ffp_count_streams()` (`R/use_ffprobe.R:119-131`) is
+  `tryCatch(withCallingHandlers(...), error=)`. The error handler's replay
+  therefore runs while the calling handler is still established, so every
+  released warning is re-captured and muffled. MEASURED with the tool absent
+  from `PATH`: `os_prep_audio()` surfaces 0 warnings where `ffmpeg()` surfaces
+  1. All four wired wrappers lose the hint; before this branch they did not.
+  This is M14 fix-delta F1 reintroduced, in the one function told to mirror it.
+- **D (85) — two AC2 status assertions cannot fail.**
+  `test-tool-exit-status.R:114` and `:126` assert `"1"` and `"11"` against a
+  message carrying a random-hex tempfile basename, so they pass on noise and
+  cannot distinguish status 1 from no status at all. AC2's wording is
+  technically met, which is how they passed the criteria audit.
+- **B (84) — `os_extract()` names a temp path that exists nowhere.** It passes
+  `infile = wavfile` to `os_extract_wav()` (`R/use_opensmile.R:302-321`), and
+  `wavfile` is `tempfile()` on the default path `os_extract_dir()` uses, so the
+  abort reads `Could not process 'file122de76bef6fe.wav'.` NEWS advertises
+  `os_extract()` as naming the file you can re-run.
+- **F (82) — no test drives `run_checked()`'s error path at all.** Every test
+  drives a returned status; nothing drives `run_tool()` erroring. That is the
+  hole A shipped through, and the sibling has a pinning test for exactly this
+  behavior (`test-commands-probe.R:258-273`).
+
+Logged, sub-threshold (15): S (66) `basename()` vs the full path
+`ffp_count_streams()` argues for under `recursive = TRUE`; Q (63) work-log says
+17 tests where the file has 12 `test_that()` blocks; I (63) DESIGN's new
+"exit status is no longer among the gaps" overstates while the second ffprobe
+query stays unchecked; M (62) no layer-2 openSMILE test though it is installed
+locally; N (62) `expect_false(file.exists(outfile))` pins ffmpeg's behavior not
+openac's; H (76) cli renders the tool's lines as an English list with an
+inserted "and"; E (74) `test-batch-dirs.R:351` asserts on the un-collapsed
+message (latent); C (68) NEWS overclaims openSMILE was previously a silent
+success; G (55) the positional last-warning drop is unconditional; R (45) the
+mechanism is duplicated rather than shared; L (45) OpenFace is mocked-only by
+recorded plan decision; O (42) `infile` unvalidated; J (30) and P (25)
+pre-existing; K (5) stale — the DESIGN correction is committed in `b94a29b`.
 
 **Correction made at review.** `DESIGN.md`'s Known-issues GP6 entry asserted two
 things this milestone falsified — that `os_prep_audio_dir()` records a bad file
