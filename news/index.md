@@ -1,0 +1,291 @@
+# Changelog
+
+## openac (development version)
+
+- [`os_check_audio()`](https://jmgirard.github.io/openac/reference/os_check_audio.md)
+  and
+  [`aw_check_audio()`](https://jmgirard.github.io/openac/reference/aw_check_audio.md)
+  now tell you when a file cannot be read at all, instead of reporting
+  it as one that simply is not ready. Each runs two ffprobe queries, and
+  only the first was checked: a file whose second query ffprobe rejected
+  came back `FALSE` — silently in
+  [`aw_check_audio()`](https://jmgirard.github.io/openac/reference/aw_check_audio.md),
+  and in
+  [`os_check_audio()`](https://jmgirard.github.io/openac/reference/os_check_audio.md)
+  under a message claiming no audio stream was found, next to a raw dump
+  of the command line you never typed. Both now warn naming the file and
+  the exit status, so an unreadable input is distinguishable from a
+  merely non-conforming one.
+
+- When a file is rejected before any tool runs, the message now says
+  which file and what was wrong with it. Previously most of these checks
+  reported the failed R expression instead — a batch row’s `error`
+  column read `file.exists(infile) is not TRUE`, naming neither the file
+  nor the defect, which was of little use when you came back to a
+  500-file run to find out which inputs to fix. Every such check in the
+  batch path now reads like
+  `Could not process 'clip.mp4': No file exists at '/data/clip.mp4'.` —
+  one line, so it stays readable in the `error` column of a table you
+  print or write to CSV. Two of those reasons are new rather than
+  reworded: an intermediate `.wav` that ffmpeg was asked for and never
+  wrote is now reported as ffmpeg having written no output there, rather
+  than as a missing file with no explanation, and a missing openSMILE
+  output CSV is attributed to openSMILE the same way.
+
+- An openSMILE config that cannot be resolved is now reported by name,
+  and
+  [`os_extract_dir()`](https://jmgirard.github.io/openac/reference/os_extract_dir.md)
+  checks it once before the run rather than letting each file discover
+  it in turn. A typo in `config` used to cost a full audio check on
+  every input in the directory and then return a table of failed rows,
+  each saying only that a config file was not found. It now stops
+  immediately, naming the config you asked for and pointing at
+  [`os_list_configs()`](https://jmgirard.github.io/openac/reference/os_list_configs.md),
+  with nothing run.
+
+- A batch’s results table now says whether each file was processed,
+  deliberately skipped, or failed. It gains a `status` column reading
+  `"ok"`, `"skipped"` or `"failed"`, and `success` is now
+  `status == "ok"` — so a file the batch chose not to process reads
+  `success = FALSE` where it used to read `TRUE`. If you read `success`
+  to count completed work, that count was previously flattering and is
+  now honest; if you read it to find the files that need attention, read
+  `status` as well to tell a deliberate skip from a genuine failure.
+  Three cases skip: an output that already exists under
+  `overwrite = FALSE` in
+  [`aw_prep_audio()`](https://jmgirard.github.io/openac/reference/aw_prep_audio.md)
+  and
+  [`os_prep_audio()`](https://jmgirard.github.io/openac/reference/os_prep_audio.md),
+  and a file with no audio stream in
+  [`aw_transcribe()`](https://jmgirard.github.io/openac/reference/aw_transcribe.md).
+  `status` describes the batch’s own job, so a batch that merely
+  *reuses* audio it prepared on an earlier run —
+  [`os_extract_dir()`](https://jmgirard.github.io/openac/reference/os_extract_dir.md)
+  or
+  [`aw_transcribe_dir()`](https://jmgirard.github.io/openac/reference/aw_transcribe_dir.md)
+  given a `wavdir` and `overwrite = FALSE` — still extracts or
+  transcribes as usual and reads `"ok"`; only a batch whose whole job
+  was preparing that audio reads `"skipped"`. The reason appears in the
+  `error` column, as it already did for a failure. A skip is announced
+  with an informational line rather than a warning, so re-running a
+  finished batch does not bury the rows that do need you. Calling any of
+  these functions on a single file by hand is unchanged. Separately,
+  [`aw_transcribe()`](https://jmgirard.github.io/openac/reference/aw_transcribe.md)
+  now stops on a file ffprobe cannot read instead of quietly returning
+  nothing: nothing is known about such a file, so a batch records it as
+  a failure rather than as a skip.
+
+- When ffmpeg, openSMILE or OpenFace fails on a file, that file is now
+  reported as a failure instead of a success. Until now nothing in the
+  package looked at whether these programs had actually worked — they
+  report failure through a channel R does not treat as an error. For
+  ffmpeg and OpenFace that meant a conversion or extraction producing no
+  output at all finished quietly and was recorded in a batch’s results
+  table as though it had worked: a long overnight run could report every
+  file successful and leave you with far fewer output files than inputs,
+  with nothing saying which were missing or why. A failed openSMILE run
+  was already recorded as a failure, but only indirectly — the step that
+  tidies its output tripped over the missing file — and the message said
+  `file.exists(infile) is not TRUE`, naming neither the file nor
+  openSMILE. All three now report the same way.
+  [`os_prep_audio()`](https://jmgirard.github.io/openac/reference/os_prep_audio.md),
+  [`aw_prep_audio()`](https://jmgirard.github.io/openac/reference/aw_prep_audio.md),
+  [`os_extract()`](https://jmgirard.github.io/openac/reference/os_extract.md)
+  and
+  [`of_extract()`](https://jmgirard.github.io/openac/reference/of_extract.md)
+  now stop with a message naming the file, the program, and the last few
+  lines of what the program itself said; in a batch that message lands
+  in the `error` column of the returned table, so you can read the
+  failures and re-run exactly those files. The low-level
+  [`ffmpeg()`](https://jmgirard.github.io/openac/reference/ffmpeg.md),
+  [`ffprobe()`](https://jmgirard.github.io/openac/reference/ffprobe.md),
+  [`openface()`](https://jmgirard.github.io/openac/reference/openface.md)
+  and
+  [`opensmile()`](https://jmgirard.github.io/openac/reference/opensmile.md)
+  functions are unchanged and still hand back whatever the program
+  printed — they are the escape hatch for driving a tool yourself.
+
+- A media file that ffprobe cannot read is now reported as that file’s
+  own result rather than being mistaken for a file with no audio.
+  [`ffp_count_streams()`](https://jmgirard.github.io/openac/reference/ffp_count_streams.md)
+  returns `NA` counts and a warning naming the file instead of stopping,
+  and the functions built on it act on that:
+  [`os_check_audio()`](https://jmgirard.github.io/openac/reference/os_check_audio.md)
+  and
+  [`aw_check_audio()`](https://jmgirard.github.io/openac/reference/aw_check_audio.md)
+  return `FALSE`,
+  [`aw_prep_audio()`](https://jmgirard.github.io/openac/reference/aw_prep_audio.md)
+  stops with a message naming the file, and
+  [`aw_transcribe()`](https://jmgirard.github.io/openac/reference/aw_transcribe.md)
+  skips it. So
+  [`aw_prep_audio_dir()`](https://jmgirard.github.io/openac/reference/aw_prep_audio_dir.md)
+  now records such a file in its returned table as a failure you can
+  read and re-run, where before the table said only that an audio stream
+  index was not true — a message that named neither the file nor the
+  reason, and that came from reading a failed probe as a file with no
+  audio.
+  [`aw_transcribe_dir()`](https://jmgirard.github.io/openac/reference/aw_transcribe_dir.md)
+  reports it too, as the next entry describes. A missing ffprobe stops
+  the run as before, because that is a problem with the installation
+  rather than with any one file.
+  [`ffp_count_streams()`](https://jmgirard.github.io/openac/reference/ffp_count_streams.md)
+  also now requires a single file path: it previously accepted a vector
+  of several and returned their counts added together, which was never
+  documented or intended, and it now stops with a message saying so.
+
+- [`install_openface_win()`](https://jmgirard.github.io/openac/reference/install_openface_win.md)
+  was silently installing an OpenFace that cannot track faces. The four
+  model files it downloads separately from the main release came from
+  links that were serving a sign-in page instead of the models — and
+  because that page arrives as a successful download, the installer
+  wrote four web pages where the models belong and reported success. How
+  long that had been true is not something we can tell from here. **If
+  you installed OpenFace through openac, re-run
+  [`install_openface_win()`](https://jmgirard.github.io/openac/reference/install_openface_win.md).**
+  The models now come from the same location the OpenFace project itself
+  uses first, and a download that is too small or is a web page is
+  refused with a message naming the link, instead of being accepted. A
+  failed install now reports every missing model at once rather than
+  stopping at the first.
+
+- [`install_opensmile_win()`](https://jmgirard.github.io/openac/reference/install_opensmile_win.md)
+  could never have worked: it asked for a file name the openSMILE 3.0.2
+  release has never carried, and the download failed with a “not found”
+  error. It now asks for the file that release does carry.
+
+- File paths containing a `$` are now handled correctly. Previously a
+  file such as `my $clip.mp4` was passed to ffmpeg, ffprobe, OpenFace or
+  openSMILE with the `$clip` part removed, so the tool was asked for a
+  file that did not exist. Paths containing spaces were already handled
+  and are unaffected. An earlier version of this note warned that a
+  Windows path containing a token such as `%TEMP%` could still be
+  expanded; that turned out not to be so. Such paths — and ones
+  containing `&`, `^` or `!` — were run against the real tools on
+  Windows and reached them unchanged, because openac starts a tool
+  directly rather than through a command interpreter.
+
+- [`ffmpeg()`](https://jmgirard.github.io/openac/reference/ffmpeg.md),
+  [`ffprobe()`](https://jmgirard.github.io/openac/reference/ffprobe.md),
+  [`openface()`](https://jmgirard.github.io/openac/reference/openface.md)
+  and
+  [`opensmile()`](https://jmgirard.github.io/openac/reference/opensmile.md)
+  now also accept a character vector giving one command-line argument
+  per element, and quote each element for you. Passing a single string
+  still works exactly as before, with quoting left to you; the vector
+  form is preferred and is what the rest of openac now uses internally.
+
+- The batch functions match `inext` regardless of case, so
+  `inext = "mp4"` also takes `.MP4` files. This is now documented, and
+  it can no longer cost you a result: where two inputs differing only in
+  extension case would have derived the same output file, the batch
+  previously wrote that file twice and reported success for both. It now
+  stops before any tool runs, naming the files involved.
+
+- The batch functions
+  [`os_prep_audio_dir()`](https://jmgirard.github.io/openac/reference/os_prep_audio_dir.md),
+  [`os_extract_dir()`](https://jmgirard.github.io/openac/reference/os_extract_dir.md),
+  [`of_extract_dir()`](https://jmgirard.github.io/openac/reference/of_extract_dir.md),
+  [`aw_prep_audio_dir()`](https://jmgirard.github.io/openac/reference/aw_prep_audio_dir.md)
+  and
+  [`aw_transcribe_dir()`](https://jmgirard.github.io/openac/reference/aw_transcribe_dir.md)
+  no longer abort the whole run when one file fails. The failing file is
+  skipped with a warning naming it and the reason, and the batch
+  continues.
+
+- Those functions now return (invisibly) a data frame with one row per
+  input file — the paths it was called with, whether it succeeded, and
+  the error message if it did not — so a failed file can be found and
+  re-run. They previously returned `NULL` or the vector of input paths.
+
+- [`os_prep_audio_dir()`](https://jmgirard.github.io/openac/reference/os_prep_audio_dir.md),
+  [`os_extract_dir()`](https://jmgirard.github.io/openac/reference/os_extract_dir.md)
+  and
+  [`of_extract_dir()`](https://jmgirard.github.io/openac/reference/of_extract_dir.md)
+  now derive output paths correctly. An input directory whose name
+  contains a regular expression character (such as `(`, `+` or `.`)
+  previously produced output paths inside the *input* directory rather
+  than under the output directory, and a file such as
+  `clip.mp4.backup.mp4` had every occurrence of the extension replaced,
+  yielding `clip.wav.backup.wav`.
+
+- Those same functions no longer treat a file merely ending in the
+  extension’s letters (`notes.notmp4` for `inext = "mp4"`) as an input.
+
+- The platform-specific installers now check which platform they are
+  running on before doing anything.
+  [`install_ffmpeg_win()`](https://jmgirard.github.io/openac/reference/install_ffmpeg_win.md),
+  [`install_openface_win()`](https://jmgirard.github.io/openac/reference/install_openface_win.md)
+  and
+  [`install_opensmile_win()`](https://jmgirard.github.io/openac/reference/install_opensmile_win.md)
+  fail with an error unless they are run on Windows, and
+  [`install_opensmile_mac()`](https://jmgirard.github.io/openac/reference/install_opensmile_mac.md)
+  unless it is run on macOS; previously none of them checked, and the
+  download and extraction ran regardless. The error points at the
+  installer for the platform you are on, or reports that openac has no
+  automated installer for that tool there.
+
+- The low-level wrappers
+  [`ffmpeg()`](https://jmgirard.github.io/openac/reference/ffmpeg.md),
+  [`ffprobe()`](https://jmgirard.github.io/openac/reference/ffprobe.md),
+  [`openface()`](https://jmgirard.github.io/openac/reference/openface.md)
+  and
+  [`opensmile()`](https://jmgirard.github.io/openac/reference/opensmile.md)
+  (and their aliases
+  [`ffm()`](https://jmgirard.github.io/openac/reference/ffmpeg.md),
+  [`ffp()`](https://jmgirard.github.io/openac/reference/ffprobe.md),
+  [`of()`](https://jmgirard.github.io/openac/reference/openface.md) and
+  [`os()`](https://jmgirard.github.io/openac/reference/opensmile.md))
+  now fail with an error naming the program when it cannot be found,
+  instead of the low-level error that previously surfaced from path
+  resolution.
+
+- [`find_program()`](https://jmgirard.github.io/openac/reference/find_program.md)
+  (and
+  [`find_ffmpeg()`](https://jmgirard.github.io/openac/reference/find_program.md),
+  [`find_ffprobe()`](https://jmgirard.github.io/openac/reference/find_program.md),
+  [`find_openface()`](https://jmgirard.github.io/openac/reference/find_program.md)
+  and
+  [`find_opensmile()`](https://jmgirard.github.io/openac/reference/find_program.md))
+  now warn and return `NULL` when a program cannot be found, instead of
+  failing with an error.
+  [`check_ffmpeg()`](https://jmgirard.github.io/openac/reference/check_ffmpeg.md),
+  [`check_ffprobe()`](https://jmgirard.github.io/openac/reference/check_ffprobe.md),
+  [`check_openface()`](https://jmgirard.github.io/openac/reference/check_openface.md)
+  and
+  [`check_opensmile()`](https://jmgirard.github.io/openac/reference/check_opensmile.md)
+  correspondingly return `FALSE` in that case.
+
+- [`find_program()`](https://jmgirard.github.io/openac/reference/find_program.md)
+  now resolves a location recorded by
+  [`set_program()`](https://jmgirard.github.io/openac/reference/set_program.md)
+  even when that location is a bare program name found on the `PATH`.
+
+- The documented return value of
+  [`set_program()`](https://jmgirard.github.io/openac/reference/set_program.md)
+  now matches what it returns.
+
+## openac 0.1.0
+
+First public release. openac wraps open-source affective-computing tools
+— ffmpeg/ffprobe, OpenFace, openSMILE, and Whisper (via audio.whisper) —
+behind one consistent R interface: tool discovery/installation,
+audio/video preparation, single-file and batch (`_dir`) extraction with
+parallelism (future/furrr) and progress (progressr), and tidy readers
+for the tool outputs.
+
+Reading tool outputs into tidy tibbles:
+
+- [`os_read()`](https://jmgirard.github.io/openac/reference/os_read.md)
+  reads openSMILE CSV output — either an aggregate (functionals) file or
+  a per-frame low-level descriptor (LLD) file — into a tidy tibble,
+  auto-detecting the delimiter and preserving openSMILE’s feature names.
+- [`of_read()`](https://jmgirard.github.io/openac/reference/of_read.md)
+  reads an OpenFace output CSV into a tidy tibble (one row per detected
+  face per frame), trimming the whitespace OpenFace pads its column
+  headers with.
+- [`aw_read()`](https://jmgirard.github.io/openac/reference/aw_read.md)
+  turns a Whisper transcription — the object from
+  [`aw_transcribe()`](https://jmgirard.github.io/openac/reference/aw_transcribe.md),
+  or its `.rds`/`.csv` output — into a tidy tibble with one row per
+  segment, parsing the `HH:MM:SS.mmm` timestamps to numeric seconds and
+  keeping a `speaker` column for diarized transcripts.

@@ -1,0 +1,216 @@
+# openac
+
+openac provides R wrappers around external, open-source
+affective-computing tools — ffmpeg/ffprobe, OpenFace, openSMILE, and
+Whisper (via audio.whisper) — so researchers can run them from a single,
+consistent R interface. It covers tool discovery, installation, and
+configuration; audio/video preparation; single-file and batch extraction
+(with parallelism and progress); and reading each tool’s output into a
+tidy tibble.
+
+## Installation
+
+You can install the development version of openac from
+[GitHub](https://github.com/jmgirard/openac) with:
+
+`# install.packages("pak")`` ``pak``::`[`pak`](https://pak.r-lib.org/reference/pak.html)`(``"jmgirard/openac"``)`
+
+openac calls external command-line tools; install and register the ones
+you need
+(e.g. [`install_opensmile_mac()`](https://jmgirard.github.io/openac/reference/install_opensmile_mac.md)
+/
+[`install_opensmile_win()`](https://jmgirard.github.io/openac/reference/install_opensmile_win.md),
+or point openac at an existing install with
+[`set_opensmile()`](https://jmgirard.github.io/openac/reference/set_program.md)).
+
+## Example
+
+Extract acoustic features from a folder of audio files in parallel, then
+read one result into a tidy tibble:
+
+[`library`](https://rdrr.io/r/base/library.html)`(`[`openac`](https://jmgirard.github.io/openac/)`)`` `` ``# Extract eGeMAPS features from every .wav under audio/ into features/.`` `[`os_extract_dir`](https://jmgirard.github.io/openac/reference/os_extract_dir.md)`(`` `` indir ``=`` ``"audio"``,`` `` inext ``=`` ``"wav"``,`` `` aggdir ``=`` ``"features"``,`` `` config ``=`` ``"egemaps/v02/eGeMAPSv02"`` ``)`` `` ``# Read one aggregate output into a one-row-per-file tidy tibble.`` ``feats`` ``<-`` `[`os_read`](https://jmgirard.github.io/openac/reference/os_read.md)`(``"features/clip01_agg.csv"``)`
+
+## Using openac alongside tidymedia
+
+openac and [tidymedia](https://github.com/jmgirard/tidymedia) both wrap
+ffmpeg/ffprobe, and both export these eight names:
+
+`ffm`, `ffmpeg`, `ffprobe`, `find_ffmpeg`, `find_ffprobe`, `set_ffmpeg`,
+`set_ffprobe`, `set_program`
+
+Attaching both packages masks one set with the other, decided by attach
+order, with no warning beyond R’s masking message. Six of the eight
+behave differently between the packages, so a masked call can succeed
+and do the wrong thing:
+
+- **`ffm` is the sharpest.** In openac it is an alias for
+  [`ffmpeg()`](https://jmgirard.github.io/openac/reference/ffmpeg.md)
+  and returns the tool’s output. In tidymedia it constructs a command
+  object and runs nothing.
+- **The `find_*` and `set_*` pairs read and write different
+  configuration directories.** A tool location recorded with
+  [`openac::set_ffmpeg()`](https://jmgirard.github.io/openac/reference/set_program.md)
+  is invisible to
+  [`tidymedia::find_ffmpeg()`](https://jmgirard.github.io/tidymedia/reference/find_program.html),
+  and the reverse. Register each tool in each package you use it from.
+- **[`set_program()`](https://jmgirard.github.io/openac/reference/set_program.md)
+  accepts different program names** in each package.
+
+If you need both, qualify the calls —
+[`openac::ffmpeg()`](https://jmgirard.github.io/openac/reference/ffmpeg.md),
+[`tidymedia::ffm()`](https://jmgirard.github.io/tidymedia/reference/ffm.html)
+— rather than relying on attach order. (Observed against tidymedia at
+commit `b99f7e8`, 2026-08-08; the two name sets are compared in full in
+`cairn/references/tidymedia-fit.md` in this repository.)
+
+## Code of Conduct
+
+Please note that the openac project is released with a [Contributor Code
+of
+Conduct](https://contributor-covenant.org/version/2/1/CODE_OF_CONDUCT.html).
+By contributing to this project, you agree to abide by its terms.
+
+# Package index
+
+## Package
+
+- [`openac`](https://jmgirard.github.io/openac/reference/openac-package.md)
+  [`openac-package`](https://jmgirard.github.io/openac/reference/openac-package.md)
+  : openac: Open Affective Computing Tools
+
+## Program management
+
+Locate, register, check and install the external command-line tools
+openac drives. Locations are discovered on the PATH or recorded per
+tool; nothing is hard-coded.
+
+- [`find_program()`](https://jmgirard.github.io/openac/reference/find_program.md)
+  [`find_ffmpeg()`](https://jmgirard.github.io/openac/reference/find_program.md)
+  [`find_ffprobe()`](https://jmgirard.github.io/openac/reference/find_program.md)
+  [`find_openface()`](https://jmgirard.github.io/openac/reference/find_program.md)
+  [`find_opensmile()`](https://jmgirard.github.io/openac/reference/find_program.md)
+  : Find the location of a dependency program
+- [`set_program()`](https://jmgirard.github.io/openac/reference/set_program.md)
+  [`set_ffmpeg()`](https://jmgirard.github.io/openac/reference/set_program.md)
+  [`set_ffprobe()`](https://jmgirard.github.io/openac/reference/set_program.md)
+  [`set_openface()`](https://jmgirard.github.io/openac/reference/set_program.md)
+  [`set_opensmile()`](https://jmgirard.github.io/openac/reference/set_program.md)
+  : Set the location of a dependency program
+- [`check_ffmpeg()`](https://jmgirard.github.io/openac/reference/check_ffmpeg.md)
+  : Check that ffmpeg is accessible
+- [`check_ffprobe()`](https://jmgirard.github.io/openac/reference/check_ffprobe.md)
+  : Check that ffprobe is accessible
+- [`check_openface()`](https://jmgirard.github.io/openac/reference/check_openface.md)
+  : Check that openface is accessible
+- [`check_opensmile()`](https://jmgirard.github.io/openac/reference/check_opensmile.md)
+  : Check that opensmile is accessible
+- [`install_ffmpeg_win()`](https://jmgirard.github.io/openac/reference/install_ffmpeg_win.md)
+  : Install FFmpeg on Windows
+- [`install_openface_win()`](https://jmgirard.github.io/openac/reference/install_openface_win.md)
+  : Install openface on Windows
+- [`install_opensmile_mac()`](https://jmgirard.github.io/openac/reference/install_opensmile_mac.md)
+  : Install openSMILE on macOS
+- [`install_opensmile_win()`](https://jmgirard.github.io/openac/reference/install_opensmile_win.md)
+  : Install openSMILE on Windows
+- [`install_whisper()`](https://jmgirard.github.io/openac/reference/install_whisper.md)
+  : Install audio.whisper package
+
+## ffmpeg and ffprobe
+
+Low-level argument passthroughs for media transcoding and probing, plus
+the stream count openac’s own guards rely on.
+
+- [`ffmpeg()`](https://jmgirard.github.io/openac/reference/ffmpeg.md)
+  [`ffm()`](https://jmgirard.github.io/openac/reference/ffmpeg.md) :
+  Low-level access to the ffmpeg command line interface
+- [`ffprobe()`](https://jmgirard.github.io/openac/reference/ffprobe.md)
+  [`ffp()`](https://jmgirard.github.io/openac/reference/ffprobe.md) :
+  Low-level access to the ffprobe command line interface
+- [`ffp_count_streams()`](https://jmgirard.github.io/openac/reference/ffp_count_streams.md)
+  : Count the streams in a media file
+
+## OpenFace
+
+Facial-behavior feature extraction, per file and per directory.
+
+- [`openface()`](https://jmgirard.github.io/openac/reference/openface.md)
+  [`of()`](https://jmgirard.github.io/openac/reference/openface.md) :
+  Low-level access to the openface command line interface
+- [`of_extract()`](https://jmgirard.github.io/openac/reference/of_extract.md)
+  : Extract openface features
+- [`of_extract_dir()`](https://jmgirard.github.io/openac/reference/of_extract_dir.md)
+  : Run of_extract() on multiple files in a directory
+
+## openSMILE
+
+Acoustic feature extraction — config discovery, audio preparation, and
+extraction per file and per directory.
+
+- [`opensmile()`](https://jmgirard.github.io/openac/reference/opensmile.md)
+  [`os()`](https://jmgirard.github.io/openac/reference/opensmile.md) :
+  Low-level access to the opensmile command line interface
+- [`os_list_configs()`](https://jmgirard.github.io/openac/reference/os_list_configs.md)
+  : List openSMILE configuration files
+- [`os_check_config()`](https://jmgirard.github.io/openac/reference/os_check_config.md)
+  : Resolve an openSMILE config name to an absolute path
+- [`os_check_audio()`](https://jmgirard.github.io/openac/reference/os_check_audio.md)
+  : Check if an audio file is ready for analysis by openSMILE
+- [`os_prep_audio()`](https://jmgirard.github.io/openac/reference/os_prep_audio.md)
+  : Prepare an audio stream for analysis by opensmile
+- [`os_prep_audio_dir()`](https://jmgirard.github.io/openac/reference/os_prep_audio_dir.md)
+  : Run os_prep_audio() on multiple files in a directory
+- [`os_extract()`](https://jmgirard.github.io/openac/reference/os_extract.md)
+  : Extract opensmile features
+- [`os_extract_dir()`](https://jmgirard.github.io/openac/reference/os_extract_dir.md)
+  : Run os_extract() on multiple files in a directory
+
+## whisper
+
+Speech transcription via audio.whisper — audio preparation, model fetch,
+and transcription per file and per directory.
+
+- [`aw_check_audio()`](https://jmgirard.github.io/openac/reference/aw_check_audio.md)
+  : Check if an audio file is ready for analysis by Whisper
+- [`aw_prep_audio()`](https://jmgirard.github.io/openac/reference/aw_prep_audio.md)
+  : Prepare an audio stream for analysis by Whisper
+- [`aw_prep_audio_dir()`](https://jmgirard.github.io/openac/reference/aw_prep_audio_dir.md)
+  : Run aw_prep_audio() on multiple files in a directory
+- [`aw_get_model()`](https://jmgirard.github.io/openac/reference/aw_get_model.md)
+  : Get a Whisper model from a local or online source
+- [`aw_transcribe()`](https://jmgirard.github.io/openac/reference/aw_transcribe.md)
+  : Transcribe an audio stream using the specified Whisper model
+- [`aw_transcribe_dir()`](https://jmgirard.github.io/openac/reference/aw_transcribe_dir.md)
+  : Transcribe multiple media files with Whisper
+
+## Tidy readers
+
+Turn one tool’s raw output into a tidy tibble under one shared contract.
+Each reader states its row grain in its first sentence.
+
+- [`os_read()`](https://jmgirard.github.io/openac/reference/os_read.md)
+  : Read openSMILE output into a tidy tibble
+- [`of_read()`](https://jmgirard.github.io/openac/reference/of_read.md)
+  : Read OpenFace output into a tidy tibble
+- [`aw_read()`](https://jmgirard.github.io/openac/reference/aw_read.md)
+  : Read a Whisper transcription into a tidy tibble
+
+## Parallelism and progress
+
+Re-exported controls so batch runs can be configured without attaching
+the upstream packages.
+
+- [`plan`](https://jmgirard.github.io/openac/reference/plan.md) :
+  Re-export the plan function from the future package
+- [`handlers`](https://jmgirard.github.io/openac/reference/handlers.md)
+  : Re-export the handlers function from the progressr package
+
+# Articles
+
+### All vignettes
+
+- [Extracting audio from video with
+  ffmpeg](https://jmgirard.github.io/openac/articles/ffmpeg_wav.md):
+- [Running openface in
+  parallel](https://jmgirard.github.io/openac/articles/openface_parallel.md):
+- [Running opensmile in
+  parallel](https://jmgirard.github.io/openac/articles/opensmile_parallel.md):
