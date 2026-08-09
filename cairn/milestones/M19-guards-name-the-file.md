@@ -1,11 +1,11 @@
 # M19: A guard that names no file
 
-- **Status:** planned
+- **Status:** in-progress
 - **Priority:** normal
 - **Depends on:** —
 - **Driving RR:** —
 - **Principles touched:** GP6, GP9
-- **Branch/PR:** —
+- **Branch/PR:** `m19-guards-name-the-file`
 
 ## Goal
 
@@ -77,7 +77,7 @@ messages; this milestone is scoped to what a batch row can carry.
 - [ ] T1 Test-first, red before the change: the missing-intermediate test for
       `os_extract_dir()` (AC2), and one message test per guard T2 enumerates
       (AC1).
-- [ ] T2 Enumerate the guards to rewrite from
+- [x] T2 Enumerate the guards to rewrite from
       `grep -n "stopifnot\|cli_abort" R/use_*.R`, keeping those reachable from
       `dir_walk()`; record the list and each disposition in the work log.
 - [ ] T3 Rewrite those guards as `cli_abort()` messages naming the file and
@@ -98,6 +98,8 @@ messages; this milestone is scoped to what a batch row can carry.
 - 2026-08-08: criteria audit ([O], fresh context) returned four findings on this file — AC2's premise unreachable (`dir_inputs()` enumerates from `list.files()`, so every batch input exists by construction) and unsatisfiable for `aw_transcribe_dir()`, which has no existence guard; AC1's grep enumerating one syntactic form while its prose universal contradicted Scope's reader-guard exemption; AC3's "aborts returning no rows" describing two different behaviors and leaving the default `config` path unpinned; all four fixed before the gate, none deferred.
 - 2026-08-08: plan gate chose retargeting AC2 to the missing-INTERMEDIATE case over the missing-input case because the latter is unreachable through any `*_dir()` wrapper and the former is the defect DESIGN measured on 2026-08-08; falsified by a batch path that can enumerate an input which then disappears before use.
 - 2026-08-08: plan gate chose validating `config` pre-flight over recording it as N per-file failures because a batch-wide argument error is not a per-file outcome and the per-file form costs N ffprobe rounds before failing; falsified by a config that legitimately varies per file.
+- 2026-08-09: implement gate chose (a) rewriting every guard inside a per-file function, argument-type checks included, over only the file-property ones — Scope's "every other one is a bare deparse" is the literal domain, and a batch given a bad `aus =` still records N rows reading `is_bool(aus) is not TRUE`; (b) one shared internal helper building every message in `run_checked()`'s established shape over 38 bespoke blocks, for consistency and one condition class to test on; (c) reading `os_extract_dir()`'s pre-flight `config` default from `formals(os_extract)` over repeating the literal, so the pre-flight check and the per-file call cannot disagree.
+- 2026-08-09: T2 guard enumeration, input `grep -n "stopifnot\|cli_abort" R/use_*.R` (74 hits). Batch-reachable — inside a function `dir_walk()` calls once per file — 38 guards: `os_check_audio` `use_opensmile.R:114-115`, `os_prep_audio` `:184-187`, `os_extract_wav` `:365-369`, `os_fix_csv` `:491`, `of_extract` `use_openface.R:75-84`, `aw_check_audio` `use_whisper.R:15-16`, `aw_prep_audio` `:110-114`/`:134`/`:139`, `aw_transcribe_wav` `:388-395`, `aw_transcribe` `:319`; the last two of those (`use_whisper.R:134`, `:319`) already name the file and need only a test. Not batch-reachable, each with its reason: the `*_dir()` pre-flight guards (`use_opensmile.R:259-262`, `:453-459`, `use_openface.R:146-149`, `use_whisper.R:230-233`, `:488-493`) abort before `dir_walk()` is entered, so no row exists to carry their message; `os_check_config` `use_opensmile.R:86`, `:91` stops being reachable at T5, which validates `config` pre-flight, and AC3 governs its message instead; `ffp_count_streams` `use_ffprobe.R:68` rejects a value that is not a file path, which `dir_walk()`'s `infile` column (always length-1 character from `fs::path_abs()`) cannot be, and has no file to name; the reader guards `os_read` `use_opensmile.R:530-539`, `of_read` `use_openface.R:193-202`, `aw_read_data` `use_whisper.R:575-604` are outside the batch path and excluded by Scope.
 
 ## Decisions
 
