@@ -1,5 +1,21 @@
 # openac (development version)
 
+* `install_openface_win()` was silently installing an OpenFace that cannot
+  track faces. The four model files it downloads separately from the main
+  release came from links that had stopped serving the models and started
+  serving a sign-in page instead — and because that page arrives as a
+  successful download, the installer wrote four web pages where the models
+  belong and reported success. **If you installed OpenFace through openac,
+  re-run `install_openface_win()`.** The models now come from the same
+  location the OpenFace project itself uses first, and a download that is too
+  small or is a web page is refused with a message naming the link, instead of
+  being accepted. A failed install now reports every missing model at once
+  rather than stopping at the first.
+
+* `install_opensmile_win()` could never have worked: it asked for a file name
+  the openSMILE 3.0.2 release has never carried, and the download failed with a
+  "not found" error. It now asks for the file that release does carry.
+
 * File paths containing a `$` are now handled correctly. Previously a file such
   as `my $clip.mp4` was passed to ffmpeg, ffprobe, OpenFace or openSMILE with
   the `$clip` part removed, so the tool was asked for a file that did not

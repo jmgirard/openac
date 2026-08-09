@@ -1,6 +1,6 @@
 # M16: The Windows installers, actually run
 
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** normal
 - **Depends on:** —
 - **Driving RR:** —
@@ -103,6 +103,9 @@ not this milestone.
 - 2026-08-08: plan chose temp config and data dirs via the existing `local_fake_config()`/`local_fake_data_dir()` helpers over letting the installers write the machine's real rappdirs config, because the run happens on the maintainer's working Windows machine and `set_*()` would overwrite the tool locations openac is actually used with there; falsified by an installer path that ignores the redirection.
 - 2026-08-08: catch-up — all four tasks were committed and CI was green, but the status was left at `in-progress`; set to `review` at the start of /milestone-review.
 - 2026-08-08: merged `main` (M15) into the branch. The only conflicts were M15's LF normalization of `R/programs_install.R` (resolved to the branch's content re-written LF, `--ignore-cr-at-eol` confirming main changed no content there) and the ROADMAP's M15 row and candidate list.
+- 2026-08-08: review return worked through: T5-T9 done, status back to `review`. Full verify on macOS — `devtools::test()` 662 pass / 0 fail / 6 skips, `devtools::check()` 0 errors 0 warnings 0 notes, `devtools::document()` no diff, `cairn_validate` all checks pass.
+- 2026-08-08: T6 done — the dependency gate for `curl` was held at the review gate and answered KEEP; recorded as D-018, with `utils::download.file()` + `readBin()` the rejected alternative (no status, no headers, no range request, so ~600 MB per probe run instead of 18 KB).
+- 2026-08-08: T5 done — `NEWS.md` gains two entries: the OpenFace models that were sign-in pages, with an explicit instruction to re-run the installer, and the openSMILE asset name that never existed. No milestone numbers in either.
 - 2026-08-08: T7 done — the markup rule has one home: `raw_is_markup()` takes bytes, `starts_with_markup()` is the file-shaped view over it, and the test file calls both rather than carrying copies. `grep -c 3c21444f43545950` over `R/` and `tests/` returns 1, from 3. Semantics deliberately unchanged — F1 and F2 (matching anywhere in 512 bytes, and across nibble boundaries) stay logged, not silently fixed under a consolidation task. Removing the probe's inline copy also took both `%||%` uses with it, closing F21.
 - 2026-08-08: T9 done — `install_openface_win()` now runs all four patch experts through `vapply()` and names every failure in one closing `cli_warn()`. The discriminating assertion is the download-attempt count: 2 before the fix, 5 after. MEASURED on the branch — the test failed at `expect_length(download_urls(state), 5L)` with "Actual length: 2" before the loop changed.
 - 2026-08-08: T9 added to the tasks at the review gate (the user approved fixing F12 with the return); T8 worked before T7 and T9 so the new failure message lands in its final style rather than being converted twice.
@@ -112,13 +115,13 @@ not this milestone.
 
 ## Tasks (review return, 2026-08-08)
 
-- [ ] T5 Add the `NEWS.md` entry for what users see: `install_opensmile_win()`
+- [x] T5 Add the `NEWS.md` entry for what users see: `install_opensmile_win()`
       was fetching an asset name the release never carried, and
       `install_openface_win()` was writing four sign-in pages where its models
       belong and reporting success; both are fixed, and a bad model download now
       fails loudly. Tell an existing OpenFace user to re-run the installer. No
       milestone numbers in user-facing text.
-- [ ] T6 Hold the dependency question gate for `curl` and record the outcome as
+- [x] T6 Hold the dependency question gate for `curl` and record the outcome as
       a D-entry (D-005, D-011 and D-016 are the precedents); if it is declined,
       replace the probe's `curl` use with `utils::download.file()` + `readBin()`
       and drop it from `Suggests`.

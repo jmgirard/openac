@@ -411,3 +411,29 @@ token vector is renderable as a human-readable command, so a display surface
 becomes cheap — deliberately deferred out of M13 as a ROADMAP candidate rather
 than folded in. A later 1.0 API freeze may retire the raw-string form; that
 supersedes this entry rather than ignoring it.
+
+### D-018 (2026-08-08): Add `curl` to Suggests (test-only), for the pinned-URL probe
+
+**Context:** M16 ran the Windows installers against the live network and found
+four patch-expert URLs answering HTTP 200 with a sign-in page. The test that
+now watches for that class asks each pinned URL for its first two kilobytes and
+inspects what comes back, which needs a ranged GET and access to the response
+status, headers and body. `curl` entered `Suggests` during M16's
+implementation as a fix for an `R CMD check` warning, without the question gate
+and decision this repo requires for any dependency change (D-005, D-011; D-016
+invoking the same rule to decline one). M16's review caught the omission and
+returned the milestone; this entry is the gate held late.
+**Decision:** Keep `curl` in Suggests. Considered and rejected:
+`utils::download.file()` + `readBin()` — it is already in `Imports` via `utils`
+and needs nothing added, but it exposes no status code, no headers and no range
+request, so the probe would have to download each URL whole to inspect its
+first bytes. That is roughly 600 MB per run instead of 18 KB, and it still
+could not record the `Content-Range` total that AC2's per-URL size record is
+read from. The probe would measure less at forty times the cost.
+**Consequences:** DESCRIPTION gains `curl` under Suggests (M16). It is used by
+`tests/testthat/test-installers-real.R` only, behind
+`skip_if_not_installed("curl")` at every use site, so a machine without it
+skips the probe rather than failing; package code under `R/` still may not use
+it. `curl` is a hard dependency of much of the R toolchain already, so the
+marginal install cost for a developer is near zero and for a user is nil —
+the same reasoning D-011 recorded for `withr`.
