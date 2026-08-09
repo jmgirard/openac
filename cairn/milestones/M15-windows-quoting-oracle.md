@@ -5,7 +5,7 @@
 - **Depends on:** —
 - **Driving RR:** —
 - **Principles touched:** GP3, GP7
-- **Branch/PR:** m15-windows-quoting-oracle
+- **Branch/PR:** m15-windows-quoting-oracle / #15
 
 ## Goal
 
@@ -59,7 +59,7 @@ command-display surface → existing candidate.
       confirmed by AC2's measurement or corrected in place and marked, whichever
       AC2 supports; DESIGN's "Calling the CLIs" paragraph states the quoting
       rule the code ends with.
-- [ ] AC6 `devtools::test()` passes, `devtools::check()` reports 0 errors, 0
+- [x] AC6 `devtools::test()` passes, `devtools::check()` reports 0 errors, 0
       warnings and no note absent from a same-day check of the default branch,
       and all five `R-CMD-check` jobs are green. CI installs no binaries, so a
       green `windows-latest` job evidences AC6 alone and never AC2.
@@ -89,7 +89,7 @@ command-display surface → existing candidate.
       literal expected strings.
 - [x] T5 Confirm or correct the `LESSONS.md` `%` line; update DESIGN's "Calling
       the CLIs" paragraph, and its known issues if T3 recorded a limitation.
-- [ ] T6 `devtools::document()`, `devtools::test()`, `devtools::check()`; open the
+- [x] T6 `devtools::document()`, `devtools::test()`, `devtools::check()`; open the
       PR and confirm all five CI jobs green.
 
 ## Work log
@@ -103,6 +103,7 @@ command-display surface → existing candidate.
 - 2026-08-08: T3 took AC3's third branch — nothing measured mangled, so `run_tool()`'s quoting behavior is unchanged and the `:22-24` comment was rewritten to cite the measurement (and to say why `cmd2` is wrong here, not merely unnecessary) instead of `shQuote`'s documented default.
 - 2026-08-08: T5 widened beyond its wording — the falsified `%` claim was not only in `LESSONS.md` and DESIGN but in the user-facing `@param arg` roxygen of all four passthroughs (`use_ffmpeg.R`, `use_ffprobe.R`, `use_openface.R`, `use_opensmile.R`), which told users a `%TEMP%` path "can still be expanded". The Goal says "the claims this repo makes about it", so all four were corrected in the same pass.
 - 2026-08-08: the Windows run also reddened `OpenFace really extracts features that of_read() can read`. Checked against `main` before attributing it: it fails there identically, so it is not M15's. Diagnosis and disposition in Review.
+- 2026-08-08: T6 done — PR #15 opened, all five R-CMD-check jobs green. Local `check()` is 0 warnings / 0 notes with one error, the pre-existing OpenFace real-tools failure.
 - 2026-08-08: plan gate chose two milestones (M15 quoting, M16 installers) over one Windows branch, because a combined goal needs an "and" and the two cross the acceptance-criteria and task tripwires together; falsified by the installer run proving to depend on M15's quoting change.
 - 2026-08-08: plan gate chose composing `shQuote("cmd")` with `"cmd2"` as the fallback fix over hand-rolling a quoter, because `?shQuote` documents that composition as the intended Windows form and a hand-rolled quoter has no local test loop on a platform this session cannot run; falsified by the composed form measuring mangled on the host.
 - 2026-08-08: plan chose a real-ffmpeg round-trip oracle over asserting `shQuote()` output alone, because the open question is whether `system2()` puts `cmd.exe` in the loop at all — `?system2` says it "allows redirection of output without needing to invoke a shell on Windows" — which no assertion over quoting output can answer; falsified by the round trip proving unable to distinguish an expanded name from an absent tool.
@@ -162,6 +163,19 @@ there is nothing to escape against, and the `cmd2` style M15 planned as its
 fallback fix would have escaped for an interpreter that never sees the string.
 The measurement takes AC3's third branch: `run_tool()`'s quoting behavior is
 unchanged.
+
+### AC6
+
+`devtools::document()`, `devtools::test()` and `devtools::check()` run on the
+Windows host: **0 warnings, 0 notes**, and one error — the OpenFace real-tools
+test below, which fails identically on `main` here.
+
+All five `R-CMD-check` jobs green on #15 (run 31286088382, 2026-08-08):
+`macos-latest (release)`, `ubuntu-latest (devel)`, `ubuntu-latest (oldrel-1)`,
+`ubuntu-latest (release)`, `windows-latest (release)`. CI installs no external
+binaries, so `test-real-tools.R` skipped on every runner — the green
+`windows-latest` job evidences the suite and never AC2's measurement, exactly
+as AC6 says.
 
 ### Out of scope, observed on the same host
 
