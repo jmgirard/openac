@@ -1,6 +1,6 @@
 # M20: A published documentation site
 
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** normal
 - **Depends on:** —
 - **Driving RR:** —
@@ -85,6 +85,9 @@ candidate row. Branch protection → existing candidate row.
       and deploy gated off `pull_request`; push and confirm the PR run green.
 - [x] T6 Run `document()`, `test()`, `check()`; record NOTEs with
       justifications.
+- [x] T7 (round 2) Add the `NEWS.md` entry for the site and `BugReports:` that
+      the consistency gate found missing; re-run AC6's three commands, which
+      the changelog edit invalidates.
 
 ## Work log
 
@@ -102,6 +105,9 @@ candidate row. Branch protection → existing candidate row.
 - 2026-08-09: all six tasks done; status → review. PR #22.
 - 2026-08-09: criteria audit ([O], fresh context) returned five findings plus an AC1 vacuity note; findings 2, 4, 5 and the AC1 note were fixed in the wording before this file was written (assert placement pinned after dependency install; the unbounded "never compiles whisper.cpp" narrowed to the named run's install log; the unexercisable deploy-path claim narrowed to a YAML condition read plus a green PR build; an explicit `reference:` section required). Findings 1 and 3 went to the question gate as one question and were settled by the user choosing to publish during the work.
 - 2026-08-09: review round 1 — all six acceptance criteria passed with fresh evidence, `cairn_validate` exit 0, but the profile consistency-gate's **changelog check FAILED**: `NEWS.md` is untouched by the branch while the milestone ships user-visible changes (a public docs site, and `BugReports:`). Independent review scored 18 findings; the only two at or above 80 (F5 95, F18 90) are that same missing NEWS entry. Status → `in-progress`. Defect-return count for M20: 1.
+- 2026-08-09: T7 — `NEWS.md` gained two development-version bullets, one for the documentation site and one for the issue tracker `BugReports:` names; T7 added to Tasks as a discovered sub-task (minor amendment, Coverage untouched — AC6 stays mapped to T1/T2/T6).
+- 2026-08-09: T7 verification — AC6 re-run. `devtools::document()` left `git status --porcelain` showing only the hand-edited `NEWS.md`; `devtools::test()` 0 fail / 1161 pass / 6 skip. The first `devtools::check()` returned `Status: 1 NOTE` — the `spelling` test's `spelling.Rout` diverged from its `.Rout.save` on `Potential spelling errors: WORD README FOUND IN NEWS.md:3`, the new word my bullet introduced. Fixed at its generator, `spelling::update_wordlist(confirm = FALSE)`, which added exactly `README` to `inst/WORDLIST`; the re-run reported `Status: OK` — 0 errors, 0 warnings, 0 notes.
+- 2026-08-09: round 2 complete; status → review. PR #22.
 
 ## Decisions
 
