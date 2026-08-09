@@ -9,8 +9,12 @@
   `status` as well to tell a deliberate skip from a genuine failure. Three cases
   skip: an output that already exists under `overwrite = FALSE` in
   `aw_prep_audio()` and `os_prep_audio()`, and a file with no audio stream in
-  `aw_transcribe()`. The reason appears in the `error` column, as it already did
-  for a failure. A skip is announced with an informational line rather than a
+  `aw_transcribe()`. `status` describes the batch's own job, so a batch that
+  merely *reuses* audio it prepared on an earlier run — `os_extract_dir()` or
+  `aw_transcribe_dir()` given a `wavdir` and `overwrite = FALSE` — still
+  extracts or transcribes as usual and reads `"ok"`; only a batch whose whole
+  job was preparing that audio reads `"skipped"`. The reason appears in the
+  `error` column, as it already did for a failure. A skip is announced with an informational line rather than a
   warning, so re-running a finished batch does not bury the rows that do need
   you. Calling any of these functions on a single file by hand is unchanged.
   Separately, `aw_transcribe()` now stops on a file ffprobe cannot read instead of

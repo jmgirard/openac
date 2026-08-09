@@ -1,6 +1,6 @@
 # M18: A skipped file is a skip, not a success
 
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** normal
 - **Depends on:** M17
 - **Driving RR:** —
@@ -98,7 +98,7 @@ plumbing that work needs, so it is planned after this one lands, not now.
       `"skipped"`.
 - [x] T9 Review round 1, F3: the leaked `#'` out of the five `@return`
       blocks; `devtools::document()`.
-- [ ] T10 Re-verify: `devtools::document()` no drift, `devtools::test()`,
+- [x] T10 Re-verify: `devtools::document()` no drift, `devtools::test()`,
       `devtools::check()`.
 
 ## Work log
@@ -124,6 +124,7 @@ plumbing that work needs, so it is planned after this one lands, not now.
 - 2026-08-09: T7 three regression tests appended to `test-batch-skip-outcome.R` and RUN red before any source change — 8 failures: `os_extract_dir()` and `aw_transcribe_dir()` over a file whose wav already exists read `status = "skipped"` with the tool never reached and no output file written. The third test passes already and is the boundary the fix must not move (`os_prep_audio_dir()` still skips). Box unticked until the suite is green.
 - 2026-08-09: T8 `absorb_skip()` added beside `skip_file()`; the two NESTED prep calls (`os_extract()` at `R/use_opensmile.R:318`, `aw_transcribe()`'s `do.call` at `R/use_whisper.R:340`) wrap theirs in it, so a reused-wav skip stops at the prep call instead of unwinding the per-file job. The two `*_prep_audio_dir()` wrappers call the prep function as `.f` directly and are untouched, which is why their skip still reaches `dir_walk()`. T7's 8 failures now pass; full suite 813 pass, 0 fail.
 - 2026-08-09: T9 the leaked `#'` removed from all five `@return` blocks (5 replacements, asserted); `devtools::document()` re-run and `grep -rn "its #'" R/ man/` now matches nothing. Two round-1 findings logged below the action bar fixed in the same lines rather than left in text being rewritten anyway: the retained "a file that fails is skipped with a warning" sentence, which contradicted the `"skipped"`/`"failed"` vocabulary defined two sentences above it, and `R/use_whisper.R:310`'s claim that `os_prep_audio()` aborts an unprobeable input — it never counts streams and has no such branch.
+- 2026-08-09: T10 re-verified after the round-1 fixes — `devtools::document()` no drift, `devtools::test()` 813 pass / 0 fail (10 more than round 1's 803, the three new regression tests), `devtools::check()` **Status: OK** 0/0/0 with the spelling comparison clean. NEWS narrowed in the same pass: it named the three skip sites without saying that `status` describes the batch's OWN job, so a reader would have expected `os_extract_dir(wavdir=, overwrite = FALSE)` to report a skip where it now reports `"ok"`. Status back to review.
 
 ## Decisions
 
