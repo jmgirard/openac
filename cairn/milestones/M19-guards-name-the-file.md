@@ -36,7 +36,7 @@ messages; this milestone is scoped to what a batch row can carry.
 
 ## Acceptance criteria
 
-- [ ] AC1 Every guard T2's work-log enumeration classifies as batch-reachable
+- [x] AC1 Every guard T2's work-log enumeration classifies as batch-reachable
       signals an error whose message names the file it stopped on and the
       defect, and a test per guard asserts the file's basename appears in it.
       That enumeration is the domain and is stated rather than assumed: its
@@ -48,7 +48,7 @@ messages; this milestone is scoped to what a batch row can carry.
       was never written. A test drives that path and asserts the row's `error`
       names the missing wav path and attributes it to ffmpeg having written no
       output there.
-- [ ] AC3 `os_check_config()` signals an error whose message contains the
+- [x] AC3 `os_check_config()` signals an error whose message contains the
       config value it could not resolve, and `os_extract_dir()` validates
       `config` before `dir_walk()` runs. Tests assert: the value appears in
       the message; an unresolvable config makes `os_extract_dir()` signal an
@@ -243,3 +243,72 @@ error whose message contains the config value it could not resolve". AC1 and AC3
 are unticked: their evidence was real but tested a narrower domain than the
 criteria claim, and both are now falsified. AC2, AC4 and AC5 stand verified and
 are untouched by these findings. First defect return for this milestone.
+
+### Round 2 (2026-08-09)
+
+_Evidence gathered 2026-08-09 on R 4.6.1 / macOS 15 (Darwin 25.6.0), at branch
+`m19-guards-name-the-file` (8f73e5f), PR #20. `main` at 212a234, unmoved since
+the branch was cut, so the branch needed no merge._
+
+- **AC1 — verified.** Domain re-derived by the criterion's own stated input:
+  `grep -n "stopifnot\|cli_abort" R/use_*.R` returns 43 hits (44 at round 1;
+  the drop is `ffp_count_streams()`'s hand-written scalar guard moving into the
+  shared `check_file_arg()`). Every `stopifnot()` among them outside a comment
+  sits in a `*_dir()` pre-flight block — `os_prep_audio_dir` `:321-324`,
+  `os_extract_dir` `:541-547`, `of_extract_dir` `use_openface.R:156-159`,
+  `aw_prep_audio_dir` `use_whisper.R:259-262`, `aw_transcribe_dir` `:557-562` —
+  which is exactly the set T2 recorded as not batch-reachable, with its reason;
+  the remaining `cli_abort` hits are `os_check_config` (AC3's), `os_fix_csv`
+  (AC4's), and the three readers Scope excludes. The 38 batch-reachable guards
+  route through `abort_file()` (32 call sites in `R/use_*.R`, of_extract's
+  eight flags driven from one). Round 1 falsified this criterion not on the
+  messages but on three guards never reached: 63 test blocks ran in
+  `test-guard-messages.R`, 206 expectations, 0 failures — 38 of them the
+  per-guard basename-and-defect cases the criterion asks for, plus 2 typed-`NA`
+  `stream` cases (F1), 9 non-scalar `infile` cases (F2) and 5 blank-ffprobe-field
+  cases (F3), each asserting the openac condition by class or by named substring
+  rather than that some error occurred.
+- **AC2 — verified.** `os_extract_dir()` driven fresh over a one-file directory
+  with `wavdir=` and `aggdir=`, ffprobe reporting a non-conforming input and
+  ffmpeg exiting 0 while writing nothing. The row reads `status = "failed"` and
+  its `error` reads, verbatim and on one line, `Could not process 'clip.mp4':
+  ffmpeg wrote no output at '<wavdir>/clip.wav'.` The test asserts the derived
+  wav path in full and the ffmpeg attribution; the bare deparse it replaces
+  appears nowhere.
+- **AC3 — verified.** Six tests, all green, and the criterion re-read against
+  the wider domain that falsified it. (1) `os_check_config("egemaps/v99/nope")`
+  aborts with a message carrying `egemaps/v99/nope` and pointing at
+  `os_list_configs()`. (2) an unresolvable `config =` makes `os_extract_dir()`
+  signal rather than return, with `boundary_tools()` `character(0)` — no call at
+  all. (3) the same holds with no `config` supplied, the default read from
+  `formals(os_extract)`. New this round, closing round 1's falsifications:
+  (4) `conf =` — the abbreviation `do.call()` would have partial-matched past
+  the check — is now resolved by `match_formals()` and pre-flighted, tools still
+  `character(0)`; (5) an explicit `config = NULL` is checked as the supplied
+  value it is rather than treated as absent; (6) an unresolved openSMILE names
+  openSMILE instead of dying on `dirname(NULL)`'s "a character vector argument
+  expected", asserted as an absence as well as a presence.
+- **AC4 — verified.** `os_fix_csv()` on a path nothing wrote aborts with
+  `Could not tidy the openSMILE output at '<path>'.` / `openSMILE wrote no
+  output there.`; the test asserts the full path and the attribution separately,
+  and the guard-case table asserts the basename. The attribution's honesty was
+  re-checked at both call sites this round, not carried over: `grep -n
+  "os_fix_csv(" R/` returns the definition and exactly two callers, both inside
+  `os_extract_wav()` on the file it just handed openSMILE as `-csvoutput` /
+  `-lldcsvoutput`.
+- **AC5 — verified.** `devtools::document()` run at review leaves the tree clean
+  (no `man/`, `NAMESPACE` or `DESCRIPTION` diff). `devtools::test()`: 1009
+  tests, 0 failures, 0 errors, 6 skips. `devtools::check()`: **Status OK —
+  0 errors, 0 warnings, 0 notes** in 44.2s; the pre-existing `spelling` NOTE the
+  criterion allows for did not appear, `spelling.R` passing as a test instead.
+
+- **Consistency gate — passed.** `cairn_validate.py` exit 0: 16 PASS, 8 OK
+  advisories, no FAIL. No `DESIGN.md` IP/GP principle changed (the edit is a
+  Known-issues correction), so `cairn_impact` is a clean no-op. Toolchain slot
+  (`r-package`): `document()` no diff; the one generated file in the diff
+  (`man/os_extract_dir.Rd`) regenerates rather than being hand-edited;
+  README.Rmd and README.md are untouched by the branch and last written by the
+  same commit (2fba1c6); no pkgdown site, so that check and the reference-index
+  row no-op; NEWS.md carries this milestone's user-visible changes with no
+  milestone number in them; no new top-level files; `check()` clean as recorded
+  under AC5.
