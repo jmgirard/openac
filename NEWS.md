@@ -1,5 +1,24 @@
 # openac (development version)
 
+* When a file is rejected before any tool runs, the message now says which file
+  and what was wrong with it. Previously most of these checks reported the
+  failed R expression instead — a batch row's `error` column read
+  `file.exists(infile) is not TRUE`, naming neither the file nor the defect,
+  which was of little use when you came back to a 500-file run to find out
+  which inputs to fix. Every such check in the batch path now reads like
+  `Could not process 'clip.mp4'.` followed by the reason. Two of those reasons
+  are new rather than reworded: an intermediate `.wav` that ffmpeg was asked
+  for and never wrote is now reported as ffmpeg having written no output there,
+  rather than as a missing file with no explanation, and a missing openSMILE
+  output CSV is attributed to openSMILE the same way.
+
+* An openSMILE config that cannot be resolved is now reported by name, and
+  `os_extract_dir()` checks it once before the run instead of once per file. A
+  typo in `config` used to cost a full audio check on every input in the
+  directory and then return a table of failed rows, each saying only that a
+  config file was not found. It now stops immediately, naming the config you
+  asked for and pointing at `os_list_configs()`, with nothing run.
+
 * A batch's results table now says whether each file was processed, deliberately
   skipped, or failed. It gains a `status` column reading `"ok"`, `"skipped"` or
   `"failed"`, and `success` is now `status == "ok"` — so a file the batch chose

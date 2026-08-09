@@ -420,6 +420,9 @@ test_that("os_check_config() names the config it could not resolve", {
   msg <- collapsed_guard(os_check_config("egemaps/v99/nope"))
 
   expect_match(msg, "egemaps/v99/nope", fixed = TRUE)
+  # The way out, not only the complaint: a user who mistyped one of several
+  # dozen config names needs the list, and NEWS says the message points at it.
+  expect_match(msg, "os_list_configs", fixed = TRUE)
 })
 
 test_that("os_extract_dir() rejects an unresolvable config before running anything", {
