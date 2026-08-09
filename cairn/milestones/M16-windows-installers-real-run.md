@@ -1,6 +1,6 @@
 # M16: The Windows installers, actually run
 
-- **Status:** review
+- **Status:** in-progress
 - **Priority:** normal
 - **Depends on:** —
 - **Driving RR:** —
@@ -103,7 +103,27 @@ not this milestone.
 - 2026-08-08: plan chose temp config and data dirs via the existing `local_fake_config()`/`local_fake_data_dir()` helpers over letting the installers write the machine's real rappdirs config, because the run happens on the maintainer's working Windows machine and `set_*()` would overwrite the tool locations openac is actually used with there; falsified by an installer path that ignores the redirection.
 - 2026-08-08: catch-up — all four tasks were committed and CI was green, but the status was left at `in-progress`; set to `review` at the start of /milestone-review.
 - 2026-08-08: merged `main` (M15) into the branch. The only conflicts were M15's LF normalization of `R/programs_install.R` (resolved to the branch's content re-written LF, `--ignore-cr-at-eol` confirming main changed no content there) and the ROADMAP's M15 row and candidate list.
+- 2026-08-08: review returned M16 to `in-progress` (defect return 1). Failed: the toolchain consistency gate's changelog check — `NEWS.md` has no entry for a milestone that fixed two broken installers — and the universal dependency gate, `curl` having been added to `Suggests` with no question gate and no D-entry. Every acceptance criterion's evidence held; T5–T8 carry the return.
 - 2026-08-08: criteria audit ([O], fresh context) returned findings on all five drafted criteria — AC1 contradicting AC3's failure branch, AC2 measuring a size after the file is `unlink()`ed and hand-counting seven URLs, AC3 blind to a 200-with-sign-in-page, AC4 resting on a false claim about `download.file()`'s status and a floor of mere non-emptiness, AC5 deleting a still-true known issue — all fixed in the wording above before the gate; none became a gate question.
+
+## Tasks (review return, 2026-08-08)
+
+- [ ] T5 Add the `NEWS.md` entry for what users see: `install_opensmile_win()`
+      was fetching an asset name the release never carried, and
+      `install_openface_win()` was writing four sign-in pages where its models
+      belong and reporting success; both are fixed, and a bad model download now
+      fails loudly. Tell an existing OpenFace user to re-run the installer. No
+      milestone numbers in user-facing text.
+- [ ] T6 Hold the dependency question gate for `curl` and record the outcome as
+      a D-entry (D-005, D-011 and D-016 are the precedents); if it is declined,
+      replace the probe's `curl` use with `utils::download.file()` + `readBin()`
+      and drop it from `Suggests`.
+- [ ] T7 Fix F3: give the markup sniff one home. Delete
+      `looks_like_markup()` and the probe test's inline copy, and have both call
+      `openac:::starts_with_markup()`, so AC4's assertion exercises the shipped
+      guard.
+- [ ] T8 Fix F10: convert `download_model()`'s five base `warning()` calls to
+      `cli::cli_warn()`, updating the three tests' message matchers with them.
 
 ## Decisions
 
@@ -205,3 +225,78 @@ All five `R-CMD-check` jobs green on #16 (run 31286091312, 2026-08-08):
 is unset there, so all four of `test-installers-real.R`'s tests skipped on
 every runner — the green `windows-latest` job evidences AC6 alone and never
 AC2's measurements, exactly as AC6 says.
+
+### Review pass 1 — 2026-08-08, on macOS, branch merged with `main` (M15)
+
+**What was verified fresh here, and what was not.** The AC2/AC3/AC4 live-network
+measurements are host-bound: they were transcribed from the Windows run recorded
+above and cannot be reproduced from macOS. What review re-derived by command
+today is everything else, plus AC2's completeness claim.
+
+- AC1 — `devtools::test()`: 653 pass, 0 fail, 6 skips. All four
+  `test-installers-real.R` tests skip per-test with their stated reasons, and
+  `test-zzz-command-contract.R`'s `top_level_skips(test_path("."))` guard passes
+  over the new file — so the gates are per-test and not at file top level, which
+  is the half of AC1 a non-Windows host can answer.
+- AC2 — completeness re-derived rather than recalled: `grep -n 'https://'
+  R/programs_install.R` outside roxygen matches 8 lines building 9 distinct URLs
+  (`:391` branches on `arch`), and the probe's `urls` vector holds exactly those
+  9. The statuses and sizes remain the Windows run's record.
+- AC3/AC4 — the repointed URLs and the `download_model()` guard are in the tree,
+  covered by three mocked regression tests that each fail on `main`.
+- AC5 — DESIGN's OneDrive entry is annotated with the measurement and its date,
+  and retained rather than deleted.
+- AC6 — `devtools::check()` here: **0 errors, 0 warnings, 0 notes**.
+  `devtools::document()` produces no diff. Five CI jobs green on #16.
+
+**Consistency gate.** `cairn_validate`: all 16 checks PASS, exit 0. Toolchain
+slot: `document()` no-diff ✓; generated files ✓; README untouched, so no re-knit
+✓; no `_pkgdown.yml`, a clean no-op; no new top-level files; `check()` clean ✓.
+**The changelog check FAILS** — `NEWS.md` carries no entry, though two of three
+Windows installers went from broken to fixed and `install_openface_win()` changed
+from returning `TRUE` onto garbage to returning `FALSE` with a warning.
+
+**Governance.** `curl` was added to `Suggests` with no `DECISIONS.md` entry and
+an empty milestone `## Decisions` section. Dependency changes are never
+unilateral — they take a question gate and a D-entry — and this repo has three
+precedents (D-005 `tibble`, D-011 `withr` test-only, D-016 declining tidymedia).
+
+**Fresh-context review.** Three distinct-evidence lenses ([O] diff-bug, [S]
+blame-history, [S] prior-PR-comments) then an [S] scorer that generated none of
+them: 25 findings, 2 scoring ≥80 and actioned, 23 logged below threshold.
+
+Actioned (≥80):
+
+- **F3 (85)** — the markup sniff is implemented three times (production
+  `starts_with_markup()`, the test file's `looks_like_markup()`, and an inline
+  copy in the probe test), all hard-coding the same five hex needles, so AC4's
+  real-run assertion exercises a copy rather than the shipped guard and the two
+  can silently diverge. The prior-review lens raised this independently against
+  `milestones/archive/M09-harness-hardening.md`, whose Outcome was collapsing
+  exactly this shape — a harness copy of a detection rule diverging from
+  production — into one shared function.
+- **F10 (80)** — `download_model()` is entirely new code and uses base
+  `warning()` five times where DESIGN's Conventions mandate `cli::cli_warn()`
+  for new code; the neighbouring `require_os()` in the same file uses
+  `cli::cli_abort()`, and the new tests match on substrings a later cli
+  conversion would break.
+
+Below threshold, logged not actioned (score in brackets): F8 [78] `curl` with no
+D-entry and F9 [78] no NEWS entry — both scored just under the bar but are
+independently gate/governance failures above, which is how they are being
+handled; F12 [72] the model loop now aborts on the first failure where the
+historical `any(status1..4)` block attempted all four; F6 [70] the probe asserts
+status and non-markup but never AC2's byte floor; F1 [68] and F2 [68] the sniff
+matches markup anywhere in 512 bytes and across nibble boundaries rather than at
+the prefix; F16 [65] a connection error warns twice; F7 [65] the probe hand-types
+the nine URLs instead of reading `openface_patch_experts`; F17 [62] the probe
+sets no timeout and can pull a full body into memory; F15 [60] `dir.create()`
+failure returns bare `FALSE`; F18 [55] six helpers sit in the test file rather
+than `helper-openac.R`; F5 [52] `>=` in code vs `>` in test; F19 [52]
+`record_measurement()` appends with no run delimiter; F21 [50] `%||%` needs
+R ≥ 4.4 with no declared floor; F13 [45] and F20 [45]; F11 [42]
+`set_openface()` runs before the models; F25 [35]; F4 [35]; F14 [32]; F22 [22];
+F23 [22]; F24 [15].
+
+**Disposition: returned to `in-progress`.** The changelog gate failed and the
+dependency question gate was never held; neither is review's to settle.
