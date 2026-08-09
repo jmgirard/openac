@@ -1,7 +1,7 @@
 # Roadmap
 
 _The only authority on milestone status. Grouped by status, not ID._
-_Last hygiene check: 2026-08-09 (second check same day: board clear, all validate checks green, both gh inboxes empty; candidate sweep merged two pairs whose halves wait on each other — `os_read` fixtures/`os_fix_csv`, and the macOS OpenFace installer/its dispatchers — and the unchecked second ffprobe query went through `/hotfix` as PR #21, its row retired and the leftover third copy of the exit-status block folded into the `run_checked()` row. 23 candidates)_
+_Last hygiene check: 2026-08-09 (second check same day: board clear, validate green, gh inboxes empty. Candidate sweep merged two pairs whose halves wait on each other; the unchecked second ffprobe query went through `/hotfix` as PR #21, retiring its row. 23 candidates)_
 _Released 0.1.0 (GitHub) 2026-07-11._
 
 ## Milestones
