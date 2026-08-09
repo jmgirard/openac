@@ -1,6 +1,6 @@
 # M20: A published documentation site
 
-- **Status:** review
+- **Status:** in-progress
 - **Priority:** normal
 - **Depends on:** —
 - **Driving RR:** —
@@ -29,29 +29,29 @@ candidate row. Branch protection → existing candidate row.
 
 ## Acceptance criteria
 
-- [ ] AC1 `_pkgdown.yml` exists at the repo root and carries an explicit
+- [x] AC1 `_pkgdown.yml` exists at the repo root and carries an explicit
       `reference:` section (not pkgdown's auto-generated index), and
       `pkgdown::check_pkgdown()` runs without error against it.
-- [ ] AC2 `pkgdown::build_site()` completes without error, and for every
+- [x] AC2 `pkgdown::build_site()` completes without error, and for every
       `.Rmd` returned by `list.files("vignettes", pattern = "[.]Rmd$")` a
       same-stem `.html` exists under `docs/articles/`.
-- [ ] AC3 `DESCRIPTION` carries `URL:` naming the site and the GitHub
+- [x] AC3 `DESCRIPTION` carries `URL:` naming the site and the GitHub
       repository, `BugReports:` naming the issue tracker, and
       `Config/Needs/website: pkgdown`; the site URL in `URL:` matches the
       `html_url` that `gh api repos/jmgirard/openac/pages` reports, ignoring a
       trailing slash.
-- [ ] AC4 `.github/workflows/pkgdown.yaml` exists; its dependency-installation
+- [x] AC4 `.github/workflows/pkgdown.yaml` exists; its dependency-installation
       step is followed by a step asserting
       `!requireNamespace("audio.whisper", quietly = TRUE)`; its deploy step is
       conditioned on a non-`pull_request` event; and its run on this
       milestone's PR is green with that assert passing and with
       `audio.whisper` absent from the dependency step's own installed-package
       log.
-- [ ] AC5 `gh api repos/jmgirard/openac/pages` reports a site sourced from
+- [x] AC5 `gh api repos/jmgirard/openac/pages` reports a site sourced from
       `gh-pages`, and fetching `<site>/reference/index.html` and
       `<site>/articles/index.html` each returns HTTP 200 and a body naming
       openac exports and vignette titles respectively.
-- [ ] AC6 `Rscript -e 'devtools::document()'` produces no diff;
+- [x] AC6 `Rscript -e 'devtools::document()'` produces no diff;
       `Rscript -e 'devtools::test()'` clean; `Rscript -e 'devtools::check()'`
       reports 0 errors and 0 warnings, with every NOTE it reports quoted and
       justified in the Review section.
@@ -101,6 +101,7 @@ candidate row. Branch protection → existing candidate row.
 - 2026-08-09: T6 — first `devtools::document()` regenerated `man/openac-package.Rd` (roxygen picked the new `URL:`/`BugReports:` into a Useful-links block), committed; the re-run left `git status --porcelain` empty, so document() is no-diff. `devtools::test()` 0 fail / 1161 pass / 6 skip. `devtools::check()` **0 errors, 0 warnings, 0 notes** — no NOTE to justify, and the `--as-cran` URL check passed because the site was already live from T4.
 - 2026-08-09: all six tasks done; status → review. PR #22.
 - 2026-08-09: criteria audit ([O], fresh context) returned five findings plus an AC1 vacuity note; findings 2, 4, 5 and the AC1 note were fixed in the wording before this file was written (assert placement pinned after dependency install; the unbounded "never compiles whisper.cpp" narrowed to the named run's install log; the unexercisable deploy-path claim narrowed to a YAML condition read plus a green PR build; an explicit `reference:` section required). Findings 1 and 3 went to the question gate as one question and were settled by the user choosing to publish during the work.
+- 2026-08-09: review round 1 — all six acceptance criteria passed with fresh evidence, `cairn_validate` exit 0, but the profile consistency-gate's **changelog check FAILED**: `NEWS.md` is untouched by the branch while the milestone ships user-visible changes (a public docs site, and `BugReports:`). Independent review scored 18 findings; the only two at or above 80 (F5 95, F18 90) are that same missing NEWS entry. Status → `in-progress`. Defect-return count for M20: 1.
 
 ## Decisions
 
@@ -123,3 +124,107 @@ changes its build order. Revisit if pkgdown ever gains an exclusion option, or
 if the page confuses a real user.
 
 ## Review
+
+Round 1 — 2026-08-09. Branch at 2d651bd, `origin/main` at eddcfcd (merge-base
+equal, nothing to merge in).
+
+### Acceptance-criteria evidence
+
+- AC1 — `grep -c '^reference:' _pkgdown.yml` = 1, so the index is explicit
+  rather than pkgdown's auto-generated one; `pkgdown::check_pkgdown()`
+  "✔ No problems found."
+- AC2 — `docs/` removed, `pkgdown::build_site(preview = FALSE)` re-run: exit
+  status 0, zero `Error`/`Warning` lines in its log. A scripted `file.exists()`
+  over `list.files("vignettes", pattern = "[.]Rmd$")` found the same-stem
+  `docs/articles/*.html` for all three.
+- AC3 — DESCRIPTION lines 9/10/34 carry `URL:`, `BugReports:` and
+  `Config/Needs/website: pkgdown`. First `URL:` element compared to
+  `gh api repos/jmgirard/openac/pages --jq .html_url` with trailing slashes
+  stripped: equal (`https://jmgirard.github.io/openac`).
+- AC4 — run 31325889814 job 93276850318/93276085336. Step conclusions from the
+  jobs API: `Confirm audio.whisper is absent` success, `Deploy to GitHub pages`
+  **skipped** on the `pull_request` event. The assert step's
+  `installed.packages()` listed 108 packages, `openac` present,
+  `audio.whisper` absent. Workflow source confirms the assert sits after
+  `setup-r-dependencies` and the deploy carries
+  `if: github.event_name != 'pull_request'`.
+- AC5 — `gh api .../pages`: `source.branch=gh-pages`, `status=built`,
+  `html_url=https://jmgirard.github.io/openac/`. `curl` → HTTP 200 for both
+  `reference/index.html` and `articles/index.html`; the reference body carries
+  all six probed exports spanning every index group, the articles body all
+  three vignette titles.
+- AC6 — `devtools::document()` left `git status --porcelain -- man NAMESPACE`
+  empty; `devtools::test()` 0 fail / 1161 pass / 6 skip; `devtools::check()`
+  **0 errors, 0 warnings, 0 notes** — no NOTE to justify.
+
+### Consistency gate
+
+- `cairn_validate.py` exit 0 — 16 PASS, 8 advisory OK, no FAIL.
+- `cairn_impact.py` not run: `Principles touched:` is `—` and the diff changes
+  no IP/GP.
+- Profile `consistency-gate` slot: `document()` no-diff ✔ · generated files not
+  hand-edited ✔ · README.Rmd/README.md untouched by the diff ✔ ·
+  `check_pkgdown()` passes ✔ · new top-level file `_pkgdown.yml` has its
+  `.Rbuildignore` entry and `check()` reports no non-standard-file NOTE ✔ ·
+  `check()` clean ✔ · **changelog entry — FAIL** (see below).
+
+### Independent review — three lenses, then a scorer
+
+[O] diff-bug 17 findings · [S] blame-history 0 ("no evidence that this diff
+silently undoes, contradicts or resurrects any past deliberate decision") ·
+[S] prior-PR-comments 1 (the `gh api .../pulls/comments` probe returned `[]`,
+so the thread walk was skipped; its finding came from the archived `## Review`
+sections). 18 scored by a fresh [S] scorer holding the diff and this plan.
+
+**Actioned (≥80), both the same defect:**
+
+- **F5 (95) — no `NEWS.md` entry, contrary to PROFILE's consistency-gate.**
+  The milestone ships two user-visible things: a documentation website at a new
+  URL, and `BugReports:` telling users where to report bugs. Neither appears in
+  the development-version section of `NEWS.md`.
+- **F18 (90) — the same miss, as a regression of a gate M16 already enforced.**
+  M16's archived review: "Two passes. The first returned the milestone — the
+  changelog gate failed and the dependency gate had never been held."
+
+Triage: **fix now**, via the return below. This is also what the consistency
+gate caught independently, so it returns the milestone on that ground alone.
+
+**Logged below the action bar (16 findings, none actioned).** Two the scorer
+rated arguable are worth a candidate row rather than silence:
+
+- F3 (70) `clean: false` on the deploy step never deletes removed pages, so a
+  renamed export leaves its old reference page served indefinitely.
+- F9 (65) `_pkgdown.yml` sets no `development: mode`, so once a release exists,
+  dev-version docs overwrite the release site at the root.
+- F8 (50) the CLAUDE.md decision names `search.json` but the deployed branch
+  also carries `llms.txt`, which likewise contains top-level page content.
+- F1 (45) the deploy `if` tests the event, not the ref, so a
+  `workflow_dispatch` on any branch can publish it.
+- F12 (35) no `paths:` filter, so every PR runs a full site build.
+- F2 (30) restates the branch-vs-CI build divergence the plan gate already
+  recorded and accepted as its falsifier.
+- F6 (30) README gains no site link or badge.
+- F10 (30) deploy action pinned to a mutable tag while the job holds
+  `contents: write` — the repo's existing house style.
+- F4 (25) `.gitignore` `docs` is unanchored; the scorer measured `usethis`
+  writing the same unanchored pattern, so the premise fails.
+- F11 (25) pak still *resolves* the `Remotes:` ref it never installs — the same
+  exposure `R-CMD-check.yaml` already carries.
+- F7 (15) the CLAUDE.md decision sits in the milestone file, which the
+  tracking rules say is exactly where a milestone-local decision belongs.
+- F13 (12) `^pkgdown\$` matches nothing today — planned in T1 as
+  forward-looking.
+- F15 (10), F16 (10) cosmetic (index group casing; DESCRIPTION whitespace).
+- F14 (5) pre-existing `.DS_Store`; F17 (5) a mid-review snapshot of this
+  section being empty, already stale.
+
+### Gate failure — round 1 returns
+
+The profile's `consistency-gate` changelog check fails: `NEWS.md` is untouched
+by this branch (`git diff --name-only origin/main..HEAD` lists it not at all)
+while the milestone ships user-visible changes. Status → `in-progress`.
+
+All six acceptance criteria passed on the evidence above, recorded at 2d651bd.
+**Round 2 must re-run AC6** — the fix edits `NEWS.md`, which `R CMD check`
+parses, so AC6's `check()` evidence does not survive the change. AC1–AC5 are
+untouched by a changelog edit.

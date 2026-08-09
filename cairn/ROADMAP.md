@@ -8,7 +8,7 @@ _Released 0.1.0 (GitHub) 2026-07-11._
 
 | ID | Title | Status | Depends on | Priority | File/Archive |
 |---|---|---|---|---|---|
-| M20 | A published documentation site | review | — | normal | milestones/M20-pkgdown-github-pages.md |
+| M20 | A published documentation site | in-progress | — | normal | milestones/M20-pkgdown-github-pages.md |
 | M17 | A tool that exited non-zero is a failed file | done | — | high | milestones/archive/M17-tool-exit-status.md |
 | M18 | A skipped file is a skip, not a success | done | M17 | normal | milestones/archive/M18-batch-skip-outcome.md |
 | M19 | A guard that names no file | done | — | normal | milestones/archive/M19-guards-name-the-file.md |
