@@ -1,6 +1,6 @@
 # M14: A bad file is an outcome, not the end of the batch
 
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** normal
 - **Depends on:** M13
 - **Driving RR:** —
@@ -46,7 +46,7 @@ opportunistic per DESIGN's Conventions. Argument-assembly changes → M13.
       for the bad file has `success = FALSE` and a non-`NA` `error`, and whose
       other two rows have `success = TRUE`. Evidence: a mocked-boundary batch
       test asserting those three rows.
-- [ ] AC4 `cairn/DESIGN.md`'s "GP6 unevenly met" line (`:217-218`) is replaced by
+- [x] AC4 `cairn/DESIGN.md`'s "GP6 unevenly met" line (`:217-218`) is replaced by
       a dated line naming what is now contractual — a failed probe is a per-file
       outcome — and which guards remain ad hoc, listing them.
 - [x] AC5 `devtools::test()` passes and `devtools::check()` reports 0 errors, 0
@@ -251,3 +251,21 @@ Two actioned findings cross the return floor:
   amendment return.
 
 Status back to `in-progress`. Defect returns for M14: 1.
+
+### AC4 re-verified (2026-08-08, after the review fixes)
+
+- AC4 — `git diff main..HEAD -- cairn/DESIGN.md` shows the "GP6 unevenly met"
+  bullet replaced by a dated line whose every claim was measured rather than
+  inferred. What it names as contractual is now `ffp_count_streams()` and its
+  four callers' NA dispositions — which is what the branch actually delivers —
+  and it states the batch-level reality separately, per entry point:
+  `aw_prep_audio_dir()` a failed row naming the file; `os_extract_dir()` a
+  failed row whose message names a tempfile the caller never passed;
+  `aw_transcribe_dir()` and `os_prep_audio_dir()` a **success**. Each of those
+  four was executed against the mocked boundary at review and read off the
+  returned table, not derived from reading the callers. The ad-hoc guards are
+  listed as before, now with `run_tool()`'s unread exit status named as the
+  larger remaining gap. NEWS carries the same limitation in user-facing words,
+  and a `KNOWN GAP` test in `test-batch-dirs.R` fails if `os_prep_audio_dir()`
+  ever stops recording a skipped file as a success, so the changelog claim is
+  enforced rather than asserted.
