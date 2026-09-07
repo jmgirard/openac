@@ -217,24 +217,18 @@ them without attaching the upstream packages.
 - 2026-07-11: **Windows-biased testing** — most real use has been on
   Windows; mac/Linux paths are lightly exercised and may have quiet
   breakage.
-- 2026-07-11 (corrected M06): The readers have fixture-backed tests
-  (M01–M03). The prep/extract wrappers and program discovery now have
-  command-construction tests at the mocked `system2` boundary; the `install_*`
-  family, the `*_dir` batch wrappers and `aw_transcribe*` still have none.
-- 2026-07-11 (**detonated and defused 2026-08-08, M16**): **OneDrive model
-  URLs** — `install_openface_win` downloaded its four patch experts from
-  hard-coded OneDrive links with embedded authkeys; links of that shape die
-  silently. They had. MEASURED on 2026-08-08, all four answered **HTTP 200 with
-  a 34 KB `login.live.com` sign-in page**: `download.file()` reported success,
-  four HTML documents landed named `.dat`, and the installer returned `TRUE`.
-  Repointed to the Dropbox links OpenFace's own `download_models` scripts try
-  *first* (openac had copied only upstream's fallback), all four measured alive
-  and serving 60.6–154.3 MB of binary. The shape of the hazard is unchanged, so
-  `download_model()` now refuses anything below a 40 MB floor or opening with
-  markup — the installer fails naming the URL instead of succeeding onto a login
-  page. Same run: `install_opensmile_win()`'s pinned
-  `opensmile-3.0.2-win-x64.zip` measured **404** — the v3.0.2 release never
-  carried that asset name — and was repointed to `-windows-x86_64.zip`.
+- 2026-07-11 (**detonated and defused 2026-08-08, M16**): **Third-party model
+  URLs** — `install_openface_win()`'s four patch experts and
+  `install_opensmile_win()`'s archive come from links openac does not control, a
+  shape that dies silently. M16 MEASURED all four OneDrive links answering HTTP
+  200 with a `login.live.com` sign-in page (the installer returned `TRUE` onto
+  four HTML documents named `.dat`) and the pinned `opensmile-3.0.2-win-x64.zip`
+  answering 404. Repointed to OpenFace's own Dropbox links and to
+  `-windows-x86_64.zip`, all measured alive; `download_model()` now refuses
+  anything below a 40 MB floor or opening with markup, so a dead link fails
+  naming the URL instead of succeeding onto a login page. The shape of the
+  hazard is unchanged — hosting the files somewhere openac controls is a ROADMAP
+  candidate.
 - 2026-08-08: **`install_ffmpeg_win()` is not pinned** — its gyan.dev URL is a
   `-release-essentials` alias that MEASURED redirecting to
   `ffmpeg-9.0-essentials_build.7z` on 2026-08-08, so the version installed moves
@@ -249,70 +243,41 @@ them without attaching the upstream packages.
 - 2026-07-11: GP5 unmet — high-level functions build their command strings
   internally with no way for users to inspect/report them; retrofit when
   touched.
-- 2026-07-11 (**narrowed 2026-08-08, M14**): GP6 unevenly met — one guard is
-  now contractual: `ffp_count_streams()` returns `NA` counts with a warning
-  naming an unprobeable file rather than aborting, and each of its four callers
-  disposes of `NA` explicitly (`os_check_audio`/`aw_check_audio` return `FALSE`,
-  `aw_prep_audio` aborts naming the file, and `aw_transcribe` **aborts naming
-  the file** — **corrected 2026-08-09, M18**: it used to skip such a file,
-  conflating "could not be probed" with "has no audio", and only the latter is
-  a deliberate skip). What that
-  buys at the BATCH level is uneven, and MEASURED 2026-08-08 rather than
-  inferred from the callers: `aw_prep_audio_dir()` records the bad file as a
-  failed row naming it; `os_extract_dir()` records a failed row naming the file and
-  the tool (**corrected 2026-08-09, M17**: it previously carried the bare
-  `stopifnot()` deparse `file.exists(infile) is not TRUE`, about a temporary wav
-  that was never written — MEASURED 2026-08-09, it now reads `Could not process
-  'clip.mp4'. ffmpeg exited with status 183. …`);
-  and `aw_transcribe_dir()` records a failed row naming the file
-  (**corrected 2026-08-09, M18**: it previously recorded a **success**, because
-  `aw_transcribe()` skipped such a file with a message and returned `NULL`,
-  which `dir_walk()` could not tell from a completed transcription). A
-  per-file disposition is not a per-file outcome until the batch table shows it,
-  and since **M18** that table has three states rather than two: `dir_walk()`
-  adds a `status` column of `"ok"`/`"skipped"`/`"failed"`, with `success` now
-  `status == "ok"`, so a file a wrapper deliberately declines
-  (`skip_file()`, `R/utils.R`) is no longer indistinguishable from one it
-  processed.
-  (`os_prep_audio_dir()` was the second such table until **M17, 2026-08-08**,
-  which made a non-zero ffmpeg exit that file's own failure — see below.)
-  Resilience is ad hoc elsewhere: the input guards in
-  `os_check_audio`, `os_prep_audio`, `os_extract_wav`, `os_fix_csv`,
-  `aw_check_audio`, `aw_prep_audio`, `aw_transcribe_wav` and `of_extract` abort
-  on a missing input (**corrected 2026-08-09, M19**, superseding "the abort
-  messages name the file in only one of them, the rest being bare `stopifnot()`
-  deparses"): every guard inside a per-file function that has one file to name
-  now aborts through `abort_file()` (`R/utils.R`), whose message leads with the
-  file and states the defect on one line (**corrected 2026-08-09, M19 review
-  round 3**, superseding "so a failed row reads the same way whether a guard or
-  a tool stopped it" — measured false: `run_checked()` is untouched and still
-  puts a wrapped, glyphed message and no `defect` field into the same column,
-  so the tool path still reads differently and names the file twice).
-  Two kinds sit outside that helper and
-  are not defects in it (**corrected 2026-08-09, M19 review round 2**,
-  superseding a reading that counted `os_fix_csv()` among them and omitted
-  `os_check_config()`): `check_file_arg()` rejects an `infile` that is not one
-  path at all, where there is no file to name and the argument is named
-  instead, and `os_check_config()` is about a batch-wide argument rather than
-  a file, though `os_extract_wav()` reaches it per file.
-  `os_check_config()` names the config it could not resolve, and
-  `os_extract_dir()` validates it once before the loop — so a bad `config`
-  costs no ffprobe rounds and produces no rows, though `os_extract_wav()` still
-  resolves it per file, making the count N+1 rather than 1. The `*_dir()`
-  wrappers' own pre-flight guards and the readers keep their `stopifnot()`s:
-  they abort before `dir_walk()` is entered or sit outside the batch path, so
-  no row exists to carry their message.
-  Exit status is read at exactly two places (**corrected 2026-08-08, M17**,
-  superseding the earlier "`run_tool()` inspects no tool's exit status"
-  reading): `ffp_count_streams()` reads it for its own contractual `NA` return
-  (M14), and `run_checked()` reads it on behalf of the four per-file wrappers,
+- 2026-07-11 (**narrowed 2026-08-08, M14; corrected M17, M18, M19**): GP6
+  unevenly met. One guard is contractual: `ffp_count_streams()` returns `NA`
+  counts with a warning naming an unprobeable file rather than aborting, and
+  each of its four callers disposes of `NA` explicitly — `os_check_audio()` and
+  `aw_check_audio()` return `FALSE`, `aw_prep_audio()` and `aw_transcribe()`
+  abort naming the file (M18: "could not be probed" is not "has no audio", and
+  only the latter is a deliberate skip).
+  Exit status is read at exactly two places (M17): `ffp_count_streams()` for its
+  own `NA` return, and `run_checked()` on behalf of the four per-file wrappers,
   aborting with the file, the program and what the tool said — so an ffmpeg,
-  openSMILE or OpenFace failure is that file's own failed row. Two
-  ffprobe calls remain unchecked — the codec/rate/channel query in
-  `os_check_audio()` and `aw_check_audio()`, where `ffp_count_streams()` guards
-  only the first probe; `os_check_audio()` has no length guard on the result, so
-  a non-zero exit there surfaces as `subscript out of bounds`.
-  `run_tool()` itself still returns `system2()`'s value verbatim, which is what
-  keeps the four exported passthroughs a raw escape hatch.
-  `dir_outputs()`'s collision refusal
-  is a deliberate pre-flight abort outside that set (see `R/utils.R`).
+  openSMILE or OpenFace failure is that file's own failed row. Two ffprobe calls
+  stay unchecked, the codec/rate/channel query in `os_check_audio()` and
+  `aw_check_audio()`; `os_check_audio()` has no length guard on the result, so a
+  non-zero exit there surfaces as `subscript out of bounds`. `run_tool()` itself
+  returns `system2()`'s value verbatim, which is what keeps the four exported
+  passthroughs a raw escape hatch.
+  Every guard inside a per-file function that has one file to name aborts
+  through `abort_file()` (`R/utils.R`), whose message leads with the file and
+  states the defect on one line (M19). Two kinds sit outside that helper and are
+  not defects in it: `check_file_arg()` rejects an `infile` that is not one path
+  at all, and `os_check_config()` is about a batch-wide argument (though
+  `os_extract_wav()` reaches it per file, making the count N+1 rather than 1).
+  The `*_dir()` pre-flight guards and the readers keep their `stopifnot()`s:
+  they abort before `dir_walk()` is entered or sit outside the batch path, so no
+  row exists to carry their message. `run_checked()` is untouched (M19 review
+  round 3, MEASURED): it still writes a wrapped, glyphed message and no `defect`
+  field into the same `error` column, so the tool path reads differently from a
+  guard path and names the file twice — a ROADMAP candidate.
+  At the batch level the disposition is an outcome only because the table shows
+  it: since **M18** `dir_walk()` carries a `status` column of
+  `"ok"`/`"skipped"`/`"failed"`, with `success` now `status == "ok"`, so a file a
+  wrapper deliberately declines (`skip_file()`, `R/utils.R`) is no longer
+  indistinguishable from one it processed. MEASURED 2026-08-08/09:
+  `aw_prep_audio_dir()`, `os_extract_dir()` and `aw_transcribe_dir()` each record
+  a bad file as a failed row naming it (`os_extract_dir()` previously carried a
+  bare `stopifnot()` deparse, M17; `aw_transcribe_dir()` previously recorded a
+  **success**, M18). `dir_outputs()`'s collision refusal is a deliberate
+  pre-flight abort outside that set (see `R/utils.R`).
