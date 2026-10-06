@@ -1,1 +1,0 @@
-AC4 removal probe: ordinary file at the target root
