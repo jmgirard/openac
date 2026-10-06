@@ -60,10 +60,54 @@ jobs:
         run: pkgdown::build_site_github_pages(new_process = FALSE, install = FALSE)
         shell: Rscript {0}
 
-      - name: Deploy to GitHub pages 🚀
-        if: github.event_name != 'pull_request'
+      # The lane comes from the built tree, never from the event. With
+      # `development: mode: auto` in `_pkgdown.yml`, pkgdown resolves the
+      # package version to a mode, and only `devel` mode builds into
+      # `docs/dev` (pkgdown's `meta_development()` applies the destination
+      # prefix when `mode == "devel"` and not otherwise). openac's
+      # `0.1.0.9000` resolves to `devel`, and a release version such as
+      # `0.1.0` resolves to `release` and builds into the `docs/` root. So the
+      # presence of `docs/dev` is what says which site was just built.
+      #
+      # Note that the version, not the event, is what decides this. The
+      # release-prep commit that lands a release version on the default
+      # branch therefore publishes to the root on an ordinary push.
+      - name: Pick the deploy lane
+        id: lane
+        run: |
+          if [ -d docs/dev ]; then
+            echo "lane=dev" >> "$GITHUB_OUTPUT"
+          else
+            echo "lane=release" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Both lanes clean within their own target. The development lane owns
+      # `dev/`, so a page removed from the package stops being served there.
+      - name: Deploy development docs 🚀
+        if: github.event_name != 'pull_request' && steps.lane.outputs.lane == 'dev'
         uses: JamesIves/github-pages-deploy-action@v4.5.0
         with:
-          clean: false
+          clean: true
+          branch: gh-pages
+          folder: docs/dev
+          target-folder: dev
+
+      # The release lane owns the root, and keeps `dev/` out of its cleaning
+      # so a release deploy does not take the development site with it. A real
+      # run of this step against a throwaway target folder, triggered by a
+      # push, showed `clean-exclude: dev` spares a `dev` path at ANY depth
+      # under the target, not only the target's own `dev` child, so a future
+      # site page whose path contains a `dev` segment would escape cleaning.
+      # No such page exists today: 0 of the 146 paths on `gh-pages` carry a
+      # `dev` segment. The deploy action applies these patterns to the same
+      # rsync that copies the built site, so such a page may also fail to
+      # publish. That half was not measured here, and the ROADMAP candidate
+      # row on site-deploy hazards carries it.
+      - name: Deploy release docs 🚀
+        if: github.event_name != 'pull_request' && steps.lane.outputs.lane == 'release'
+        uses: JamesIves/github-pages-deploy-action@v4.5.0
+        with:
+          clean: true
+          clean-exclude: dev
           branch: gh-pages
           folder: docs

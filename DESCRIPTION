@@ -35,6 +35,6 @@ Config/Needs/website: pkgdown
 Encoding: UTF-8
 Language: en-US
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 8.0.0
 Remotes:
     bnosac/audio.whisper
+Config/roxygen2/version: 8.1.0

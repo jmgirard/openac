@@ -3,6 +3,12 @@ url: https://jmgirard.github.io/openac/
 template:
   bootstrap: 5
 
+# pkgdown resolves the package version to a mode. Only `devel` mode builds
+# into `docs/dev`. A release version builds into the `docs/` root. The deploy
+# job reads which one it got from the built tree.
+development:
+  mode: auto
+
 # Groups mirror cairn/DESIGN.md "Function Families". Every exported topic gets
 # a row here — pkgdown::check_pkgdown() fails on any topic this file omits.
 reference:

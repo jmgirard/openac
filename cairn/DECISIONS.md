@@ -489,3 +489,57 @@ r-lib/actions template, which is how such a line gets dropped without notice.
 `Imports` or `Suggests`, so users installing openac never install pkgdown and
 `R CMD check` is unaffected. The field becomes the single declared home for
 anything the website build needs later (e.g. a bootstrap theme package).
+
+### D-021 (2026-10-06): Site placement follows the package version, via `development: mode: auto`
+
+**Context:** The pkgdown site job deployed the built tree to the `gh-pages`
+root with `clean: false`, so a push to the default branch published a
+development build over whatever the root held, and nothing that build no
+longer produced was ever removed. A released site and a development site had
+no separate homes.
+**Decision:** Set `development: mode: auto` in `_pkgdown.yml` and let the
+package version decide placement: pkgdown resolves a `devel` version into a
+`dev/` subdirectory and a release version into the site root. The deploy job
+reads which of the two it got from the built tree rather than from the
+triggering event, and each lane cleans within its own target, the release lane
+excluding `dev` so it cannot take the development site with it.
+Considered and rejected: `development: mode: unreleased`, which forces the
+development banner regardless of version and still lets the root alternate
+between release and development content. Considered and rejected: keeping one
+lane and only turning `clean` on, which removes stale files but locks in the
+overwrite the root suffers.
+Also decided: leave the existing root content in place rather than
+hand-committing a redirect or rebuilding it from the `v0.1.0` tag. A redirect
+makes part of the deliverable an out-of-band commit no CI reproduces, and the
+tag's tree carries no `_pkgdown.yml`. The first release-version build is what
+replaces the root.
+**Consequences:** The version, not the event, decides placement, so the
+release-prep commit that lands a release version on the default branch
+publishes to the root on an ordinary push. Until such a build happens the root
+keeps the development build it already holds, which is what `URL:` in
+DESCRIPTION and the README point at. Reversing this means removing the
+`development:` key and rejoining the two lanes.
+
+### D-022 (2026-10-06): Re-pin the committed generated files to roxygen2 8.1.0
+
+**Context:** `DESCRIPTION` declared `RoxygenNote: 8.0.0` while the maintainer's
+machine runs roxygen2 8.1.0, so `devtools::document()` always produced a diff:
+the version field is renamed to `Config/roxygen2/version` by the newer roxygen,
+and `NAMESPACE`'s two `importFrom(utils, ...)` lines are emitted as one
+multi-line call. The drift was reproduced identically on the default branch at
+M21's branch point, so it belonged to no milestone's work. Two gates read the
+no-diff result: a hygiene acceptance criterion, and the toolchain profile's
+consistency gate.
+**Decision:** The user, asked at a stop, chose to commit the regeneration as
+roxygen 8.1.0 produces it, re-pinning the declared roxygen version. Considered
+and rejected: narrowing the acceptance criterion to compare the branch's diff
+against the default branch's, which leaves the profile's own no-diff check
+failing on every future milestone for the same environment reason. Considered
+and rejected: narrowing the profile's consistency gate to that same baseline
+comparison, which changes how every future milestone is checked in order to
+accommodate one machine's toolchain version.
+**Consequences:** `devtools::document()` is a no-op again, so both gates pass
+on their original wording and no criterion or profile slot is reworded. The
+committed generated files now require roxygen2 8.1.0 or newer to reproduce; a
+contributor on 8.0.0 would see the change in reverse until they upgrade. No R
+source, no roxygen comment, and no package dependency changed.
