@@ -1,16 +1,15 @@
 # Roadmap
 
 _The only authority on milestone status. Grouped by status, not ID._
-_Last hygiene check: 2026-09-06 (triage pass: 37 items weighed. Promoted the pkgdown site-lifecycle row and the tool-path error-column row (records-hygiene §7). Compressed and unblocked "Show the constructed command" (M13 shipped) and "Restore GP6 for output-path collisions" (M18 shipped), both raised to high; raised the Windows face-less-input row to high; lowered CRAN readiness and the tidymedia-names row to low. In DESIGN Known issues: dropped the test-coverage entry as a refuted premise (installers, `*_dir` wrappers and `aw_transcribe*` all have test files) and compressed the third-party-URL and GP6 entries. No decision entry owed. M17 and M16 terminal rows pruned to hold retention at 3. 25 candidates, 11 known issues, validate green)_
+_Last hygiene check: 2026-10-06 (M21 merged, PR #23. Archived M21 to a 25-line summary and pruned the M18 terminal row to hold retention at 3. Pruned the roxygen-drift candidate row, which M21 resolved by committing the regeneration (D-022), and filed one row carrying four latent site-deploy hazards the review found. DESIGN Known issues gained the release lane's unmeasured root target, accepted rather than planned away. LESSONS: added the clone-not-worktree baseline lesson, pruned the fail-open `_R_CHECK_PACKAGE_NAME_` entry to stay under the line cap. D-021 and D-022 recorded. 25 candidates, 12 known issues, validate green, byte budgets under.)_
 _Released 0.1.0 (GitHub) 2026-07-11._
 
 ## Milestones
 
 | ID | Title | Status | Depends on | Priority | File/Archive |
 |---|---|---|---|---|---|
-| M21 | A site that knows its version, and deploys that leave nothing behind | review | — | normal | milestones/M21-pkgdown-site-lifecycle.md |
+| M21 | A site that knows its version, and deploys that leave nothing behind | done | — | normal | milestones/archive/M21-pkgdown-site-lifecycle.md |
 | M20 | A published documentation site | done | — | normal | milestones/archive/M20-pkgdown-github-pages.md |
-| M18 | A skipped file is a skip, not a success | done | M17 | normal | milestones/archive/M18-batch-skip-outcome.md |
 | M19 | A guard that names no file | done | — | normal | milestones/archive/M19-guards-name-the-file.md |
 
 ## Candidates

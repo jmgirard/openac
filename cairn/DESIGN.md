@@ -202,6 +202,14 @@ them without attaching the upstream packages.
 ## Known issues
 
 <!-- Running list of accepted warts; each line dated. -->
+- 2026-10-06 (M21): **The release lane's own target is unmeasured.** Both site
+  deploy lanes were measured for real against `gh-pages`, but only under a
+  throwaway target folder. The shipped release step has no `target-folder` at
+  all: it deploys to the branch root, where the action takes its
+  no-subdirectory path and where `.nojekyll` and any hand-committed root
+  content live. No safe measurement reaches that case without overwriting the
+  live site, so it is accepted rather than planned away. The first
+  release-version build is what will exercise it.
 - 2026-07-11: Legacy `stopifnot()` + base `warning()` style persists until
   code is touched (opportunistic migration to `cli` — see Conventions).
 - 2026-07-11: **External-tool version drift** — wrappers assume particular
