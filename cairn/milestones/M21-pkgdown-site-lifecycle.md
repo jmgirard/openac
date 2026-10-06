@@ -149,6 +149,8 @@ A "Get started" vignette → the existing candidate row.
 
 ## Work log
 
+- 2026-10-06: a plan-gate falsifier was met, and the gate's conclusion still stands. The gate chose to leave the stale `gh-pages` root over a hand-committed redirect or a rebuild from the `v0.1.0` tag, naming its falsifier as evidence that the first release-lane deploy does not replace the root wholesale. T4 produced such evidence: `clean-exclude: dev` spared a `dev` directory nested below the target root, so the release lane does not replace its target wholesale. The conclusion survives on measurement rather than on the falsifier failing to fire: 0 of the 146 paths on `gh-pages` carry a `dev` segment, so the first release-lane deploy replaces everything there.
+- 2026-10-06: review pass 2 settled 16 findings from three fresh lenses. Eight fixed on the branch at c143305, one left to the archive summary, seven rejected with reasons. All seven criteria now pass on fresh evidence, AC6 included, and the toolchain gate is clean.
 - 2026-10-06: the routed AC6 amendment was NOT taken. The audit of the proposed wording returned 5 findings, and its second one was decisive: rewording AC6 cannot discharge the toolchain profile's own consistency-gate check, which states the same no-diff requirement and which review runs in addition to the criteria, so the identical measurement would still fail there. That made it a dependency question rather than a wording question, and it was put to the user at a stop. The user chose to commit the regeneration, recorded as D-022. AC6 therefore stands exactly as planned and is expected to pass unchanged. No `amendment return: AC6` line is owed, because no amendment was executed.
 - 2026-10-06: `DESCRIPTION` and `NAMESPACE` regenerated under roxygen2 8.1.0, per the user's choice at the stop. `RoxygenNote: 8.0.0` becomes `Config/roxygen2/version: 8.1.0`, and two `importFrom(utils, ...)` lines become one multi-line call. No R source and no roxygen comment changed. `devtools::test()`: FAIL 0, WARN 0, SKIP 8, PASS 1154. `devtools::check()`: 0 errors, 0 warnings, 0 notes.
 - 2026-10-06: amendment routed: AC6 — the clause `devtools::document()` produces no diff fails on this machine, and the discriminating control shows it fails identically on `main` at the branch point, so it is a property of the environment rather than of this milestone. The local roxygen2 is 8.1.0 and the committed generated files were produced by 8.0.0. This branch touches no R source and no roxygen comment, so it cannot satisfy the clause and cannot be the cause. Repairing it by committing the regeneration would re-pin a build-time tool, which is a dependency change and not this milestone's to take. AC6 needs the clause narrowed to what the milestone can promise. No prior amendment return names AC6, so this is the first.
@@ -338,18 +340,18 @@ above.
 spawned: diff-bug, blame-history, prior-review
 
 - diff-bug #F1: the ROADMAP candidate row recording the roxygen drift is stale,
-  since this branch committed the regeneration — fix now, row pruned.
+  since this branch committed the regeneration — fix now, fixed c143305, row pruned.
 - diff-bug #F2: the release-step comment called the measurement "dispatched",
-  but it was push-triggered after GitHub refused the dispatch — fix now.
+  but it was push-triggered after GitHub refused the dispatch — fix now, fixed c143305.
 - diff-bug #F3: the same comment gave only the cleaning half of
   `clean-exclude: dev`, leaving a reader with the benign half of a two-sided
-  hazard — fix now. The comment now says the action applies the pattern to the
+  hazard — fix now, fixed c143305. The comment now says the action applies the pattern to the
   same rsync that copies the site, that the publishing half was not measured
   here, and that the candidate row carries it.
 - diff-bug #F4: pass 1's AC5 evidence line paraphrased a NEWS draft that did
-  not ship — fix now, re-read against the shipped text and re-recorded above.
+  not ship — fix now, fixed c143305, re-read against the shipped text and re-recorded above.
 - diff-bug #F5: a plan-gate falsifier was met and nothing recorded it — fix
-  now, recorded as a work-log line. The gate chose to leave the stale root
+  now, fixed c143305, recorded as a work-log line. The gate chose to leave the stale root
   with the falsifier "evidence that the first release-lane deploy does not
   replace the root wholesale", and T4 measured `clean-exclude: dev` sparing a
   `dev` path at any depth, which is such evidence. The gate's conclusion
@@ -357,7 +359,7 @@ spawned: diff-bug, blame-history, prior-review
   segment, so the first release-lane deploy does replace everything there.
 - diff-bug #F6: NEWS said "A development version publishes under `/dev/`",
   false for a `0.0.0.x` version, which resolves to `unreleased` mode and
-  publishes at the root — fix now, narrowed to "such as the current one".
+  publishes at the root — fix now, fixed c143305, narrowed to "such as the current one".
 - diff-bug #F7: D-021 says "a `devel` version" where mode rather than version
   is precise — rejected. Decision entries are history and are superseded
   rather than edited, the imprecision changes no part of the decision, and the
@@ -367,14 +369,14 @@ spawned: diff-bug, blame-history, prior-review
   concern. A build that publishes nothing replaces nothing, so the sentence is
   true of it.
 - diff-bug #F9: AC6 was still unticked with no evidence that `document()` now
-  produces no diff — fix now, measured two ways and re-recorded above.
+  produces no diff — fix now, fixed c143305, measured two ways and re-recorded above.
 - diff-bug #F10: the Scope section still promises "a real dispatched
   measurement" — follow-up, handled at the archive. Scope is plan-owned and
   review never edits it, and the archive summary replaces this file at merge,
   stating the push-triggered method.
 - diff-bug #F11: the lane comment's claim holds only while
   `development.destination` and `PKGDOWN_DEV_MODE` are unset, and the env-var
-  half was unrecorded — fix now, absorbed into the site-deploy-hazards
+  half was unrecorded — fix now, fixed c143305, absorbed into the site-deploy-hazards
   candidate row.
 - diff-bug #F12: D-022's Context states a measured control — rejected. It
   serves as the decision's rationale there, the measurement is recorded in
