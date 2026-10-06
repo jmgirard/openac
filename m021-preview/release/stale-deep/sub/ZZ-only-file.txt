@@ -1,0 +1,1 @@
+AC4 removal probe: directory at depth holding one file
