@@ -60,10 +60,37 @@ jobs:
         run: pkgdown::build_site_github_pages(new_process = FALSE, install = FALSE)
         shell: Rscript {0}
 
-      - name: Deploy to GitHub pages 🚀
-        if: github.event_name != 'pull_request'
+      # The lane comes from the built tree, never from the event. With
+      # `development: mode: auto` in `_pkgdown.yml`, a development version
+      # builds into `docs/dev` and a release version into the `docs/` root,
+      # so the presence of `docs/dev` is what says which site was just built.
+      - name: Pick the deploy lane
+        id: lane
+        run: |
+          if [ -d docs/dev ]; then
+            echo "lane=dev" >> "$GITHUB_OUTPUT"
+          else
+            echo "lane=release" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Both lanes clean within their own target. The development lane owns
+      # `dev/`, so a page removed from the package stops being served there.
+      - name: Deploy development docs 🚀
+        if: github.event_name != 'pull_request' && steps.lane.outputs.lane == 'dev'
         uses: JamesIves/github-pages-deploy-action@v4.5.0
         with:
-          clean: false
+          clean: true
+          branch: gh-pages
+          folder: docs/dev
+          target-folder: dev
+
+      # The release lane owns the root, and keeps `dev/` out of its cleaning
+      # so a release deploy does not take the development site with it.
+      - name: Deploy release docs 🚀
+        if: github.event_name != 'pull_request' && steps.lane.outputs.lane == 'release'
+        uses: JamesIves/github-pages-deploy-action@v4.5.0
+        with:
+          clean: true
+          clean-exclude: dev
           branch: gh-pages
           folder: docs

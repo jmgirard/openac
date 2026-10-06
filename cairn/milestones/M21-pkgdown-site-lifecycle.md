@@ -41,13 +41,16 @@ A "Get started" vignette → the existing candidate row.
       under `PKGDOWN_DEV_MODE=release`, again from a removed `docs/`, writes
       `docs/index.html` and no `docs/dev`. Both listings quoted in the review.
 - [ ] AC2: `.github/workflows/pkgdown.yaml` decides its deploy lane from the
-      built tree, not from the event: one step tests whether `docs/dev` exists
-      and both deploy steps consume its output. Every `if:` key on a deploy
-      step is quoted in full in the review; each gates deploy-or-not only, the
-      `github.event_name != 'pull_request'` guard is retained, and none names
-      a lane. The branch's own pull-request CI run logs the lane step reporting
-      `dev`, and the identical test command run locally against the
-      release-mode tree of AC1 reports `release`.
+      built tree, not from the event. One step, `Pick the deploy lane`, tests
+      whether `docs/dev` exists and writes `lane=dev` or `lane=release` to
+      `$GITHUB_OUTPUT`, and both deploy steps — `Deploy development docs 🚀`
+      and `Deploy release docs 🚀` — read that output. Each of those two
+      steps' `if:` is exactly `github.event_name != 'pull_request' &&
+      steps.lane.outputs.lane == '<lane>'`, with `<lane>` the string literal
+      `dev` or `release`, and no other operator or operand appears in either
+      expression. `pkgdown.yaml` contains no deploy step other than these two.
+      The lane step's `[ -d docs/dev ]` test resolves `dev` against a built
+      tree containing `docs/dev` and `release` against one without it.
 - [ ] AC3: A dispatched run of the dev lane's deploy step against `gh-pages` —
       the preview workflow's copy, differing from the shipped step only in
       `target-folder` — MEASURED that its cleaning is scoped to that target.
@@ -96,22 +99,30 @@ A "Get started" vignette → the existing candidate row.
       `template:`). Build twice from a removed `docs/` — once plain, once
       under `PKGDOWN_DEV_MODE=release` — capturing
       `fs::dir_ls("docs", all = TRUE)` each time.
-- [ ] T2: Rewrite the deploy tail of `.github/workflows/pkgdown.yaml`
+- [x] T2: Rewrite the deploy tail of `.github/workflows/pkgdown.yaml`
       (currently one step at the file's end with `clean: false`): add a lane
       step after "Build site" setting `lane=dev` or `lane=release` from
       `[ -d docs/dev ]` into `$GITHUB_OUTPUT`, then two deploy steps — dev
       (`folder: docs/dev`, `target-folder: dev`, `clean: true`) and release
       (`folder: docs`, `clean: true`, `clean-exclude: dev`) — each keeping the
       existing `github.event_name != 'pull_request'` guard alongside its lane
-      condition. Run the lane test locally against both T1 trees.
+      condition. Run the lane test locally against both T1 trees. Capture both
+      deploy steps' `if:` keys in full, for the review to quote.
 - [ ] T3: Add `.github/workflows/pkgdown-preview.yaml`, `workflow_dispatch`
-      only, copying each of T2's two deploy steps verbatim except
-      `target-folder`, which points under a single preview folder. Confirm
-      `.Rbuildignore`'s `^\.github$` covers it (no new entry expected).
+      only, copying T2's lane step and each of T2's two deploy steps verbatim
+      except `target-folder`, which points under a single preview folder. Give
+      the dispatch a `mode` input that sets `PKGDOWN_DEV_MODE` for the build,
+      so one dispatch builds the auto-mode tree and the other the release-mode
+      tree and the copied lane step decides each run's lane from the tree it
+      got. Confirm `.Rbuildignore`'s `^\.github$` covers it (no new entry
+      expected).
 - [ ] T4: For each lane: plant that criterion's items on `gh-pages` under the
       preview folder, record `git rev-parse origin/gh-pages` and the tree,
       dispatch the preview workflow, record the tree after, and produce the
       `git diff` between the two commits. Two runs, evidence for AC3 and AC4.
+      Capture each run's lane-step log as cited evidence that the copied step
+      resolves `dev` in the auto-mode run and `release` in the release-mode
+      run.
 - [ ] T5: Write the `NEWS.md` entry. If `tests/spelling.Rout.save` drifts,
       regenerate with `spelling::update_wordlist(confirm = FALSE)` — never by
       hand-editing `inst/WORDLIST` (M20 lesson).
@@ -122,6 +133,10 @@ A "Get started" vignette → the existing candidate row.
 
 ## Work log
 
+- 2026-10-06: substantive amendment: AC2 rewritten. Two defects in the planned wording. First, "none names a lane" read literally forbids the only condition that can select a lane from the lane step's output, which T2 mandates. Second, "the branch's own pull-request CI run" cannot exist when review verifies criteria, because the PR opens only after the merge approval. The amended AC2 states the two deploy steps' `if:` expressions verbatim, names both steps instead of quantifying over "every deploy step", and binds the lane step's own `[ -d docs/dev ]` decision against a tree with and without `docs/dev`. Two evidence-quotation clauses moved out of the criterion into T2 and T4 as instrument properties. Deliverable unchanged, so no user stop. T3 now also copies the lane step and takes a build-mode dispatch input, so both lane values are observed in real dispatched runs. Coverage unchanged (AC2 to T2).
+- 2026-10-06: re-audit: AC2 (full) — returned 8 findings, all applied. Undefined "lane condition" sub-term, "gates deploy-or-not only" self-contradiction, a local run of a step body that writes to `$GITHUB_OUTPUT` and reports nothing locally, two AC1 trees that never coexist, an unenumerated "every deploy step" domain, two instrument-bound evidence-quotation clauses, and no criterion observing the shipped workflow executing at all.
+- 2026-10-06: re-audit: AC2 (full) — returned 3 findings on the fixed wording, all applied. "Exactly two terms" had no stated unit of counting, so the `if:` is now given verbatim. The evidence sentence attributed a preview-workflow run to the shipped file and rested on a build step no criterion mandated. That sentence was instrument-bound, so it narrowed to the lane step's own decision and the dispatched-run logs moved to T4. The reader's one loosening note was also applied: AC2 now states that `pkgdown.yaml` holds no third deploy step. Re-entry spent, no further reader for AC2.
+- 2026-10-06: T2 done. `pkgdown.yaml`'s single `clean: false` deploy step replaced by a `Pick the deploy lane` step writing `lane=dev` or `lane=release` to `$GITHUB_OUTPUT`, then two deploy steps. Both `if:` keys read in full from the file: `github.event_name != 'pull_request' && steps.lane.outputs.lane == 'dev'` at line 79 and the same with `'release'` at line 90. `grep -n 'name: Deploy'` finds those two deploy steps and no third. The lane test reports `dev` against the auto-mode tree and `release` against the release-mode tree. `devtools::test()`: FAIL 0, WARN 0, SKIP 8, PASS 1154.
 - 2026-10-06: T1 done. `development: mode: auto` added to `_pkgdown.yml` beside `template:`. From a removed `docs/`, the plain build left `fs::dir_ls("docs", all = TRUE)` reporting exactly `docs/dev`; the same build under `PKGDOWN_DEV_MODE=release` wrote `docs/index.html` and no `docs/dev`. `devtools::test()`: FAIL 0, WARN 0, SKIP 8, PASS 1154. `install = FALSE` needs openac in the library, so the branch was installed once with `devtools::install(quick = TRUE)` before building.
 - 2026-10-06: status set in-progress, branch `m021-pkgdown-site-lifecycle` cut from the pushed `main` (already up to date, nothing unpushed). Tree was clean at the cut.
 - 2026-09-06: created by /milestone-plan.
