@@ -1,13 +1,13 @@
 # M21: A site that knows its version, and deploys that leave nothing behind
 
-- **Status:** planned
+- **Status:** in-progress
 - **Priority:** normal
 - **Depends on:** —
 - **Driving RR:** —
 - **Principles touched:** —
 - **Resolves:** —
 - **Surface tier:** user-facing — the deliverable is the published documentation site users read
-- **Branch/PR:** —
+- **Branch/PR:** `m021-pkgdown-site-lifecycle`
 
 ## Goal
 
@@ -92,7 +92,7 @@ A "Get started" vignette → the existing candidate row.
 
 ## Tasks
 
-- [ ] T1: Add `development: mode: auto` to `_pkgdown.yml` (top level, beside
+- [x] T1: Add `development: mode: auto` to `_pkgdown.yml` (top level, beside
       `template:`). Build twice from a removed `docs/` — once plain, once
       under `PKGDOWN_DEV_MODE=release` — capturing
       `fs::dir_ls("docs", all = TRUE)` each time.
@@ -122,6 +122,8 @@ A "Get started" vignette → the existing candidate row.
 
 ## Work log
 
+- 2026-10-06: T1 done. `development: mode: auto` added to `_pkgdown.yml` beside `template:`. From a removed `docs/`, the plain build left `fs::dir_ls("docs", all = TRUE)` reporting exactly `docs/dev`; the same build under `PKGDOWN_DEV_MODE=release` wrote `docs/index.html` and no `docs/dev`. `devtools::test()`: FAIL 0, WARN 0, SKIP 8, PASS 1154. `install = FALSE` needs openac in the library, so the branch was installed once with `devtools::install(quick = TRUE)` before building.
+- 2026-10-06: status set in-progress, branch `m021-pkgdown-site-lifecycle` cut from the pushed `main` (already up to date, nothing unpushed). Tree was clean at the cut.
 - 2026-09-06: created by /milestone-plan.
 - 2026-09-06: criteria audit ran in FULL mode (user-facing tier); returned 10 findings over 6 draft criteria. Nine applied before writing: AC1 gained `all = TRUE` and a removed-`docs/` precondition; AC2's ban narrowed to lane selection and given an enumerating procedure (quote every deploy-step `if:`); AC3 and AC4 each given three planted probes varying form and depth; AC4 gained AC3's outside-the-target diff clause; AC5's two false root claims rescoped; AC6's "any NOTE justified" replaced by the `main`-at-branch-point NOTE set. The tenth — the release lane's real target is the `gh-pages` root, which no safe measurement reaches — is carried as a stated limitation in AC4 and in Out. AC7 was added afterwards to bind the cleanup, and went back through the audit's questions.
 - 2026-09-06: plan gate chose `development: mode: auto` over `mode: unreleased` and over a clean-only fix because `unreleased` forces the banner regardless of version and still lets the root flip between release and dev content, and clean-only locks in the overwrite; falsified by a pkgdown release whose `auto` resolution puts a dev version at the root.

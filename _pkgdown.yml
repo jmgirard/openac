@@ -3,6 +3,11 @@ url: https://jmgirard.github.io/openac/
 template:
   bootstrap: 5
 
+# A development version builds into `docs/dev`, a release version into the
+# `docs/` root. The deploy job reads which one it got from the built tree.
+development:
+  mode: auto
+
 # Groups mirror cairn/DESIGN.md "Function Families". Every exported topic gets
 # a row here — pkgdown::check_pkgdown() fails on any topic this file omits.
 reference:
