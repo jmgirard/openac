@@ -85,7 +85,12 @@ jobs:
           target-folder: dev
 
       # The release lane owns the root, and keeps `dev/` out of its cleaning
-      # so a release deploy does not take the development site with it.
+      # so a release deploy does not take the development site with it. A
+      # dispatched measurement of this step against a throwaway target showed
+      # `clean-exclude: dev` spares a `dev` path at ANY depth under the target,
+      # not only the target's own `dev` child, so a future site page whose
+      # path contains a `dev` segment would also escape cleaning. No such page
+      # exists today.
       - name: Deploy release docs 🚀
         if: github.event_name != 'pull_request' && steps.lane.outputs.lane == 'release'
         uses: JamesIves/github-pages-deploy-action@v4.5.0

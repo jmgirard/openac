@@ -1,19 +1,19 @@
 # openac (development version)
 
-* The documentation site now keeps development documentation apart from
-  released documentation. A build of the development version publishes under
-  <https://jmgirard.github.io/openac/dev/>, so a push to the default branch no
-  longer overwrites the site root. From the next release onward, the site root
-  holds the released version. Each build also replaces what it publishes
-  instead of merging onto it. A help page you remove from the package
-  therefore stops being served under `/dev/`.
+* The documentation site now publishes development documentation separately,
+  under <https://jmgirard.github.io/openac/dev/>. A push to the default branch
+  no longer overwrites the site root. The site root keeps the last build it was
+  given until the next release replaces it with the released version. Each
+  build also replaces what it publishes instead of merging onto it. A help page
+  you remove from the package therefore stops being served under `/dev/`.
 
 * openac now has a documentation website at
   <https://jmgirard.github.io/openac/>. It carries a help page for every
   documented topic in the package, indexed by tool family — program
   management, ffmpeg and ffprobe, OpenFace, openSMILE, whisper, the tidy
   readers, and parallelism and progress — alongside the vignettes and the
-  README. It is rebuilt and republished on every push to the default branch.
+  README. It is rebuilt on every push to the default branch and republished
+  under `/dev/`.
 
 * The package now names an issue tracker,
   <https://github.com/jmgirard/openac/issues>, so bug reports have a stated
