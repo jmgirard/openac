@@ -17,7 +17,7 @@
 # branch can fire one, and the deletion push in T7 cannot either, because the
 # file is gone at that ref.
 #
-# Measurement run for the dev lane: `auto`.
+# Measurement run for the release lane: `release`.
 #
 # `PKGDOWN_DEV_MODE` below is a literal. The first run lands it as `auto`,
 # which builds a tree with `docs/dev`; editing it to `release` and pushing
@@ -64,7 +64,7 @@ jobs:
         run: pkgdown::build_site_github_pages(new_process = FALSE, install = FALSE)
         shell: Rscript {0}
         env:
-          PKGDOWN_DEV_MODE: auto
+          PKGDOWN_DEV_MODE: release
 
       - name: Pick the deploy lane
         id: lane
