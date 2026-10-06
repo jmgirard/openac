@@ -8,7 +8,7 @@ _Released 0.1.0 (GitHub) 2026-07-11._
 
 | ID | Title | Status | Depends on | Priority | File/Archive |
 |---|---|---|---|---|---|
-| M21 | A site that knows its version, and deploys that leave nothing behind | in-progress | — | normal | milestones/M21-pkgdown-site-lifecycle.md |
+| M21 | A site that knows its version, and deploys that leave nothing behind | review | — | normal | milestones/M21-pkgdown-site-lifecycle.md |
 | M20 | A published documentation site | done | — | normal | milestones/archive/M20-pkgdown-github-pages.md |
 | M18 | A skipped file is a skip, not a success | done | M17 | normal | milestones/archive/M18-batch-skip-outcome.md |
 | M19 | A guard that names no file | done | — | normal | milestones/archive/M19-guards-name-the-file.md |

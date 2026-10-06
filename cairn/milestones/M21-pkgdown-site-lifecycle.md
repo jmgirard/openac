@@ -1,6 +1,6 @@
 # M21: A site that knows its version, and deploys that leave nothing behind
 
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** normal
 - **Depends on:** —
 - **Driving RR:** —
