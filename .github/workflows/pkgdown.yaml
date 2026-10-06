@@ -93,12 +93,16 @@ jobs:
           target-folder: dev
 
       # The release lane owns the root, and keeps `dev/` out of its cleaning
-      # so a release deploy does not take the development site with it. A
-      # dispatched measurement of this step against a throwaway target showed
-      # `clean-exclude: dev` spares a `dev` path at ANY depth under the target,
-      # not only the target's own `dev` child, so a future site page whose
-      # path contains a `dev` segment would also escape cleaning. No such page
-      # exists today.
+      # so a release deploy does not take the development site with it. A real
+      # run of this step against a throwaway target folder, triggered by a
+      # push, showed `clean-exclude: dev` spares a `dev` path at ANY depth
+      # under the target, not only the target's own `dev` child, so a future
+      # site page whose path contains a `dev` segment would escape cleaning.
+      # No such page exists today: 0 of the 146 paths on `gh-pages` carry a
+      # `dev` segment. The deploy action applies these patterns to the same
+      # rsync that copies the built site, so such a page may also fail to
+      # publish. That half was not measured here, and the ROADMAP candidate
+      # row on site-deploy hazards carries it.
       - name: Deploy release docs 🚀
         if: github.event_name != 'pull_request' && steps.lane.outputs.lane == 'release'
         uses: JamesIves/github-pages-deploy-action@v4.5.0

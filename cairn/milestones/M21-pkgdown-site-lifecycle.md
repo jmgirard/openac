@@ -84,7 +84,7 @@ A "Get started" vignette → the existing candidate row.
       documentation now lives under `/dev/` on the site, that the site root
       will hold the released version from the next release onward, and that a
       page removed from the package stops being served under `/dev/`.
-- [ ] AC6: Hygiene gate — this milestone's surface is covered by AC1–AC4:
+- [x] AC6: Hygiene gate — this milestone's surface is covered by AC1–AC4:
       `devtools::test()` passes, `devtools::document()` produces no diff,
       `pkgdown::check_pkgdown()` passes, and `devtools::check()` reports 0
       errors, 0 warnings, and the same NOTE set it reports on `main` at the
@@ -234,11 +234,21 @@ not moved: merge-base equals `origin/main` at d87978a, nothing unpushed.
   Shared-clause check: neither removal probe's path occurs anywhere in the
   after tree, so each was cleaned rather than overwritten by built content,
   and both survivor paths are present exactly once.
-- AC5 PASS. The `NEWS.md` entry names `/dev/` and its URL, says the site root
-  keeps the last build it was given until the next release replaces it with
-  the released version, and says a help page removed from the package stops
-  being served under `/dev/`.
-- AC6 FAIL on one clause. `devtools::test()`: FAIL 0, WARN 0, SKIP 8, PASS
+- AC5 PASS. Re-read at pass 2 against the shipped text, after pass 1's
+  evidence line was found to paraphrase a draft that did not ship. The
+  `NEWS.md` entry names `/dev/` and its URL; says "A release version publishes
+  at the site root, which from the next release onward is what the root
+  holds"; and says "A help page you remove from the package therefore stops
+  being served under `/dev/`." All three of AC5's required statements present.
+- AC6 PASS at pass 2, after the regeneration of D-022. `devtools::test()`:
+  FAIL 0, WARN 0, SKIP 8, PASS 1154. `pkgdown::check_pkgdown()`: no problems.
+  `devtools::document()` now produces no diff: run on the branch it changes
+  nothing, and run over a clean `git archive` of HEAD extracted to a scratch
+  directory it leaves DESCRIPTION, NAMESPACE and `man/` all identical to the
+  committed tree. `devtools::check()` on the branch: 0 errors, 0 warnings, 0
+  notes. In a fresh clone of `main` at d87978a: 0 errors, 0 warnings, 0 notes.
+  Both `check()` outputs match, the NOTE sets both empty.
+- AC6 at pass 1 FAILED on one clause, recorded here as history. `devtools::test()`: FAIL 0, WARN 0, SKIP 8, PASS
   1154. `pkgdown::check_pkgdown()`: no problems. `devtools::check()` on the
   branch: 0 errors, 0 warnings, 0 notes. On `main` at the branch point
   d87978a, in a fresh clone: 0 errors, 0 warnings, 0 notes, so the NOTE sets
@@ -317,7 +327,74 @@ spawned: diff-bug, blame-history, prior-review
   canonical links on `/dev/` pages — follow-up. pkgdown owns the dev-site URL
   prefix itself through `meta_development()`, so this is a question about
   pkgdown's own output rather than a defect in this diff.
-- prior-review: no findings. The repo's prior review record on these files is
+Pass 2, 2026-10-06, after the AC6 amendment was routed and resolved by D-022
+instead. `main` still had not moved. The lane step and both deploy steps were
+re-checked byte-for-byte against the two commits the measurement runs
+executed, 7ada2b0f and 19cf03aa, and are unchanged outside comments, so AC3
+and AC4's measurements still describe the shipped steps. AC1, AC2, AC6 and AC7
+were re-executed from scratch on the pass-2 tree with the results recorded
+above.
+
+spawned: diff-bug, blame-history, prior-review
+
+- diff-bug #F1: the ROADMAP candidate row recording the roxygen drift is stale,
+  since this branch committed the regeneration — fix now, row pruned.
+- diff-bug #F2: the release-step comment called the measurement "dispatched",
+  but it was push-triggered after GitHub refused the dispatch — fix now.
+- diff-bug #F3: the same comment gave only the cleaning half of
+  `clean-exclude: dev`, leaving a reader with the benign half of a two-sided
+  hazard — fix now. The comment now says the action applies the pattern to the
+  same rsync that copies the site, that the publishing half was not measured
+  here, and that the candidate row carries it.
+- diff-bug #F4: pass 1's AC5 evidence line paraphrased a NEWS draft that did
+  not ship — fix now, re-read against the shipped text and re-recorded above.
+- diff-bug #F5: a plan-gate falsifier was met and nothing recorded it — fix
+  now, recorded as a work-log line. The gate chose to leave the stale root
+  with the falsifier "evidence that the first release-lane deploy does not
+  replace the root wholesale", and T4 measured `clean-exclude: dev` sparing a
+  `dev` path at any depth, which is such evidence. The gate's conclusion
+  survives on measurement: 0 of the 146 paths on `gh-pages` carry a `dev`
+  segment, so the first release-lane deploy does replace everything there.
+- diff-bug #F6: NEWS said "A development version publishes under `/dev/`",
+  false for a `0.0.0.x` version, which resolves to `unreleased` mode and
+  publishes at the root — fix now, narrowed to "such as the current one".
+- diff-bug #F7: D-021 says "a `devel` version" where mode rather than version
+  is precise — rejected. Decision entries are history and are superseded
+  rather than edited, the imprecision changes no part of the decision, and the
+  workflow comments now carry the precise statement.
+- diff-bug #F8: NEWS's "Each build also replaces what it publishes" is loose
+  for a pull-request build, which publishes nothing — rejected, false as a
+  concern. A build that publishes nothing replaces nothing, so the sentence is
+  true of it.
+- diff-bug #F9: AC6 was still unticked with no evidence that `document()` now
+  produces no diff — fix now, measured two ways and re-recorded above.
+- diff-bug #F10: the Scope section still promises "a real dispatched
+  measurement" — follow-up, handled at the archive. Scope is plan-owned and
+  review never edits it, and the archive summary replaces this file at merge,
+  stating the push-triggered method.
+- diff-bug #F11: the lane comment's claim holds only while
+  `development.destination` and `PKGDOWN_DEV_MODE` are unset, and the env-var
+  half was unrecorded — fix now, absorbed into the site-deploy-hazards
+  candidate row.
+- diff-bug #F12: D-022's Context states a measured control — rejected. It
+  serves as the decision's rationale there, the measurement is recorded in
+  AC6's evidence line, and decision entries are not edited.
+- blame-history #1: `RoxygenNote: 8.0.0` was set as a by-product of an earlier
+  milestone re-running `document()`, with no record of a deliberate pin, so the
+  regeneration undoes nothing deliberate — rejected, nothing to act on. Its
+  stale-row note duplicates F1.
+- blame-history #2: nothing outside DESCRIPTION records the roxygen 8.1.0
+  floor — rejected. D-022 states the consequence, and
+  `Config/roxygen2/version` is the machine-readable floor.
+- blame-history #3: `Config/roxygen2/version` sits after `Remotes:` where
+  `RoxygenNote` sat before it — rejected, style. That is where roxygen writes
+  it, and the field is valid DCF in that position.
+- prior-review pass 2: no findings bearing on the newly touched generated
+  files. The only prior record on them is the archived check-hygiene summary,
+  which lists the roxygen version as an outcome rather than a finding to
+  preserve. Relied on pass 1's inline-comment probe, which returned an empty
+  list.
+- prior-review pass 1: no findings. The repo's prior review record on these files is
   the earlier site milestone's archived summary plus one lesson about a
   prose-only NEWS edit adding a spelling NOTE. `spelling::spell_check_package()`
   reports no errors. The inline-comment probe returned an empty list, so the

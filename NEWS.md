@@ -3,8 +3,8 @@
 * The documentation site now publishes development documentation separately,
   under <https://jmgirard.github.io/openac/dev/>. Where a build lands follows
   the package version, not the event that triggered it. A development version
-  publishes under `/dev/`, so a development build no longer overwrites the site
-  root. A release version publishes at the site root, which from the next
+  such as the current one publishes under `/dev/`, so a development build no
+  longer overwrites the site root. A release version publishes at the site root, which from the next
   release onward is what the root holds. Each build also replaces what it
   publishes instead of merging onto it. A help page you remove from the package
   therefore stops being served under `/dev/`.
