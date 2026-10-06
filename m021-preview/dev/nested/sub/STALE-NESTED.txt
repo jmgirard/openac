@@ -1,1 +1,0 @@
-AC3 stale file in a nested subdirectory
