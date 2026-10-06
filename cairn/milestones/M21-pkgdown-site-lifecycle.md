@@ -26,8 +26,14 @@ preview path, removed again before merge; a `NEWS.md` entry.
 
 **Out:** the `gh-pages` root, which keeps serving M20's `0.1.0.9000` build
 until the first `release: published` event rebuilds it — accepted at the plan
-gate and held as a ROADMAP candidate row. The root-target case of the release
-lane is not measured (AC4 states this). A version dropdown or custom
+gate and held as a ROADMAP candidate row. Neither lane is measured at its
+shipped target. The release-lane preview run measures `clean-exclude: dev`
+against an explicit `target-folder`, showing that the pattern protects a `dev`
+path under the deploy target. Whether the pattern is anchored at that target or
+matched by name at any depth, and how the action behaves with the branch root
+as its target, are not measured. The dev lane is likewise measured at
+`m021-preview/dev` rather than at the shipped `dev/`, so that its cleaning is
+scoped to its target at any depth is inferred from that run. A version dropdown or custom
 `development.version_label` → not planned; raise as a candidate if wanted.
 A "Get started" vignette → the existing candidate row.
 
@@ -51,24 +57,27 @@ A "Get started" vignette → the existing candidate row.
       expression. `pkgdown.yaml` contains no deploy step other than these two.
       The lane step's `[ -d docs/dev ]` test resolves `dev` against a built
       tree containing `docs/dev` and `release` against one without it.
-- [ ] AC3: A dispatched run of the dev lane's deploy step against `gh-pages` —
-      the preview workflow's copy, differing from the shipped step only in
-      `target-folder` — MEASURED that its cleaning is scoped to that target.
-      Three items planted under the target beforehand — a stale file at the
-      target root, a stale file in a nested subdirectory, and a stale
-      directory — are all absent from the tree afterwards, and `git diff`
-      between the `gh-pages` commits immediately before and after the run
-      reports no path outside the target folder changed.
-- [ ] AC4: A dispatched run with the release lane's exact deploy inputs
-      (`clean: true`, `clean-exclude: dev`), differing from the shipped step
-      only in `target-folder`, MEASURED that three items planted under the
-      target survive byte-identical — `dev/<file>`, `dev/<sub>/<file>`, and a
-      directory named `dev` nested below the target root — while a stale file
-      planted elsewhere under the target is absent afterwards, and `git diff`
-      across the two `gh-pages` commits reports no path outside the target
-      folder changed. The review states what the run showed for the nested
-      `dev` segment, and states that the shipped release step's root target is
-      not what was measured.
+- Shared by AC3 and AC4: each is MEASURED by a push-triggered run of the
+  preview workflow's copy of the shipped step named, every key of whose
+  `with:` block equals the shipped step's but for `target-folder`, shown by a
+  diff of the two extracted step blocks. No probe's path occurs in the built
+  site, no probe is named `.nojekyll`, `.git`, `.github` or `.ssh`, every
+  directory probe holds exactly one file, and `git diff` between the
+  `gh-pages` commits immediately before and after the run reports no path
+  outside the target folder changed.
+- [ ] AC3: The shipped dev-lane deploy step's cleaning is scoped to its
+      `target-folder`. Four items planted under the target beforehand — an
+      ordinary file at the target root, a dotfile at the target root, an
+      ordinary file in a nested subdirectory, and a directory — are all absent
+      from the tree afterwards.
+- [ ] AC4: The shipped release-lane deploy step's cleaning spares `dev` under
+      its target while removing other stale content, its copy carrying the
+      release lane's exact deploy inputs (`clean: true`, `clean-exclude: dev`)
+      and differing only by an added `target-folder`. Two items planted under
+      the target survive byte-identical, `dev/<file>` and `dev/<sub>/.<file>`,
+      while two planted elsewhere under the target — an ordinary file at the
+      target root and a directory at depth, neither named `dev` — are absent
+      afterwards.
 - [ ] AC5: `NEWS.md` gains an entry telling users that development
       documentation now lives under `/dev/` on the site, that the site root
       will hold the released version from the next release onward, and that a
@@ -122,20 +131,27 @@ A "Get started" vignette → the existing candidate row.
       `git diff` between the two commits. Two runs, evidence for AC3 and AC4.
       Capture each run's lane-step log as cited evidence that the copied step
       resolves `dev` in the auto-mode run and `release` in the release-mode
-      run.
+      run, and record each run's head commit alongside it, so a reader can see
+      the deploy steps were unchanged between the two. Also record whether a
+      `dev` directory nested below the target root survived run 2, and quote
+      what the run showed for it.
 - [ ] T5: Write the `NEWS.md` entry. If `tests/spelling.Rout.save` drifts,
       regenerate with `spelling::update_wordlist(confirm = FALSE)` — never by
       hand-editing `inst/WORDLIST` (M20 lesson).
 - [ ] T6: Run the verify slot on the branch, and `devtools::check()` on both
       the branch and `main` at the branch point; capture both NOTE sets.
-- [ ] T7: Delete `.github/workflows/pkgdown-preview.yaml` and remove the
-      preview folder from `gh-pages`; confirm with `git ls-tree -r`.
+- [ ] T7: Delete `.github/workflows/pkgdown-preview.yaml` and push that
+      deletion FIRST, so no later push of the branch can fire a run that
+      re-creates the preview folder. Then remove the preview folder from
+      `gh-pages`. Confirm both with `git ls-tree -r`.
 
 ## Work log
 
 - 2026-10-06: substantive amendment: AC2 rewritten. Two defects in the planned wording. First, "none names a lane" read literally forbids the only condition that can select a lane from the lane step's output, which T2 mandates. Second, "the branch's own pull-request CI run" cannot exist when review verifies criteria, because the PR opens only after the merge approval. The amended AC2 states the two deploy steps' `if:` expressions verbatim, names both steps instead of quantifying over "every deploy step", and binds the lane step's own `[ -d docs/dev ]` decision against a tree with and without `docs/dev`. Two evidence-quotation clauses moved out of the criterion into T2 and T4 as instrument properties. Deliverable unchanged, so no user stop. T3 now also copies the lane step and takes a build-mode dispatch input, so both lane values are observed in real dispatched runs. Coverage unchanged (AC2 to T2).
 - 2026-10-06: re-audit: AC2 (full) — returned 8 findings, all applied. Undefined "lane condition" sub-term, "gates deploy-or-not only" self-contradiction, a local run of a step body that writes to `$GITHUB_OUTPUT` and reports nothing locally, two AC1 trees that never coexist, an unenumerated "every deploy step" domain, two instrument-bound evidence-quotation clauses, and no criterion observing the shipped workflow executing at all.
 - 2026-10-06: re-audit: AC2 (full) — returned 3 findings on the fixed wording, all applied. "Exactly two terms" had no stated unit of counting, so the `if:` is now given verbatim. The evidence sentence attributed a preview-workflow run to the shipped file and rested on a build step no criterion mandated. That sentence was instrument-bound, so it narrowed to the lane step's own decision and the dispatched-run logs moved to T4. The reader's one loosening note was also applied: AC2 now states that `pkgdown.yaml` holds no third deploy step. Re-entry spent, no further reader for AC2.
+- 2026-10-06: the amendment put the plan-owned body at 150 lines, one over the cap. Compressed the heaviest plan-owned section, Acceptance criteria, in one pass: the clauses AC3 and AC4 state identically now sit in one shared line above them. No promise changed. Validate green again.
+- 2026-10-06: substantive amendment: AC3 and AC4 rewritten, Out extended, T4 and T7 given further steps. The user chose to apply all ten findings of the second audit round at the wording stop. AC3 and AC4 now make the shipped deploy step the subject and the preview run the procedure, name the `with:`-block diff that enumerates the key set each claims equal, and constrain the planted probes: four probes in AC3 crossing the root/nested and ordinary/hidden axes, two removal probes in AC4, no probe named `.nojekyll` or colliding with a built-site path, and every directory probe holding exactly one file. AC4 drops the nested `dev` probe, which could fail while the shipped release lane is correct, and T4 now records it instead. Out declares that neither lane is measured at its shipped target and states the release-lane inference in a form the nested-`dev` result cannot contradict. T7 pushes the workflow deletion before clearing the gh-pages folder. Run 1 must be redone, because the probe set changed. Deliverable unchanged, so no further stop.
 - 2026-10-06: run 1 measured the dev lane. Preview run 37512555826, push event, head 378c7927, conclusion success. `gh-pages` before 490baef, after 6819e55. All three planted probes absent afterwards: the dotfile `m021-preview/dev/.stale-root`, the nested ordinary file `m021-preview/dev/nested/sub/STALE-NESTED.txt`, and the stale directory's only file `m021-preview/dev/stale-dir/STALE-DIR-FILE.txt`. The sentinel `m021-preview/OUTSIDE-SENTINEL.txt`, planted outside the target, is present and unchanged. `git diff --name-only 490baef 6819e55` lists no path outside `m021-preview/dev/`. The deployed tree contains `m021-preview/dev/.nojekyll`, which the build writes, so a probe named `.nojekyll` would have read as survival.
 - 2026-10-06: re-audit: AC3 (full) — returned 5 findings shared with AC4. Trigger wording too loose, probe-set axes, the push trigger's missing path filter, T7 ordering, and the hidden-file axis. All applied, which spent the one re-entry.
 - 2026-10-06: re-audit: AC4 (full) — returned the same 5 findings. Additionally: the shipped release step has no `target-folder` key at all, so "differing only in `target-folder`" was false as written, and two clauses mandating what the review states are instrument-bound. All applied.
