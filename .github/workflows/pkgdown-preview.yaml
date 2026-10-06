@@ -17,6 +17,8 @@
 # branch can fire one, and the deletion push in T7 cannot either, because the
 # file is gone at that ref.
 #
+# Measurement run for the dev lane: `auto`.
+#
 # `PKGDOWN_DEV_MODE` below is a literal. The first run lands it as `auto`,
 # which builds a tree with `docs/dev`; editing it to `release` and pushing
 # again builds a tree without one. The copied lane step then decides each
