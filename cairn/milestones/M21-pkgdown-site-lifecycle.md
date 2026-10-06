@@ -1,6 +1,6 @@
 # M21: A site that knows its version, and deploys that leave nothing behind
 
-- **Status:** review
+- **Status:** in-progress
 - **Priority:** normal
 - **Depends on:** —
 - **Driving RR:** —
@@ -149,6 +149,8 @@ A "Get started" vignette → the existing candidate row.
 
 ## Work log
 
+- 2026-10-06: amendment routed: AC6 — the clause `devtools::document()` produces no diff fails on this machine, and the discriminating control shows it fails identically on `main` at the branch point, so it is a property of the environment rather than of this milestone. The local roxygen2 is 8.1.0 and the committed generated files were produced by 8.0.0. This branch touches no R source and no roxygen comment, so it cannot satisfy the clause and cannot be the cause. Repairing it by committing the regeneration would re-pin a build-time tool, which is a dependency change and not this milestone's to take. AC6 needs the clause narrowed to what the milestone can promise. No prior amendment return names AC6, so this is the first.
+- 2026-10-06: review pass 1 settled 21 findings from three fresh-context lenses. Six fixed on the branch at 33c54fe, five filed as a candidate row or a follow-up, nine rejected with reasons, and one routed as the amendment return above. The most consequential: NEWS claimed a push to the default branch no longer overwrites the site root, which is false for the release-prep push, since the version and not the event decides placement. Verified with `pkgdown:::dev_mode_auto("0.1.0")` returning `release` and the release walk committing the version bump to the default branch before tagging.
 - 2026-10-06: substantive amendment: AC2 rewritten. Two defects in the planned wording. First, "none names a lane" read literally forbids the only condition that can select a lane from the lane step's output, which T2 mandates. Second, "the branch's own pull-request CI run" cannot exist when review verifies criteria, because the PR opens only after the merge approval. The amended AC2 states the two deploy steps' `if:` expressions verbatim, names both steps instead of quantifying over "every deploy step", and binds the lane step's own `[ -d docs/dev ]` decision against a tree with and without `docs/dev`. Two evidence-quotation clauses moved out of the criterion into T2 and T4 as instrument properties. Deliverable unchanged, so no user stop. T3 now also copies the lane step and takes a build-mode dispatch input, so both lane values are observed in real dispatched runs. Coverage unchanged (AC2 to T2).
 - 2026-10-06: re-audit: AC2 (full) — returned 8 findings, all applied. Undefined "lane condition" sub-term, "gates deploy-or-not only" self-contradiction, a local run of a step body that writes to `$GITHUB_OUTPUT` and reports nothing locally, two AC1 trees that never coexist, an unenumerated "every deploy step" domain, two instrument-bound evidence-quotation clauses, and no criterion observing the shipped workflow executing at all.
 - 2026-10-06: re-audit: AC2 (full) — returned 3 findings on the fixed wording, all applied. "Exactly two terms" had no stated unit of counting, so the `if:` is now given verbatim. The evidence sentence attributed a preview-workflow run to the shipped file and rested on a build step no criterion mandated. That sentence was instrument-bound, so it narrowed to the lane step's own decision and the dispatched-run logs moved to T4. The reader's one loosening note was also applied: AC2 now states that `pkgdown.yaml` holds no third deploy step. Re-entry spent, no further reader for AC2.
@@ -254,7 +256,7 @@ spawned: diff-bug, blame-history, prior-review
 - diff-bug #1: NEWS and the Goal say a push to the default branch can never
   overwrite the site root, but the release-prep push carries a release version,
   so the lane resolves `release` and the root is rebuilt on an ordinary push —
-  fix now. Confirmed independently: `pkgdown:::dev_mode_auto("0.1.0")` returns
+  fix now, fixed 33c54fe. Confirmed independently: `pkgdown:::dev_mode_auto("0.1.0")` returns
   `release`, and the release walk commits the version bump to the default
   branch before tagging. The NEWS entry now states placement by version rather
   than by event, and the workflow comment says so too. The Goal's substance
@@ -274,7 +276,7 @@ spawned: diff-bug, blame-history, prior-review
   capability whose consequence is new now the root is the released site.
 - diff-bug #6: a `release: published` event on a prerelease or dev-version tag
   resolves the dev lane, so a release does not always replace the root — fix
-  now, covered by the same version-based NEWS rewording as #1.
+  now, fixed 33c54fe, covered by the same version-based NEWS rewording as #1.
 - diff-bug #7: the concurrency group queues one run with no
   `cancel-in-progress`, so a third push cancels the pending one and the two
   lanes can sit at different commits — follow-up, candidate row.
@@ -283,16 +285,16 @@ spawned: diff-bug, blame-history, prior-review
   `clean-exclude`, with nothing asserting the four agree — follow-up,
   candidate row.
 - diff-bug #9: the lane comment claimed a development version builds into
-  `docs/dev`, which is false for a `0.0.0.x` version — fix now. Verified
+  `docs/dev`, which is false for a `0.0.0.x` version — fix now, fixed 33c54fe. Verified
   against pkgdown's `meta_development()`, where `in_dev <- mode == "devel"`
   gates the prefix, so only `devel` mode gets it. Both comments now say
   `devel` mode rather than development version.
 - diff-bug #10: AC1's "Both listings quoted in the review" was unsatisfied,
-  counts given instead of listings — fix now, both listings now quoted above.
+  counts given instead of listings — fix now, fixed 33c54fe, both listings now quoted above.
 - diff-bug #11: the AC3/AC4 shared clause's no-collision requirement was
-  evidenced for AC3 only — fix now, AC4's check added above.
+  evidenced for AC3 only — fix now, fixed 33c54fe, AC4's check added above.
 - diff-bug #12: the gate choices with rejected alternatives sat only in the
-  work log — fix now, recorded as D-021.
+  work log — fix now, fixed 33c54fe, recorded as D-021.
 - diff-bug #13: the AC3/AC4 evidence is not reproducible from the merged tree,
   surviving as run ids and commit hashes — rejected, planned change. AC7
   requires the removal and Out declares the consequence.
