@@ -7,21 +7,24 @@
 # for `target-folder`, which points under `m021-preview/` instead of at the
 # real `dev/` and the real site root. The lane step is a verbatim copy.
 #
-# The `mode` input sets `PKGDOWN_DEV_MODE` for the build, so one dispatch
-# produces a tree with `docs/dev` and the other a tree without it. The copied
-# lane step then decides each run's lane from the tree it was given, the same
-# way the shipped step does.
+# `workflow_dispatch` is not usable here: GitHub refuses to dispatch a
+# workflow that is not on the default branch, and this file is deliberately
+# never put there. Measured on 2026-10-06, `gh workflow run
+# pkgdown-preview.yaml --ref m021-pkgdown-site-lifecycle` answered "HTTP 404:
+# workflow pkgdown-preview.yaml not found on the default branch". So the
+# trigger is a push of this branch, narrowed to this file alone, which makes
+# a run happen only when this file itself changes. No other push of the
+# branch can fire one, and the deletion push in T7 cannot either, because the
+# file is gone at that ref.
+#
+# `PKGDOWN_DEV_MODE` below is a literal. The first run lands it as `auto`,
+# which builds a tree with `docs/dev`; editing it to `release` and pushing
+# again builds a tree without one. The copied lane step then decides each
+# run's lane from the tree it was given, the same way the shipped step does.
 on:
-  workflow_dispatch:
-    inputs:
-      mode:
-        description: 'pkgdown development mode for the build'
-        required: true
-        default: 'auto'
-        type: choice
-        options:
-          - auto
-          - release
+  push:
+    branches: [m021-pkgdown-site-lifecycle]
+    paths: ['.github/workflows/pkgdown-preview.yaml']
 
 name: pkgdown-preview.yaml
 
@@ -59,7 +62,7 @@ jobs:
         run: pkgdown::build_site_github_pages(new_process = FALSE, install = FALSE)
         shell: Rscript {0}
         env:
-          PKGDOWN_DEV_MODE: ${{ inputs.mode }}
+          PKGDOWN_DEV_MODE: auto
 
       - name: Pick the deploy lane
         id: lane
