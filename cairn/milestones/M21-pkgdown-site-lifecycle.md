@@ -41,14 +41,14 @@ A "Get started" vignette → the existing candidate row.
 
 ## Acceptance criteria
 
-- [ ] AC1: `_pkgdown.yml` sets `development: mode: auto`, and with `docs/`
+- [x] AC1: `_pkgdown.yml` sets `development: mode: auto`, and with `docs/`
       removed beforehand, `pkgdown::build_site_github_pages(dest_dir = "docs",
       new_process = FALSE, install = FALSE)` on the working tree at
       DESCRIPTION's `0.1.0.9000` leaves `fs::dir_ls("docs", all = TRUE)`
       reporting exactly one entry, the directory `docs/dev`; the same command
       under `PKGDOWN_DEV_MODE=release`, again from a removed `docs/`, writes
       `docs/index.html` and no `docs/dev`. Both listings quoted in the review.
-- [ ] AC2: `.github/workflows/pkgdown.yaml` decides its deploy lane from the
+- [x] AC2: `.github/workflows/pkgdown.yaml` decides its deploy lane from the
       built tree, not from the event. One step, `Pick the deploy lane`, tests
       whether `docs/dev` exists and writes `lane=dev` or `lane=release` to
       `$GITHUB_OUTPUT`, and both deploy steps — `Deploy development docs 🚀`
@@ -67,12 +67,12 @@ A "Get started" vignette → the existing candidate row.
   directory probe holds exactly one file, and `git diff` between the
   `gh-pages` commits immediately before and after the run reports no path
   outside the target folder changed.
-- [ ] AC3: The shipped dev-lane deploy step's cleaning is scoped to its
+- [x] AC3: The shipped dev-lane deploy step's cleaning is scoped to its
       `target-folder`. Four items planted under the target beforehand — an
       ordinary file at the target root, a dotfile at the target root, an
       ordinary file in a nested subdirectory, and a directory — are all absent
       from the tree afterwards.
-- [ ] AC4: The shipped release-lane deploy step's cleaning spares `dev` under
+- [x] AC4: The shipped release-lane deploy step's cleaning spares `dev` under
       its target while removing other stale content, its copy carrying the
       release lane's exact deploy inputs (`clean: true`, `clean-exclude: dev`)
       and differing only by an added `target-folder`. Two items planted under
@@ -80,7 +80,7 @@ A "Get started" vignette → the existing candidate row.
       while two planted elsewhere under the target — an ordinary file at the
       target root and a directory at depth, neither named `dev` — are absent
       afterwards.
-- [ ] AC5: `NEWS.md` gains an entry telling users that development
+- [x] AC5: `NEWS.md` gains an entry telling users that development
       documentation now lives under `/dev/` on the site, that the site root
       will hold the released version from the next release onward, and that a
       page removed from the package stops being served under `/dev/`.
@@ -89,7 +89,7 @@ A "Get started" vignette → the existing candidate row.
       `pkgdown::check_pkgdown()` passes, and `devtools::check()` reports 0
       errors, 0 warnings, and the same NOTE set it reports on `main` at the
       branch point. Both `check()` outputs quoted.
-- [ ] AC7: Nothing from the measurement survives: `.github/workflows/
+- [x] AC7: Nothing from the measurement survives: `.github/workflows/
       pkgdown-preview.yaml` is absent from the branch tip, and
       `git ls-tree -r --name-only origin/gh-pages` lists no path under the
       preview folder. Both listings quoted.
@@ -179,3 +179,142 @@ A "Get started" vignette → the existing candidate row.
 ## Decisions
 
 ## Review
+
+Pass 1, 2026-10-06. Branch `m021-pkgdown-site-lifecycle`, no PR yet. `main` had
+not moved: merge-base equals `origin/main` at d87978a, nothing unpushed.
+
+- AC1 PASS. `_pkgdown.yml` carries `development:` / `mode: auto`. DESCRIPTION
+  reads `0.1.0.9000`. From a removed `docs/`, the plain build left
+  `fs::dir_ls("docs", all = TRUE)` reporting 1 entry, `docs/dev`. From a
+  removed `docs/` again, the same call under `PKGDOWN_DEV_MODE=release` left
+  `docs/index.html` present, `docs/dev` absent, 26 top-level entries. Both
+  listings quoted. Auto mode: `docs/dev`. Release mode: `docs/.nojekyll
+  docs/404.html docs/404.md docs/CLAUDE.html docs/CLAUDE.md
+  docs/CODE_OF_CONDUCT.html docs/CODE_OF_CONDUCT.md docs/LICENSE.html
+  docs/LICENSE.md docs/articles docs/authors.html docs/authors.md docs/deps
+  docs/index.html docs/index.md docs/katex-auto.js docs/lightswitch.js
+  docs/link.svg docs/llms.txt docs/news docs/pkgdown.js docs/pkgdown.yml
+  docs/reference docs/search.json docs/sitemap.xml docs/tutorials`.
+- AC2 PASS. `Pick the deploy lane` tests `[ -d docs/dev ]` and writes
+  `lane=dev` or `lane=release` to `$GITHUB_OUTPUT`. `grep -n 'name: Deploy'`
+  finds exactly two deploy steps, `Deploy development docs 🚀` (line 78) and
+  `Deploy release docs 🚀` (line 94), and no third. `grep -n 'if:'` finds
+  exactly two `if:` keys in the whole file, both on those steps:
+  `github.event_name != 'pull_request' && steps.lane.outputs.lane == 'dev'`
+  and the same with `'release'`. Neither carries a further operator or
+  operand. The lane test reported `dev` against the AC1 auto-mode tree and
+  `release` against the AC1 release-mode tree.
+- AC3 PASS. Run 37514709251, push event, head 7ada2b0f, success; `Pick the
+  deploy lane` and `Deploy development docs 🚀` ran, `Deploy release docs 🚀`
+  skipped. `diff` of the extracted step blocks shows the preview copy
+  differing from the shipped step in `target-folder` alone. `gh-pages`
+  f2b7959 to 5aaf9a1. All four probes absent afterwards:
+  `ZZ-stale-root.txt`, the dotfile `.zz-stale-root`,
+  `nested/sub/ZZ-stale-nested.txt`, and `stale-dir/ZZ-only-file.txt`. None of
+  the four paths exists in the after tree at all, so none was overwritten by
+  built content. The sentinel `m021-preview/ZZ-OUTSIDE-SENTINEL.txt` is
+  present. 148 paths changed between the two commits, every one under
+  `m021-preview/dev/`.
+- AC4 PASS. Run 37515072961, push event, head 19cf03aa, success; `Deploy
+  release docs 🚀` ran, `Deploy development docs 🚀` skipped. `diff` of the
+  extracted step blocks shows the preview copy differing only by an added
+  `target-folder`. `gh-pages` a165410 to d97dd60. Both survivors
+  byte-identical by blob hash: `release/dev/KEEP-FILE.txt` at 1d2e405 and
+  `release/dev/sub/.keep-dotfile` at 6dcc03f. Both removal probes absent:
+  `release/ZZ-stale-root.txt` and `release/stale-deep/sub/ZZ-only-file.txt`.
+  148 paths changed, every one under `m021-preview/release/`. T4's record:
+  the `dev` directory nested below the target root,
+  `release/reference/dev/ZZ-nested-dev.txt`, SURVIVED at 90e4a80, so
+  `clean-exclude: dev` spares a `dev` path at any depth under the target. The
+  shipped release step's root target is not what was measured, as Out states.
+  Shared-clause check: neither removal probe's path occurs anywhere in the
+  after tree, so each was cleaned rather than overwritten by built content,
+  and both survivor paths are present exactly once.
+- AC5 PASS. The `NEWS.md` entry names `/dev/` and its URL, says the site root
+  keeps the last build it was given until the next release replaces it with
+  the released version, and says a help page removed from the package stops
+  being served under `/dev/`.
+- AC6 FAIL on one clause. `devtools::test()`: FAIL 0, WARN 0, SKIP 8, PASS
+  1154. `pkgdown::check_pkgdown()`: no problems. `devtools::check()` on the
+  branch: 0 errors, 0 warnings, 0 notes. On `main` at the branch point
+  d87978a, in a fresh clone: 0 errors, 0 warnings, 0 notes, so the NOTE sets
+  match, both empty. But `devtools::document()` does NOT produce no diff: it
+  rewrites `RoxygenNote: 8.0.0` to `Config/roxygen2/version: 8.1.0` and
+  reflows one `importFrom` block. Discriminating control: the same command in
+  the `main`-at-branch-point clone produces the identical diff, so the clause
+  fails on `main` too and this branch did not cause it. The local roxygen2 is
+  8.1.0 and the committed files were generated by 8.0.0. The branch touches
+  no R source and no roxygen comment. Routed as an amendment return below.
+- AC7 PASS. `git ls-tree -r --name-only HEAD -- .github/workflows/` lists
+  `R-CMD-check.yaml` and `pkgdown.yaml` only. `git ls-tree -r --name-only
+  origin/gh-pages | grep '^m021-preview'` returns nothing.
+
+spawned: diff-bug, blame-history, prior-review
+
+- diff-bug #1: NEWS and the Goal say a push to the default branch can never
+  overwrite the site root, but the release-prep push carries a release version,
+  so the lane resolves `release` and the root is rebuilt on an ordinary push —
+  fix now. Confirmed independently: `pkgdown:::dev_mode_auto("0.1.0")` returns
+  `release`, and the release walk commits the version bump to the default
+  branch before tagging. The NEWS entry now states placement by version rather
+  than by event, and the workflow comment says so too. The Goal's substance
+  holds, since a development build cannot reach the root, so no goal return.
+- diff-bug #2: the advertised root URL stays a stale development build until
+  the first release-version build, and NEWS does not spell that out — surfaced
+  at the merge question. Accepted at the plan gate and already a candidate row.
+- diff-bug #3: `clean-exclude: dev` is an `--exclude` on the same rsync that
+  transfers the built site, so a future `dev`-segment path would also fail to
+  publish, not only escape cleaning — follow-up, candidate row. The publishing
+  half is read off the action's source and was not measured here, so it is not
+  written into the workflow comment as a derived claim.
+- diff-bug #4: AC6 is not met, its box unticked — amendment return, routed
+  below.
+- diff-bug #5: `workflow_dispatch` accepts any ref and can publish an
+  arbitrary branch over the root — follow-up, candidate row. Pre-existing
+  capability whose consequence is new now the root is the released site.
+- diff-bug #6: a `release: published` event on a prerelease or dev-version tag
+  resolves the dev lane, so a release does not always replace the root — fix
+  now, covered by the same version-based NEWS rewording as #1.
+- diff-bug #7: the concurrency group queues one run with no
+  `cancel-in-progress`, so a third push cancels the pending one and the two
+  lanes can sit at different commits — follow-up, candidate row.
+- diff-bug #8: the literal `dev` is unlinked across pkgdown's
+  `development.destination` default, the lane test, `target-folder` and
+  `clean-exclude`, with nothing asserting the four agree — follow-up,
+  candidate row.
+- diff-bug #9: the lane comment claimed a development version builds into
+  `docs/dev`, which is false for a `0.0.0.x` version — fix now. Verified
+  against pkgdown's `meta_development()`, where `in_dev <- mode == "devel"`
+  gates the prefix, so only `devel` mode gets it. Both comments now say
+  `devel` mode rather than development version.
+- diff-bug #10: AC1's "Both listings quoted in the review" was unsatisfied,
+  counts given instead of listings — fix now, both listings now quoted above.
+- diff-bug #11: the AC3/AC4 shared clause's no-collision requirement was
+  evidenced for AC3 only — fix now, AC4's check added above.
+- diff-bug #12: the gate choices with rejected alternatives sat only in the
+  work log — fix now, recorded as D-021.
+- diff-bug #13: the AC3/AC4 evidence is not reproducible from the merged tree,
+  surviving as run ids and commit hashes — rejected, planned change. AC7
+  requires the removal and Out declares the consequence.
+- blame-history #1: `clean: false` was the r-lib template default, with no
+  recorded protective purpose — rejected, false as a concern. Confirms the
+  switch to `clean: true` undoes nothing deliberate.
+- blame-history #2: `clean-exclude: dev` over-matches — duplicate of
+  diff-bug #3, same candidate row.
+- blame-history #3: the first release deploy rebuilds the whole root —
+  rejected, planned change, already a candidate row.
+- blame-history #4: the `audio.whisper` assert invariant is undisturbed —
+  rejected, nothing to act on.
+- blame-history #5: no resurrected bug, no contradicted decision — rejected,
+  nothing to act on.
+- blame-history #6: the NEWS edit is faithful to what the earlier milestone
+  shipped — rejected, nothing to act on. Its wording note is covered by #1.
+- blame-history #7: `url:` still points at the site root, which could affect
+  canonical links on `/dev/` pages — follow-up. pkgdown owns the dev-site URL
+  prefix itself through `meta_development()`, so this is a question about
+  pkgdown's own output rather than a defect in this diff.
+- prior-review: no findings. The repo's prior review record on these files is
+  the earlier site milestone's archived summary plus one lesson about a
+  prose-only NEWS edit adding a spelling NOTE. `spelling::spell_check_package()`
+  reports no errors. The inline-comment probe returned an empty list, so the
+  per-PR walk was skipped.

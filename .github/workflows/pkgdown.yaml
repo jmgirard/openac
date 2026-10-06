@@ -61,9 +61,17 @@ jobs:
         shell: Rscript {0}
 
       # The lane comes from the built tree, never from the event. With
-      # `development: mode: auto` in `_pkgdown.yml`, a development version
-      # builds into `docs/dev` and a release version into the `docs/` root,
-      # so the presence of `docs/dev` is what says which site was just built.
+      # `development: mode: auto` in `_pkgdown.yml`, pkgdown resolves the
+      # package version to a mode, and only `devel` mode builds into
+      # `docs/dev` (pkgdown's `meta_development()` applies the destination
+      # prefix when `mode == "devel"` and not otherwise). openac's
+      # `0.1.0.9000` resolves to `devel`, and a release version such as
+      # `0.1.0` resolves to `release` and builds into the `docs/` root. So the
+      # presence of `docs/dev` is what says which site was just built.
+      #
+      # Note that the version, not the event, is what decides this. The
+      # release-prep commit that lands a release version on the default
+      # branch therefore publishes to the root on an ordinary push.
       - name: Pick the deploy lane
         id: lane
         run: |

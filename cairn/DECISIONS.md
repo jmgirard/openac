@@ -489,3 +489,33 @@ r-lib/actions template, which is how such a line gets dropped without notice.
 `Imports` or `Suggests`, so users installing openac never install pkgdown and
 `R CMD check` is unaffected. The field becomes the single declared home for
 anything the website build needs later (e.g. a bootstrap theme package).
+
+### D-021 (2026-10-06): Site placement follows the package version, via `development: mode: auto`
+
+**Context:** The pkgdown site job deployed the built tree to the `gh-pages`
+root with `clean: false`, so a push to the default branch published a
+development build over whatever the root held, and nothing that build no
+longer produced was ever removed. A released site and a development site had
+no separate homes.
+**Decision:** Set `development: mode: auto` in `_pkgdown.yml` and let the
+package version decide placement: pkgdown resolves a `devel` version into a
+`dev/` subdirectory and a release version into the site root. The deploy job
+reads which of the two it got from the built tree rather than from the
+triggering event, and each lane cleans within its own target, the release lane
+excluding `dev` so it cannot take the development site with it.
+Considered and rejected: `development: mode: unreleased`, which forces the
+development banner regardless of version and still lets the root alternate
+between release and development content. Considered and rejected: keeping one
+lane and only turning `clean` on, which removes stale files but locks in the
+overwrite the root suffers.
+Also decided: leave the existing root content in place rather than
+hand-committing a redirect or rebuilding it from the `v0.1.0` tag. A redirect
+makes part of the deliverable an out-of-band commit no CI reproduces, and the
+tag's tree carries no `_pkgdown.yml`. The first release-version build is what
+replaces the root.
+**Consequences:** The version, not the event, decides placement, so the
+release-prep commit that lands a release version on the default branch
+publishes to the root on an ordinary push. Until such a build happens the root
+keeps the development build it already holds, which is what `URL:` in
+DESCRIPTION and the README point at. Reversing this means removing the
+`development:` key and rejoining the two lanes.
